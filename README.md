@@ -407,3 +407,29 @@ PDF export uses Puppeteer Core with @sparticuz/chromium. Each of the 50 template
 ## License
 
 [Apache License 2.0](LICENSE)
+
+
+## 使用示例
+
+### 基本用法
+```python
+import package_name
+
+# 初始化
+client = package_name.Client()
+
+# 调用功能
+result = client.process()
+print(f"结果: {result}")
+```
+
+### 高级用法
+```python
+# 配置参数
+config = {
+    'setting': 'value',
+    'timeout': 30
+}
+
+client = package_name.Client(**config)
+```
