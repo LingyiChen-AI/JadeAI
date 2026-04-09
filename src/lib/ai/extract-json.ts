@@ -90,7 +90,7 @@ const KEY_ALIASES: Record<string, string> = {
   abilityScores: 'dimensionScores',
   rounds: 'roundEvaluations',
   evaluations: 'roundEvaluations',
-  summary: 'overallFeedback',
+  //summary: 'overallFeedback',
   feedback: 'overallFeedback',
   overallSummary: 'overallFeedback',
   improvements: 'improvementPlan',
