@@ -142,12 +142,18 @@ function AcademicSectionContent({ section, resume }: { section: any; resume: Res
   if (section.type === 'skills') {
     const categories = (content as SkillsContent).categories || [];
     return (
-      <div className="space-y-0.5">
+      <div className="space-y-1">
         {categories.map((cat: any) => (
-          <p key={cat.id} className="text-sm text-zinc-600">
-            <span className="font-bold text-zinc-700">{cat.name}: </span>
-            {cat.skills?.join(', ')}
-          </p>
+          <div key={cat.id}>
+            <p className="text-sm font-bold text-zinc-700">{cat.name}</p>
+            {cat.skills?.length > 0 && (
+              <ul className="mt-0.5 list-disc pl-4">
+                {cat.skills.map((skill: string, i: number) => (
+                  <li key={i} className="text-sm text-zinc-600">{skill}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         ))}
       </div>
     );

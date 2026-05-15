@@ -141,9 +141,15 @@ function JapaneseSectionContent({ section, lang }: { section: any; lang?: string
     return (
       <div className="space-y-2">
         {((content as SkillsContent).categories || []).map((cat: any) => (
-          <div key={cat.id} className="flex text-sm">
-            <span className="w-32 shrink-0 font-normal" style={{ color: PRIMARY }}>{cat.name}</span>
-            <span className="font-light" style={{ color: PRIMARY }}>{(cat.skills || []).join(', ')}</span>
+          <div key={cat.id}>
+            <p className="text-sm font-normal" style={{ color: PRIMARY }}>{cat.name}</p>
+            {(cat.skills || []).length > 0 && (
+              <ul className="mt-0.5 list-disc pl-4">
+                {(cat.skills || []).map((skill: string, i: number) => (
+                  <li key={i} className="text-sm font-light" style={{ color: PRIMARY }}>{skill}</li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>

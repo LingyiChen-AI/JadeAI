@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { EditableText } from '../fields/editable-text';
 import { EditableDate } from '../fields/editable-date';
-import { EditableRichText } from '../fields/editable-rich-text';
+import { EditableMarkdown } from '../fields/editable-markdown';
 import { EditableList } from '../fields/editable-list';
+import { EditableTextareaList } from '../fields/editable-textarea-list';
 import { FieldWrapper } from '../fields/field-wrapper';
 import { generateId } from '@/lib/utils';
 import type { ResumeSection, WorkExperienceContent, WorkExperienceItem } from '@/types/resume';
@@ -72,8 +73,8 @@ export function WorkExperienceSection({ section, onUpdate }: Props) {
               <EditableDate label={t('startDate')} value={item.startDate} onChange={(v) => updateItem(index, { startDate: v })} />
               <EditableDate label={t('endDate')} value={item.endDate || ''} onChange={(v) => updateItem(index, { endDate: v || null, current: !v })} />
             </FieldWrapper>
-            <EditableRichText label={t('description')} value={item.description} onChange={(v) => updateItem(index, { description: v })} />
-            <EditableList label={t('technologies')} items={item.technologies || []} onChange={(v) => updateItem(index, { technologies: v })} />
+            <EditableMarkdown label={t('description')} value={item.description} onChange={(v) => updateItem(index, { description: v })} />
+            <EditableTextareaList label={t('technologies')} items={item.technologies || []} onChange={(v) => updateItem(index, { technologies: v })} />
             <EditableList label={t('highlights')} items={item.highlights} onChange={(v) => updateItem(index, { highlights: v })} />
           </div>
         </div>

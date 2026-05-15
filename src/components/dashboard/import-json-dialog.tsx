@@ -12,12 +12,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { getAIHeaders } from '@/stores/settings-store';
 import {
   Upload,
   Loader2,
   CheckCircle2,
   AlertCircle,
   FileJson,
+  FileText,
+  FileIcon,
 } from 'lucide-react';
 
 interface ImportJsonDialogProps {
@@ -26,13 +29,33 @@ interface ImportJsonDialogProps {
 }
 
 type ImportState = 'idle' | 'importing' | 'success' | 'error';
+type FileType = 'json' | 'markdown' | 'pdf';
 
 function getHeaders() {
+  const fingerprint = typeof window !== 'undefined' ? localStorage.getItem('jade_fingerprint') : null;
+  const headers: Record<string, string> = {};
+  if (fingerprint) headers['x-fingerprint'] = fingerprint;
+  return headers;
+}
+
+function getJsonHeaders() {
   const fingerprint = typeof window !== 'undefined' ? localStorage.getItem('jade_fingerprint') : null;
   return {
     'Content-Type': 'application/json',
     ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}),
   };
+}
+
+function getFileType(file: File): FileType {
+  if (file.name.endsWith('.json')) return 'json';
+  if (file.name.endsWith('.md') || file.name.endsWith('.markdown')) return 'markdown';
+  if (file.name.endsWith('.pdf')) return 'pdf';
+  return 'json';
+}
+
+function isSupportedFile(file: File): boolean {
+  const ext = file.name.toLowerCase();
+  return ext.endsWith('.json') || ext.endsWith('.md') || ext.endsWith('.markdown') || ext.endsWith('.pdf');
 }
 
 export function ImportJsonDialog({ open, onOpenChange }: ImportJsonDialogProps) {
@@ -42,6 +65,7 @@ export function ImportJsonDialog({ open, onOpenChange }: ImportJsonDialogProps) 
   const [state, setState] = useState<ImportState>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileType, setFileType] = useState<FileType>('json');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,16 +74,19 @@ export function ImportJsonDialog({ open, onOpenChange }: ImportJsonDialogProps) 
       setState('idle');
       setErrorMessage('');
       setSelectedFile(null);
+      setFileType('json');
     }
   }, [open]);
 
   const handleFileSelect = useCallback((file: File) => {
-    if (!file.name.endsWith('.json')) {
+    if (!isSupportedFile(file)) {
       setState('error');
       setErrorMessage(t('invalidFormat'));
+      setSelectedFile(null);
       return;
     }
     setSelectedFile(file);
+    setFileType(getFileType(file));
     setState('idle');
     setErrorMessage('');
   }, [t]);
@@ -93,33 +120,102 @@ export function ImportJsonDialog({ open, onOpenChange }: ImportJsonDialogProps) 
     setErrorMessage('');
 
     try {
-      const text = await selectedFile.text();
-      const data = JSON.parse(text);
+      if (fileType === 'pdf') {
+        // PDF import: use existing parse API with FormData
+        const aiHeaders = getAIHeaders();
+        if (!aiHeaders['x-api-key']) {
+          setState('error');
+          setErrorMessage(t('noApiKey'));
+          return;
+        }
 
-      if (!Array.isArray(data.sections)) {
-        throw new Error(t('invalidFormat'));
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        const res = await fetch('/api/resume/parse', {
+          method: 'POST',
+          headers: { ...getHeaders(), ...aiHeaders },
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          setState('error');
+          setErrorMessage(errData.error || t('error'));
+          return;
+        }
+        const newResume = await res.json();
+
+        setState('success');
+        setTimeout(() => {
+          onOpenChange(false);
+          router.push(`/editor/${newResume.id}`);
+        }, 1000);
+      } else if (fileType === 'markdown') {
+        // Markdown import: use AI to parse
+        const aiHeaders = getAIHeaders();
+        if (!aiHeaders['x-api-key']) {
+          setState('error');
+          setErrorMessage(t('noApiKey'));
+          return;
+        }
+
+        const text = await selectedFile.text();
+        const res = await fetch('/api/resume/parse-markdown', {
+          method: 'POST',
+          headers: { ...getJsonHeaders(), ...aiHeaders },
+          body: JSON.stringify({ content: text }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          setState('error');
+          setErrorMessage(errData.error || t('error'));
+          return;
+        }
+        const newResume = await res.json();
+
+        setState('success');
+        setTimeout(() => {
+          onOpenChange(false);
+          router.push(`/editor/${newResume.id}`);
+        }, 1000);
+      } else {
+        // JSON import: existing logic
+        const text = await selectedFile.text();
+        const data = JSON.parse(text);
+
+        if (!Array.isArray(data.sections)) {
+          setState('error');
+          setErrorMessage(t('invalidFormat'));
+          return;
+        }
+
+        // Create a new resume with imported data (ids are ignored server-side)
+        const res = await fetch('/api/resume', {
+          method: 'POST',
+          headers: getJsonHeaders(),
+          body: JSON.stringify({
+            title: data.title || 'Imported Resume',
+            template: data.template || 'classic',
+            themeConfig: data.themeConfig,
+            sections: data.sections,
+          }),
+        });
+
+        if (!res.ok) {
+          setState('error');
+          setErrorMessage(t('error'));
+          return;
+        }
+        const newResume = await res.json();
+
+        setState('success');
+        setTimeout(() => {
+          onOpenChange(false);
+          router.push(`/editor/${newResume.id}`);
+        }, 1000);
       }
-
-      // Create a new resume with imported data (ids are ignored server-side)
-      const res = await fetch('/api/resume', {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({
-          title: data.title || 'Imported Resume',
-          template: data.template || 'classic',
-          themeConfig: data.themeConfig,
-          sections: data.sections,
-        }),
-      });
-
-      if (!res.ok) throw new Error(t('error'));
-      const newResume = await res.json();
-
-      setState('success');
-      setTimeout(() => {
-        onOpenChange(false);
-        router.push(`/editor/${newResume.id}`);
-      }, 1000);
     } catch (err: any) {
       setState('error');
       if (err instanceof SyntaxError) {
@@ -128,13 +224,25 @@ export function ImportJsonDialog({ open, onOpenChange }: ImportJsonDialogProps) 
         setErrorMessage(err.message || t('error'));
       }
     }
-  }, [selectedFile, onOpenChange, router, t]);
+  }, [selectedFile, fileType, onOpenChange, router, t]);
 
   const isLoading = state === 'importing';
 
+  const renderFileIcon = () => {
+    if (fileType === 'pdf') return <FileIcon className="mb-3 h-8 w-8 text-green-500" />;
+    if (fileType === 'markdown') return <FileText className="mb-3 h-8 w-8 text-green-500" />;
+    return <FileJson className="mb-3 h-8 w-8 text-green-500" />;
+  };
+
+  const getLoadingText = () => {
+    if (fileType === 'pdf') return t('parsingPdf');
+    if (fileType === 'markdown') return t('parsingMarkdown');
+    return t('importing');
+  };
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o && !isLoading) onOpenChange(false); }}>
-      <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden" onPointerDownOutside={(e) => { if (isLoading) e.preventDefault(); }}>
         <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5 text-brand" />
@@ -144,7 +252,19 @@ export function ImportJsonDialog({ open, onOpenChange }: ImportJsonDialogProps) 
         </DialogHeader>
 
         <div className="px-6 py-5">
-          {(state === 'idle' || (state === 'error' && selectedFile)) && (
+          {(state === 'idle' || state === 'error') && selectedFile && (
+            <div
+              className="flex flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed p-8 text-center border-green-300 bg-green-50/50 dark:border-green-700 dark:bg-green-950/20"
+            >
+              {renderFileIcon()}
+              <p className="max-w-full truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {selectedFile.name}
+              </p>
+              <p className="mt-1 text-xs text-zinc-400">{t('dragHint')}</p>
+            </div>
+          )}
+
+          {(state === 'idle' || state === 'error') && !selectedFile && (
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -153,43 +273,29 @@ export function ImportJsonDialog({ open, onOpenChange }: ImportJsonDialogProps) 
               className={`flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
                 isDragging
                   ? 'border-brand bg-brand-muted dark:bg-brand-muted'
-                  : selectedFile
-                    ? 'border-green-300 bg-green-50/50 dark:border-green-700 dark:bg-green-950/20'
-                    : 'border-zinc-300 hover:border-brand hover:bg-brand-muted/30 dark:border-zinc-600 dark:hover:border-brand dark:hover:bg-brand-muted/10'
+                  : 'border-zinc-300 hover:border-brand hover:bg-brand-muted/30 dark:border-zinc-600 dark:hover:border-brand dark:hover:bg-brand-muted/10'
               }`}
             >
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".json"
+                accept=".json,.md,.markdown,.pdf"
                 onChange={handleInputChange}
                 className="hidden"
               />
-              {selectedFile ? (
-                <>
-                  <FileJson className="mb-3 h-8 w-8 text-green-500" />
-                  <p className="max-w-full truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    {selectedFile.name}
-                  </p>
-                  <p className="mt-1 text-xs text-zinc-400">{t('dragHint')}</p>
-                </>
-              ) : (
-                <>
-                  <Upload className="mb-3 h-8 w-8 text-zinc-400" />
-                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    {t('selectFile')}
-                  </p>
-                  <p className="mt-1 text-xs text-zinc-400">{t('dragHint')}</p>
-                </>
-              )}
+              <Upload className="mb-3 h-8 w-8 text-zinc-400" />
+              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {t('selectFile')}
+              </p>
+              <p className="mt-1 text-xs text-zinc-400">{t('dragHint')}</p>
             </div>
           )}
 
-          {state === 'error' && !selectedFile && (
-            <div className="flex flex-col items-center justify-center py-6 text-center">
-              <AlertCircle className="mb-3 h-8 w-8 text-red-500" />
-              <p className="text-sm font-medium text-red-600 dark:text-red-400">
-                {errorMessage || t('error')}
+          {state === 'error' && errorMessage && (
+            <div className="flex items-center gap-2 rounded-md bg-red-50 px-3 py-2 dark:bg-red-950/30 mt-3">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {errorMessage}
               </p>
             </div>
           )}
@@ -198,7 +304,7 @@ export function ImportJsonDialog({ open, onOpenChange }: ImportJsonDialogProps) 
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Loader2 className="mb-3 h-8 w-8 animate-spin text-brand" />
               <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                {t('importing')}
+                {getLoadingText()}
               </p>
             </div>
           )}

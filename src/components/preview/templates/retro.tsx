@@ -165,9 +165,15 @@ function RetroSectionContent({ section, resume }: { section: any; resume: Resume
     return (
       <div className="space-y-2">
         {categories.map((cat: any) => (
-          <div key={cat.id} className="flex text-sm">
-            <span className="w-32 shrink-0 font-bold" style={{ color: PRIMARY, fontFamily: "'Courier New', monospace" }}>{cat.name}:</span>
-            <span style={{ color: '#57534e' }}>{cat.skills?.join(' \u2022 ')}</span>
+          <div key={cat.id}>
+            <p className="text-sm font-bold" style={{ color: PRIMARY, fontFamily: "'Courier New', monospace" }}>{cat.name}</p>
+            {cat.skills?.length > 0 && (
+              <ul className="mt-0.5 list-disc pl-4">
+                {cat.skills.map((skill: string, i: number) => (
+                  <li key={i} className="text-sm" style={{ color: '#57534e' }}>{skill}</li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>

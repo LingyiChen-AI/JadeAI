@@ -140,10 +140,16 @@ function AtsSectionContent({ section, resume }: { section: any; resume: Resume }
     return (
       <div className="space-y-1">
         {categories.map((cat: any) => (
-          <p key={cat.id} className="text-sm text-zinc-700">
-            <span className="font-bold text-black">{cat.name}: </span>
-            {cat.skills?.join(', ')}
-          </p>
+          <div key={cat.id}>
+            <p className="text-sm font-bold text-black">{cat.name}</p>
+            {cat.skills?.length > 0 && (
+              <ul className="mt-0.5 list-disc pl-4">
+                {cat.skills.map((skill: string, i: number) => (
+                  <li key={i} className="text-sm text-zinc-700">{skill}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         ))}
       </div>
     );

@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 
 interface EditableListProps {
@@ -29,12 +29,13 @@ export function EditableList({ label, items, onChange, placeholder }: EditableLi
       <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{label}</label>
       <div className="space-y-1.5">
         {(items || []).map((item, index) => (
-          <div key={index} className="flex items-center gap-1">
-            <Input
+          <div key={index} className="flex items-start gap-1">
+            <Textarea
               value={item}
               onChange={(e) => updateItem(index, e.target.value)}
               placeholder={placeholder}
-              className="h-8 text-sm"
+              className="text-sm min-h-[60px] flex-1 resize-none"
+              rows={2}
             />
             <Button
               variant="ghost"

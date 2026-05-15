@@ -80,7 +80,13 @@ function CompactLeftContent({ section }: { section: any }) {
         {((content as SkillsContent).categories || []).map((cat: any) => (
           <div key={cat.id}>
             <p className="text-[10px] font-semibold text-zinc-600">{cat.name}</p>
-            <p className="text-[10px] text-zinc-500">{(cat.skills || []).join(', ')}</p>
+            {(cat.skills || []).length > 0 && (
+              <ul className="mt-0.5 list-disc pl-3">
+                {(cat.skills || []).map((skill: string, i: number) => (
+                  <li key={i} className="text-[10px] text-zinc-500">{skill}</li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>

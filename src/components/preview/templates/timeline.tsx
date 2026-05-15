@@ -131,7 +131,13 @@ function TimelineSectionContent({ section, resume }: { section: any; resume: Res
         {(content.categories || []).map((cat: any) => (
           <div key={cat.id} className="flex text-sm">
             <span className="w-28 shrink-0 font-medium" style={{ color: ACCENT }}>{cat.name}:</span>
-            <span className="text-zinc-600">{(cat.skills || []).join(', ')}</span>
+            {(cat.skills || []).length > 0 && (
+              <ul className="mt-0.5 list-disc pl-4">
+                {(cat.skills || []).map((skill: string, i: number) => (
+                  <li key={i} className="text-sm text-zinc-600">{skill}</li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>

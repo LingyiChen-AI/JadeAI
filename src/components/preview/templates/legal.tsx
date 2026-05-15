@@ -152,7 +152,13 @@ function LegalSectionContent({ section, resume }: { section: any; resume: Resume
         {((content as SkillsContent).categories || []).map((cat: any) => (
           <div key={cat.id} className="text-sm">
             <span className="font-bold" style={{ color: PRIMARY }}>{cat.name}: </span>
-            <span style={{ color: BODY_TEXT }}>{(cat.skills || []).join(', ')}</span>
+            {(cat.skills || []).length > 0 && (
+              <ul className="mt-0.5 list-disc pl-4">
+                {(cat.skills || []).map((skill: string, i: number) => (
+                  <li key={i} className="text-sm" style={{ color: BODY_TEXT }}>{skill}</li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>

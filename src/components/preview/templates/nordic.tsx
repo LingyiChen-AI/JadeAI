@@ -130,9 +130,15 @@ function NordicSectionContent({ section, resume }: { section: any; resume: Resum
     return (
       <div className="space-y-1.5">
         {((content as SkillsContent).categories || []).map((cat: any) => (
-          <div key={cat.id} className="flex text-sm">
-            <span className="w-28 shrink-0 font-medium" style={{ color: SLATE_500 }}>{cat.name}:</span>
-            <span className="font-light" style={{ color: SLATE_400 }}>{(cat.skills || []).join(', ')}</span>
+          <div key={cat.id}>
+            <p className="text-sm font-medium" style={{ color: SLATE_500 }}>{cat.name}</p>
+            {(cat.skills || []).length > 0 && (
+              <ul className="mt-0.5 list-disc pl-4">
+                {(cat.skills || []).map((skill: string, i: number) => (
+                  <li key={i} className="text-sm font-light" style={{ color: SLATE_400 }}>{skill}</li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>

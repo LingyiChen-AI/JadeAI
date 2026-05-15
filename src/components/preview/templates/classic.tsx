@@ -138,9 +138,15 @@ function SectionContent({ section, lang }: { section: any; lang?: string }) {
     return (
       <div className="space-y-1">
         {categories.map((cat: any) => (
-          <div key={cat.id} className="flex text-sm">
-            <span className="font-medium text-zinc-700 w-28 shrink-0">{cat.name}:</span>
-            <span className="text-zinc-600">{cat.skills?.join(', ')}</span>
+          <div key={cat.id}>
+            <p className="text-sm font-medium text-zinc-700">{cat.name}</p>
+            {cat.skills?.length > 0 && (
+              <ul className="mt-0.5 list-disc pl-4">
+                {cat.skills.map((skill: string, i: number) => (
+                  <li key={i} className="text-sm text-zinc-600">{skill}</li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>

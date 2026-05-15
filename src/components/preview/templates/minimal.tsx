@@ -112,7 +112,16 @@ function MinimalSectionContent({ section, lang }: { section: any; lang?: string 
     return (
       <div className="space-y-1">
         {(content.categories || []).map((cat: any) => (
-          <p key={cat.id} className="text-sm text-zinc-600">{cat.skills?.join(' / ')}</p>
+          <div key={cat.id}>
+            <p className="text-sm font-medium text-zinc-700">{cat.name}</p>
+            {cat.skills?.length > 0 && (
+              <ul className="mt-0.5 list-disc pl-4">
+                {cat.skills.map((skill: string, i: number) => (
+                  <li key={i} className="text-sm text-zinc-600">{skill}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         ))}
       </div>
     );

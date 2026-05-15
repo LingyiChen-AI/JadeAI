@@ -192,7 +192,13 @@ function ArchitectSectionContent({ section, resume }: { section: any; resume: Re
             >
               {cat.name}:
             </span>
-            <span style={{ color: BODY_TEXT }}>{(cat.skills || []).join(' / ')}</span>
+            {(cat.skills || []).length > 0 && (
+              <ul className="mt-0.5 list-disc pl-4">
+                {(cat.skills || []).map((skill: string, i: number) => (
+                  <li key={i} className="text-sm" style={{ color: BODY_TEXT }}>{skill}</li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>

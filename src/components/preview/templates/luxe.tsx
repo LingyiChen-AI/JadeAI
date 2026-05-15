@@ -152,7 +152,13 @@ function LuxeSectionContent({ section, lang }: { section: any; lang?: string }) 
         {((content as SkillsContent).categories || []).map((cat: any) => (
           <div key={cat.id} className="flex text-sm">
             <span className="w-32 shrink-0 font-bold" style={{ color: GOLD }}>{cat.name}:</span>
-            <span style={{ color: '#44403c' }}>{(cat.skills || []).join(', ')}</span>
+            {(cat.skills || []).length > 0 && (
+              <ul className="mt-0.5 list-disc pl-4">
+                {(cat.skills || []).map((skill: string, i: number) => (
+                  <li key={i} className="text-sm" style={{ color: '#44403c' }}>{skill}</li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>
