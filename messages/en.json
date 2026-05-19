@@ -785,6 +785,7 @@
       "continue": "Continue",
       "start": "Start Interview",
       "viewReport": "View Report",
+      "viewRecord": "View Record",
       "deleteConfirm": "Are you sure you want to delete this interview? This action cannot be undone."
     },
     "setup": {

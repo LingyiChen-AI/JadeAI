@@ -134,11 +134,18 @@ export function InterviewCard({ session, onDelete }: InterviewCardProps) {
       {/* Action + date + delete */}
       <div className="flex items-center gap-2">
         {isCompleted ? (
-          <Link href={`/interview/${session.id}/report`} className="flex-1">
-            <Button variant="outline" size="sm" className="w-full rounded-lg border-brand-muted text-xs text-brand hover:bg-brand-muted dark:border-brand-muted dark:text-brand dark:hover:bg-brand-muted">
-              {t('lobby.viewReport')}
-            </Button>
-          </Link>
+          <>
+            <Link href={`/interview/${session.id}`} className="flex-1">
+              <Button variant="outline" size="sm" className="w-full rounded-lg border-brand-muted text-xs text-brand hover:bg-brand-muted dark:border-brand-muted dark:text-brand dark:hover:bg-brand-muted">
+                {t('lobby.viewRecord')}
+              </Button>
+            </Link>
+            <Link href={`/interview/${session.id}/report`} className="flex-1">
+              <Button variant="outline" size="sm" className="w-full rounded-lg border-brand-muted text-xs text-brand hover:bg-brand-muted dark:border-brand-muted dark:text-brand dark:hover:bg-brand-muted">
+                {t('lobby.viewReport')}
+              </Button>
+            </Link>
+          </>
         ) : (
           <Link href={`/interview/${session.id}`} className="flex-1">
             <Button size="sm" className="w-full rounded-lg bg-brand text-xs hover:bg-brand-hover">

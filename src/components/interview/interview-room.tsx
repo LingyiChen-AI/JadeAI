@@ -78,6 +78,15 @@ export function InterviewRoom({ sessionId, initialMessages }: InterviewRoomProps
     }
   }, [currentRound?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-set viewing history if round is already done
+  useEffect(() => {
+    if (currentRound && (currentRound.status === 'completed' || currentRound.status === 'skipped')) {
+      setIsViewingHistory(true);
+      setShowTransition(false);
+      loadedRef.current = true;
+    }
+  }, [currentRound?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Detect round completion
   useEffect(() => {
     if (!messages.length || isLoading || isViewingHistory) return;
@@ -118,6 +127,7 @@ export function InterviewRoom({ sessionId, initialMessages }: InterviewRoomProps
 
     const isDone = targetRound.status === 'completed' || targetRound.status === 'skipped';
     setIsViewingHistory(isDone);
+    if (isDone) setShowTransition(false);
 
     // Reset init refs
     loadedRef.current = true;
@@ -161,7 +171,7 @@ export function InterviewRoom({ sessionId, initialMessages }: InterviewRoomProps
 
   const isLastRound = currentRoundIndex >= rounds.length - 1;
 
-  if (showTransition) {
+  if (showTransition && !isViewingHistory) {
     const nextRound = rounds[currentRoundIndex + 1];
     return (
       <div className="mx-auto max-w-4xl space-y-4">

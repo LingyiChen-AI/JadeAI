@@ -785,6 +785,7 @@
       "continue": "继续面试",
       "start": "进入面试",
       "viewReport": "查看报告",
+      "viewRecord": "查看面试记录",
       "deleteConfirm": "确定要删除这场面试记录吗？此操作不可恢复。"
     },
     "setup": {
