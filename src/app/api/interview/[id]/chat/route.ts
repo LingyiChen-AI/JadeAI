@@ -85,6 +85,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         await interviewRepository.incrementQuestionCount(roundId);
 
         if (text.includes('[ROUND_COMPLETE]')) {
+          await interviewRepository.updateRoundStatus(roundId, 'completed');
           await interviewRepository.setRoundSummary(roundId, {
             score: 0,
             feedback: text.replace('[ROUND_COMPLETE]', '').trim(),
