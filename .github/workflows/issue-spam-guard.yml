@@ -1,0 +1,275 @@
+name: Issue Spam Guard
+
+# 新 issue / 评论 创建或编辑时，调用大模型判断是否为"求 star / 刷 star / 互刷 / 广告 / 灌水"等垃圾内容：
+#   - 垃圾 issue   -> 删除整条 issue（GraphQL deleteIssue，需要 admin 权限的 PAT）
+#   - 垃圾 comment -> 删除该条评论（REST deleteComment）
+# 默认 GITHUB_TOKEN 无法删除 issue，所以统一使用 ADMIN_PAT。
+
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: '要测试的 issue 号（留空则测试 comment_id）'
+        required: false
+        type: string
+      comment_id:
+        description: '要测试的评论 id（填了则测评论，优先于 issue_number）'
+        required: false
+        type: string
+
+permissions:
+  issues: write
+
+jobs:
+  # ---------- 手动端到端测试 ----------
+  test-dispatch:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch, classify and delete if spam
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.ADMIN_PAT }}
+          script: |
+            const baseUrl = (process.env.AI_BASE_URL || '').replace(/\/+$/, '');
+            const apiKey  = process.env.AI_API_KEY;
+            const model   = process.env.AI_MODEL || 'gpt-4o-mini';
+            if (!baseUrl || !apiKey) { core.setFailed('缺少 AI_BASE_URL 或 AI_API_KEY secret'); return; }
+
+            const commentId = (context.payload.inputs.comment_id || '').trim();
+
+            if (commentId) {
+              // ---- 测试评论 ----
+              const { data: comment } = await github.rest.issues.getComment({
+                owner: context.repo.owner, repo: context.repo.repo, comment_id: Number(commentId),
+              });
+              const text = `这是某 issue 下的一条评论：\n${comment.body || ''}`;
+              const verdict = await classify(text, { fetch, core, baseUrl, apiKey, model, prompt: process.env.AI_PROMPT });
+              core.notice(`评论分类结果: spam=${verdict?.spam} 理由=${verdict?.reason || '无'}`);
+              if (!verdict || !verdict.spam) { core.info('非垃圾评论，保留。'); return; }
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner, repo: context.repo.repo, comment_id: Number(commentId),
+              });
+              core.notice(`已删除垃圾评论 (comment id ${commentId})`);
+              return;
+            }
+
+            // ---- 测试 issue ----
+            const number = Number(context.payload.inputs.issue_number);
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: number,
+            });
+            const text = `Issue 标题：${issue.title || ''}\n\nIssue 正文：\n${issue.body || ''}`;
+
+            const verdict = await classify(text, { fetch, core, baseUrl, apiKey, model, prompt: process.env.AI_PROMPT });
+            core.notice(`分类结果: spam=${verdict?.spam} 理由=${verdict?.reason || '无'}`);
+            if (!verdict || !verdict.spam) { core.info('非垃圾，保留。'); return; }
+
+            await github.graphql(
+              `mutation($id: ID!) { deleteIssue(input: { issueId: $id }) { repository { nameWithOwner } } }`,
+              { id: issue.node_id }
+            );
+            core.notice(`已删除垃圾 issue #${number}: ${issue.title}`);
+
+            async function classify(content, { fetch, core, baseUrl, apiKey, model, prompt }) {
+              const systemPrompt = (prompt && prompt.trim()) ? prompt : [
+                '你是 GitHub 仓库的内容审核员，只负责判断一条 issue 或评论是否为"垃圾/恶意内容"。',
+                '判定为垃圾（spam=true）的情形：',
+                '1. 指控本项目刷 star / 买 star / star 造假、质疑 star 数据真实性、嘲讽"这项目就是刷出来的"等攻击性、无建设性的内容；',
+                '2. 求 star、索要 star、"帮我点个 star"、互刷 star、star/关注 互换；',
+                '3. 推广其他仓库、产品、社群、外链等纯广告；',
+                '4. 与本项目无关的灌水、刷屏、辱骂、无意义内容。',
+                '判定为正常（spam=false）的情形：',
+                '- 真实的 bug 反馈、报错、复现步骤；',
+                '- 功能建议、使用提问、技术讨论；',
+                '- 即使语气不满，但在描述具体问题或提出具体改进，也算正常。',
+                '只要命中任意一条垃圾情形即 spam=true；不确定时倾向 spam=false（宁可漏判，不要误删正常反馈）。',
+                '严格只输出 JSON，不要任何解释或代码块包裹：{"spam": true 或 false, "reason": "简短中文理由"}。',
+              ].join('\n');
+              const resp = await fetch(`${baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                body: JSON.stringify({
+                  model, temperature: 0,
+                  response_format: { type: 'json_object' },
+                  messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content },
+                  ],
+                }),
+              });
+              if (!resp.ok) { core.warning(`大模型请求失败: ${resp.status} ${await resp.text()}`); return null; }
+              const data = await resp.json();
+              const raw = data?.choices?.[0]?.message?.content || '{}';
+              core.info(`模型原始输出: ${raw}`);
+              try { return JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim()); }
+              catch (e) { core.warning(`无法解析模型输出，跳过: ${e}`); return null; }
+            }
+        env:
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          AI_PROMPT: ${{ secrets.AI_PROMPT }}
+
+  # ---------- 处理整条 issue ----------
+  guard-issue:
+    if: >-
+      github.event_name == 'issues' &&
+      github.event.issue.author_association != 'OWNER' &&
+      github.event.issue.author_association != 'MEMBER' &&
+      github.event.issue.author_association != 'COLLABORATOR'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Classify and delete issue if spam
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.ADMIN_PAT }}
+          script: |
+            const baseUrl = (process.env.AI_BASE_URL || '').replace(/\/+$/, '');
+            const apiKey  = process.env.AI_API_KEY;
+            const model   = process.env.AI_MODEL || 'gpt-4o-mini';
+            if (!baseUrl || !apiKey) { core.setFailed('缺少 AI_BASE_URL 或 AI_API_KEY secret'); return; }
+
+            const issue = context.payload.issue;
+            const text  = `Issue 标题：${issue.title || ''}\n\nIssue 正文：\n${issue.body || ''}`;
+
+            const verdict = await classify(text, { fetch, core, baseUrl, apiKey, model, prompt: process.env.AI_PROMPT });
+            if (!verdict || !verdict.spam) {
+              core.info(`非垃圾内容，保留。理由: ${verdict?.reason || '无'}`);
+              return;
+            }
+            core.info(`判定为垃圾 issue，准备删除。理由: ${verdict.reason || '无'}`);
+
+            await github.graphql(
+              `mutation($id: ID!) {
+                 deleteIssue(input: { issueId: $id }) { repository { nameWithOwner } }
+               }`,
+              { id: issue.node_id }
+            );
+            core.notice(`已删除垃圾 issue #${issue.number}: ${issue.title}`);
+
+            // ---- 共享分类函数 ----
+            async function classify(content, { fetch, core, baseUrl, apiKey, model, prompt }) {
+              // 优先用 secret 自定义 prompt（AI_PROMPT），否则用内置默认
+              const systemPrompt = (prompt && prompt.trim()) ? prompt : [
+                '你是 GitHub 仓库的内容审核员，只负责判断一条 issue 或评论是否为"垃圾/恶意内容"。',
+                '判定为垃圾（spam=true）的情形：',
+                '1. 指控本项目刷 star / 买 star / star 造假、质疑 star 数据真实性、嘲讽"这项目就是刷出来的"等攻击性、无建设性的内容；',
+                '2. 求 star、索要 star、"帮我点个 star"、互刷 star、star/关注 互换；',
+                '3. 推广其他仓库、产品、社群、外链等纯广告；',
+                '4. 与本项目无关的灌水、刷屏、辱骂、无意义内容。',
+                '判定为正常（spam=false）的情形：',
+                '- 真实的 bug 反馈、报错、复现步骤；',
+                '- 功能建议、使用提问、技术讨论；',
+                '- 即使语气不满，但在描述具体问题或提出具体改进，也算正常。',
+                '只要命中任意一条垃圾情形即 spam=true；不确定时倾向 spam=false（宁可漏判，不要误删正常反馈）。',
+                '严格只输出 JSON，不要任何解释或代码块包裹：{"spam": true 或 false, "reason": "简短中文理由"}。',
+              ].join('\n');
+              const resp = await fetch(`${baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                body: JSON.stringify({
+                  model, temperature: 0,
+                  response_format: { type: 'json_object' },
+                  messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content },
+                  ],
+                }),
+              });
+              if (!resp.ok) { core.warning(`大模型请求失败: ${resp.status} ${await resp.text()}`); return null; }
+              const data = await resp.json();
+              const raw = data?.choices?.[0]?.message?.content || '{}';
+              core.info(`模型原始输出: ${raw}`);
+              try {
+                return JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+              } catch (e) { core.warning(`无法解析模型输出，跳过: ${e}`); return null; }
+            }
+        env:
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          AI_PROMPT: ${{ secrets.AI_PROMPT }}
+
+  # ---------- 处理单条评论 ----------
+  guard-comment:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.comment.author_association != 'OWNER' &&
+      github.event.comment.author_association != 'MEMBER' &&
+      github.event.comment.author_association != 'COLLABORATOR'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Classify and delete comment if spam
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.ADMIN_PAT }}
+          script: |
+            const baseUrl = (process.env.AI_BASE_URL || '').replace(/\/+$/, '');
+            const apiKey  = process.env.AI_API_KEY;
+            const model   = process.env.AI_MODEL || 'gpt-4o-mini';
+            if (!baseUrl || !apiKey) { core.setFailed('缺少 AI_BASE_URL 或 AI_API_KEY secret'); return; }
+
+            const comment = context.payload.comment;
+            const text    = `这是某 issue 下的一条评论：\n${comment.body || ''}`;
+
+            const verdict = await classify(text, { fetch, core, baseUrl, apiKey, model, prompt: process.env.AI_PROMPT });
+            if (!verdict || !verdict.spam) {
+              core.info(`非垃圾评论，保留。理由: ${verdict?.reason || '无'}`);
+              return;
+            }
+            core.info(`判定为垃圾评论，准备删除。理由: ${verdict.reason || '无'}`);
+
+            await github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: comment.id,
+            });
+            core.notice(`已删除垃圾评论 (comment id ${comment.id})`);
+
+            // ---- 共享分类函数 ----
+            async function classify(content, { fetch, core, baseUrl, apiKey, model, prompt }) {
+              // 优先用 secret 自定义 prompt（AI_PROMPT），否则用内置默认
+              const systemPrompt = (prompt && prompt.trim()) ? prompt : [
+                '你是 GitHub 仓库的内容审核员，只负责判断一条 issue 或评论是否为"垃圾/恶意内容"。',
+                '判定为垃圾（spam=true）的情形：',
+                '1. 指控本项目刷 star / 买 star / star 造假、质疑 star 数据真实性、嘲讽"这项目就是刷出来的"等攻击性、无建设性的内容；',
+                '2. 求 star、索要 star、"帮我点个 star"、互刷 star、star/关注 互换；',
+                '3. 推广其他仓库、产品、社群、外链等纯广告；',
+                '4. 与本项目无关的灌水、刷屏、辱骂、无意义内容。',
+                '判定为正常（spam=false）的情形：',
+                '- 真实的 bug 反馈、报错、复现步骤；',
+                '- 功能建议、使用提问、技术讨论；',
+                '- 即使语气不满，但在描述具体问题或提出具体改进，也算正常。',
+                '只要命中任意一条垃圾情形即 spam=true；不确定时倾向 spam=false（宁可漏判，不要误删正常反馈）。',
+                '严格只输出 JSON，不要任何解释或代码块包裹：{"spam": true 或 false, "reason": "简短中文理由"}。',
+              ].join('\n');
+              const resp = await fetch(`${baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                body: JSON.stringify({
+                  model, temperature: 0,
+                  response_format: { type: 'json_object' },
+                  messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content },
+                  ],
+                }),
+              });
+              if (!resp.ok) { core.warning(`大模型请求失败: ${resp.status} ${await resp.text()}`); return null; }
+              const data = await resp.json();
+              const raw = data?.choices?.[0]?.message?.content || '{}';
+              core.info(`模型原始输出: ${raw}`);
+              try {
+                return JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+              } catch (e) { core.warning(`无法解析模型输出，跳过: ${e}`); return null; }
+            }
+        env:
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          AI_PROMPT: ${{ secrets.AI_PROMPT }}
