@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createDeepSeek } from '@ai-sdk/deepseek';
 
 export interface AIConfig {
   provider: string;
@@ -33,6 +34,10 @@ export function getModel(config: AIConfig, modelOverride?: string) {
       const p = createGoogleGenerativeAI({ apiKey: config.apiKey, baseURL: config.baseURL || undefined });
       return p(modelId);
     }
+    case 'deepseek': {
+      const p = createDeepSeek({ apiKey: config.apiKey, baseURL: config.baseURL || undefined });
+      return p.languageModel(modelId);
+    }
     default: {
       const p = createOpenAI({ apiKey: config.apiKey, baseURL: config.baseURL });
       return p.chat(modelId);
@@ -40,14 +45,11 @@ export function getModel(config: AIConfig, modelOverride?: string) {
   }
 }
 
-/**
- * Returns providerOptions for JSON mode — only applicable to OpenAI-compatible providers.
- */
 export function getJsonProviderOptions(config: AIConfig) {
   if (config.provider === 'openai') {
     return { openai: { response_format: { type: 'json_object' as const } } };
   }
-  return {} as Record<string, never>;
+  return {} as Record<string, unknown>;
 }
 
 export class AIConfigError extends Error {
