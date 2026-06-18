@@ -37,6 +37,7 @@ const AI_PROVIDERS: { value: AIProvider; label: string }[] = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'anthropic', label: 'Anthropic' },
   { value: 'gemini', label: 'Google Gemini' },
+  { value: 'deepseek', label: 'DeepSeek' },
 ];
 
 export function SettingsDialog() {
