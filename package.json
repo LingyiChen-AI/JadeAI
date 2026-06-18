@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.50",
+    "@ai-sdk/deepseek": "^2.0.39",
     "@ai-sdk/google": "^3.0.34",
     "@ai-sdk/openai": "^3.0.26",
     "@ai-sdk/react": "^3.0.80",
