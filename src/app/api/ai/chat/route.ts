@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         const textPart = lastMessage.parts?.find((p: { type: string }) => p.type === 'text');
         const content = textPart?.text || lastMessage.content || '';
         if (content) {
-          // First user message in this session → set as session title
+          // First user message in this session -> set as session title
           const userMessages = messages.filter((m: { role: string }) => m.role === 'user');
           if (userMessages.length === 1) {
             const title = content.slice(0, 50);
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       messages: truncatedMessages,
       tools,
       stopWhen: tools ? stepCountIs(25) : undefined,
-      onFinish: async ({ text, steps }) => {
+      onFinish: async ({ text, reasoning, steps }) => {
         if (!sessionId) return;
 
         // Build ordered parts array preserving the interleaving of text and tool calls
@@ -89,18 +89,25 @@ export async function POST(request: NextRequest) {
         }
 
         const fullText = text || '';
+        const metadata: Record<string, unknown> = orderedParts.length > 0 ? { orderedParts } : {};
+        if (reasoning) {
+          metadata.reasoning = reasoning;
+        }
+
         if (fullText || orderedParts.some((p) => p.type === 'tool')) {
           await chatRepository.addMessage({
             sessionId,
             role: 'assistant',
             content: fullText,
-            metadata: orderedParts.length > 0 ? { orderedParts } : {},
+            metadata,
           });
         }
       },
     });
 
-    return result.toUIMessageStreamResponse();
+    return result.toUIMessageStreamResponse({
+      sendReasoning: true,
+    });
   } catch (error) {
     if (error instanceof AIConfigError) {
       return new Response(JSON.stringify({ error: error.message }), { status: 401 });
