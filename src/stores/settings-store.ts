@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type AIProvider = 'openai' | 'anthropic' | 'gemini';
+export type AIProvider = 'openai' | 'anthropic' | 'gemini' | 'deepseek';
 
 interface SettingsStore {
   // AI settings
@@ -39,6 +39,7 @@ const PROVIDER_DEFAULTS: Record<AIProvider, ProviderConfig> = {
   openai: { baseURL: 'https://api.openai.com/v1', model: 'gpt-4o', apiKey: '' },
   anthropic: { baseURL: 'https://api.anthropic.com', model: 'claude-sonnet-4-20250514', apiKey: '' },
   gemini: { baseURL: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-2.0-flash', apiKey: '' },
+  deepseek: { baseURL: 'https://api.deepseek.com', model: 'deepseek-chat', apiKey: '' },
 };
 
 function loadProviderConfigs(): Partial<Record<AIProvider, ProviderConfig>> {
@@ -204,12 +205,21 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const res = await fetch('/api/user/settings', { headers: getHeaders() });
       if (res.ok) {
         const data = await res.json();
-        // Backward compat: map legacy 'custom' provider to 'openai'
-        const provider = (data.aiProvider === 'custom' || data.aiProvider === 'azure') ? 'openai' : data.aiProvider;
+        // Backward compat: map legacy 'custom'/'azure' provider to 'openai'
+        let provider = (data.aiProvider === 'custom' || data.aiProvider === 'azure') ? 'openai' : data.aiProvider;
+        // Defensive: if server returns an unrecognized provider, fall back to openai
+        if (!PROVIDER_DEFAULTS[provider as AIProvider]) {
+          provider = 'openai';
+        }
+        const defaults = PROVIDER_DEFAULTS[provider as AIProvider];
+        const configs = loadProviderConfigs();
+        const cached = configs[provider as AIProvider];
+        const restored = cached || defaults;
+
         set({
-          ...(provider && { aiProvider: provider }),
-          ...(data.aiBaseURL && { aiBaseURL: data.aiBaseURL }),
-          ...(data.aiModel && { aiModel: data.aiModel }),
+          aiProvider: provider as AIProvider,
+          aiBaseURL: data.aiBaseURL || restored.baseURL,
+          aiModel: data.aiModel || restored.model,
           ...(typeof data.autoSave === 'boolean' && { autoSave: data.autoSave }),
           ...(typeof data.autoSaveInterval === 'number' && { autoSaveInterval: data.autoSaveInterval }),
           _hydrated: true,
