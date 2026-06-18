@@ -13,6 +13,10 @@ export function dbMessagesToUIMessages(dbMessages: DBMessage[]): UIMessage[] {
     const parts: UIMessage['parts'] = [];
     const metadata = (msg.metadata || {}) as Record<string, unknown>;
 
+    if (msg.role === 'assistant' && typeof metadata.reasoning === 'string' && metadata.reasoning) {
+      parts.push({ type: 'reasoning' as const, text: metadata.reasoning });
+    }
+
     if (msg.role === 'assistant' && metadata.orderedParts) {
       // New format: ordered parts preserving interleaving of text and tool calls
       const orderedParts = metadata.orderedParts as ({ type: 'text'; text: string } | { type: 'tool'; toolName: string; args: unknown; result: unknown })[];
@@ -33,7 +37,7 @@ export function dbMessagesToUIMessages(dbMessages: DBMessage[]): UIMessage[] {
     } else if (msg.role === 'assistant' && metadata.toolCalls) {
       // Legacy format: tool calls separate from text (backward compat)
       const toolCalls = metadata.toolCalls as { toolName: string; args: Record<string, unknown> }[];
-      const toolResults = (metadata.toolResults || []) as { toolName: string; result: unknown }[];
+      const toolResults = (metadata.toolResults ?? []) as { toolName: string; result: unknown }[];
 
       for (let i = 0; i < toolCalls.length; i++) {
         const tc = toolCalls[i];
