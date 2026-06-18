@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { useTheme } from 'next-themes';
-import { Settings, Cpu, Paintbrush, PenTool, Eye, EyeOff, Sun, Moon, Monitor, ChevronsUpDown, Check, Loader2 } from 'lucide-react';
+import { Settings, Cpu, Paintbrush, PenTool, Eye, EyeOff, Sun, Moon, Monitor, ChevronsUpDown, Check, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,7 @@ import { useTourStore } from '@/stores/tour-store';
 import { usePathname, useRouter } from '@/i18n/routing';
 import { locales, localeNames } from '@/i18n/config';
 import { cn } from '@/lib/utils';
+import { getDefaultBaseURL, getDefaultModel } from '@/lib/ai/provider';
 
 const AI_PROVIDERS: { value: AIProvider; label: string }[] = [
   { value: 'openai', label: 'OpenAI' },
@@ -72,9 +73,12 @@ export function SettingsDialog() {
   const [modelOpen, setModelOpen] = useState(false);
   const [modelSearch, setModelSearch] = useState('');
   const [fetchedModels, setFetchedModels] = useState<string[]>([]);
-  const [modelsFetching, setModelsFetching] = useState(false);
   const [modelsFetched, setModelsFetched] = useState(false);
+  const [modelFetchState, setModelFetchState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [modelFetchError, setModelFetchError] = useState<string | null>(null);
+  const [modelSource, setModelSource] = useState<'list' | 'manual'>('list');
   const modelSearchRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (isOpen && !_hydrated) {
@@ -82,40 +86,87 @@ export function SettingsDialog() {
     }
   }, [isOpen, _hydrated, hydrate]);
 
-  // Fetch models when combobox opens or when apiKey/baseURL changes
-  const fetchModels = useCallback(async () => {
-    setModelsFetching(true);
-    try {
-      const res = await fetch('/api/ai/models', { headers: getAIHeaders() });
-      const data = await res.json();
-      const ids = (data.models || []).map((m: { id: string }) => m.id);
-      setFetchedModels(ids);
-      setModelsFetched(true);
-    } catch {
-      setFetchedModels([]);
-      setModelsFetched(true);
-    } finally {
-      setModelsFetching(false);
+  // Cancel any in-flight model fetch
+  const cancelModelFetch = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
   }, []);
 
-  // Re-fetch models when apiKey or baseURL changes
+  // Fetch models when combobox opens or when credentials change
+  const fetchModels = useCallback(async () => {
+    cancelModelFetch();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setModelFetchState('loading');
+    setModelFetchError(null);
+
+    try {
+      const res = await fetch('/api/ai/models', {
+        headers: getAIHeaders(),
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+
+      const data = await res.json();
+      if (controller.signal.aborted) return;
+
+      const ids = (data.models || []).map((m: { id: string }) => m.id);
+      setFetchedModels(ids);
+      setModelsFetched(true);
+      setModelFetchState('idle');
+
+      // If the current model came from a previous list and is no longer available,
+      // fall back to the provider default.
+      if (
+        modelSource === 'list' &&
+        aiModel &&
+        ids.length > 0 &&
+        !ids.includes(aiModel)
+      ) {
+        setAIModel(getDefaultModel(aiProvider));
+      }
+    } catch (err) {
+      if (controller.signal.aborted) return;
+      setFetchedModels([]);
+      setModelsFetched(true);
+      setModelFetchState('error');
+      setModelFetchError((err as Error)?.message || 'settings.fetchModelsFailed');
+    } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
+    }
+  }, [aiProvider, aiApiKey, aiBaseURL, aiModel, modelSource, setAIModel, cancelModelFetch]);
+
+  // Re-fetch models when apiKey, baseURL, or provider changes
   const prevKeyRef = useRef(aiApiKey);
   const prevUrlRef = useRef(aiBaseURL);
+  const prevProviderRef = useRef(aiProvider);
   useEffect(() => {
-    if (prevKeyRef.current !== aiApiKey || prevUrlRef.current !== aiBaseURL) {
+    if (
+      prevKeyRef.current !== aiApiKey ||
+      prevUrlRef.current !== aiBaseURL ||
+      prevProviderRef.current !== aiProvider
+    ) {
       prevKeyRef.current = aiApiKey;
       prevUrlRef.current = aiBaseURL;
+      prevProviderRef.current = aiProvider;
+      cancelModelFetch();
       setModelsFetched(false);
       setFetchedModels([]);
+      setModelFetchState('idle');
+      setModelFetchError(null);
     }
-  }, [aiApiKey, aiBaseURL]);
+  }, [aiApiKey, aiBaseURL, aiProvider, cancelModelFetch]);
 
   useEffect(() => {
-    if (modelOpen && !modelsFetched && !modelsFetching) {
+    if (modelOpen && !modelsFetched && modelFetchState !== 'loading') {
       fetchModels();
     }
-  }, [modelOpen, modelsFetched, modelsFetching, fetchModels]);
+  }, [modelOpen, modelsFetched, modelFetchState, fetchModels]);
 
   // Focus search input when popover opens
   useEffect(() => {
@@ -125,6 +176,11 @@ export function SettingsDialog() {
       setModelSearch('');
     }
   }, [modelOpen]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => cancelModelFetch();
+  }, [cancelModelFetch]);
 
   const filteredModels = fetchedModels.filter((m) =>
     m.toLowerCase().includes(modelSearch.toLowerCase())
@@ -136,6 +192,17 @@ export function SettingsDialog() {
 
   const handleThemeChange = (theme: string) => {
     setTheme(theme);
+  };
+
+  const handleManualModelChange = (value: string) => {
+    setModelSource('manual');
+    setAIModel(value);
+  };
+
+  const handleModelSelect = (id: string) => {
+    setModelSource('list');
+    setAIModel(id);
+    setModelOpen(false);
   };
 
   return (
@@ -215,7 +282,7 @@ export function SettingsDialog() {
               <Input
                 value={aiBaseURL}
                 onChange={(e) => setAIBaseURL(e.target.value)}
-                placeholder="https://api.openai.com/v1"
+                placeholder={getDefaultBaseURL(aiProvider)}
               />
             </div>
 
@@ -247,15 +314,42 @@ export function SettingsDialog() {
                   </div>
 
                   {/* Model list */}
-                  <div className="max-h-48 overflow-y-auto p-1" onWheel={(e) => e.stopPropagation()}>
-                    {modelsFetching && (
+                  <div
+                    className="max-h-48 overflow-y-auto p-1"
+                    onWheel={(e) => e.stopPropagation()}
+                    aria-live="polite"
+                    aria-busy={modelFetchState === 'loading'}
+                  >
+                    {modelFetchState === 'loading' && (
                       <div className="flex items-center justify-center py-4 text-sm text-zinc-400">
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         {tCommon('loading')}
                       </div>
                     )}
 
-                    {!modelsFetching && filteredModels.length === 0 && modelsFetched && (
+                    {modelFetchState === 'error' && (
+                      <div className="px-2 py-3" role="alert">
+                        <div className="flex items-start gap-2 text-xs text-red-600 dark:text-red-400">
+                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                          <span className="flex-1">{t(modelFetchError || 'ai.fetchModelsFailed')}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="mt-2 w-full text-xs cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fetchModels();
+                          }}
+                        >
+                          <RotateCcw className="mr-1.5 h-3 w-3" />
+                          {t('ai.retry')}
+                        </Button>
+                      </div>
+                    )}
+
+                    {modelFetchState !== 'loading' && filteredModels.length === 0 && modelsFetched && (
                       <div className="py-3 text-center text-xs text-zinc-400">
                         {t('ai.noModelsFound')}
                       </div>
@@ -269,10 +363,7 @@ export function SettingsDialog() {
                           'flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800',
                           aiModel === m && 'bg-zinc-100 dark:bg-zinc-800'
                         )}
-                        onClick={() => {
-                          setAIModel(m);
-                          setModelOpen(false);
-                        }}
+                        onClick={() => handleModelSelect(m)}
                       >
                         <Check className={cn('mr-2 h-4 w-4', aiModel === m ? 'opacity-100' : 'opacity-0')} />
                         <span className="truncate">{m}</span>
@@ -282,9 +373,10 @@ export function SettingsDialog() {
 
                   {/* Manual entry */}
                   <div className="border-t px-3 py-2">
+                    <Label className="text-xs text-zinc-500 mb-1.5 block">{t('ai.manualModel')}</Label>
                     <Input
                       value={aiModel}
-                      onChange={(e) => setAIModel(e.target.value)}
+                      onChange={(e) => handleManualModelChange(e.target.value)}
                       placeholder={t('ai.modelPlaceholder')}
                       className="h-8 text-sm"
                       onKeyDown={(e) => {

@@ -209,9 +209,18 @@
       "clear": "Clear",
       "dateDisplay": "{month} {year}",
       "months": {
-        "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr",
-        "05": "May", "06": "Jun", "07": "Jul", "08": "Aug",
-        "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"
+        "01": "Jan",
+        "02": "Feb",
+        "03": "Mar",
+        "04": "Apr",
+        "05": "May",
+        "06": "Jun",
+        "07": "Jul",
+        "08": "Aug",
+        "09": "Sep",
+        "10": "Oct",
+        "11": "Nov",
+        "12": "Dec"
       }
     }
   },
@@ -265,7 +274,11 @@
       "baseURL": "Base URL",
       "model": "Default Model",
       "modelPlaceholder": "Enter model name...",
-      "noModelsFound": "No models found. Enter a model name manually below."
+      "noModelsFound": "No models found. Enter a model name manually below.",
+      "apiKeyRequired": "Please enter your API Key first",
+      "fetchModelsFailed": "Failed to fetch models. Please check your API Key and Base URL",
+      "manualModel": "Enter model name manually",
+      "retry": "Retry"
     },
     "appearance": {
       "title": "Appearance",

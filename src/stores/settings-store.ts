@@ -1,6 +1,9 @@
 import { create } from 'zustand';
-
-export type AIProvider = 'openai' | 'anthropic' | 'gemini';
+import {
+  AIProvider,
+  getDefaultBaseURL,
+  getDefaultModel,
+} from '@/lib/ai/provider';
 
 interface SettingsStore {
   // AI settings
@@ -35,23 +38,46 @@ interface ProviderConfig {
   apiKey: string;
 }
 
-const PROVIDER_DEFAULTS: Record<AIProvider, ProviderConfig> = {
-  openai: { baseURL: 'https://api.openai.com/v1', model: 'gpt-4o', apiKey: '' },
-  anthropic: { baseURL: 'https://api.anthropic.com', model: 'claude-sonnet-4-20250514', apiKey: '' },
-  gemini: { baseURL: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-2.0-flash', apiKey: '' },
-};
-
-function loadProviderConfigs(): Partial<Record<AIProvider, ProviderConfig>> {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = localStorage.getItem(PROVIDER_CONFIGS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch { return {}; }
+interface PersistedProviderConfigs {
+  version: number;
+  configs: Partial<Record<AIProvider, ProviderConfig>>;
 }
 
-function saveProviderConfigs(configs: Partial<Record<AIProvider, ProviderConfig>>) {
+function migrateLegacyConfigs(raw: unknown): PersistedProviderConfigs {
+  if (
+    raw &&
+    typeof raw === 'object' &&
+    !Array.isArray(raw) &&
+    'version' in raw
+  ) {
+    return raw as PersistedProviderConfigs;
+  }
+
+  // Legacy shape was Record<AIProvider, ProviderConfig>
+  const legacy = (raw ?? {}) as Partial<Record<AIProvider, ProviderConfig>>;
+  return { version: 1, configs: legacy };
+}
+
+function loadProviderConfigs(): PersistedProviderConfigs {
+  if (typeof window === 'undefined') return { version: 1, configs: {} };
+  try {
+    const raw = localStorage.getItem(PROVIDER_CONFIGS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    const migrated = migrateLegacyConfigs(parsed);
+    saveProviderConfigs(migrated);
+    return migrated;
+  } catch {
+    return { version: 1, configs: {} };
+  }
+}
+
+function saveProviderConfigs(configs: PersistedProviderConfigs) {
   if (typeof window === 'undefined') return;
-  try { localStorage.setItem(PROVIDER_CONFIGS_KEY, JSON.stringify(configs)); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(PROVIDER_CONFIGS_KEY, JSON.stringify(configs));
+  } catch {
+    /* ignore */
+  }
 }
 
 function getFingerprint(): string | null {
@@ -92,13 +118,13 @@ function syncToServer(state: SettingsStore) {
 }
 
 function syncProviderConfig(state: SettingsStore) {
-  const configs = loadProviderConfigs();
-  configs[state.aiProvider] = {
+  const persisted = loadProviderConfigs();
+  persisted.configs[state.aiProvider] = {
     baseURL: state.aiBaseURL,
     model: state.aiModel,
     apiKey: state.aiApiKey,
   };
-  saveProviderConfigs(configs);
+  saveProviderConfigs(persisted);
 }
 
 function saveApiKeyLocally(key: string) {
@@ -109,7 +135,9 @@ function saveApiKeyLocally(key: string) {
     } else {
       localStorage.removeItem(API_KEY_STORAGE_KEY);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 function loadApiKeyLocally(): string {
@@ -134,8 +162,8 @@ export function getAIHeaders(): Record<string, string> {
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   aiProvider: 'openai',
   aiApiKey: '',
-  aiBaseURL: 'https://api.openai.com/v1',
-  aiModel: 'gpt-4o',
+  aiBaseURL: getDefaultBaseURL('openai'),
+  aiModel: getDefaultModel('openai'),
   autoSave: true,
   autoSaveInterval: 500,
   _hydrated: false,
@@ -145,14 +173,17 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     const { aiProvider: prev, aiBaseURL, aiModel, aiApiKey } = get();
 
     // Save current provider's config before switching
-    const configs = loadProviderConfigs();
-    configs[prev] = { baseURL: aiBaseURL, model: aiModel, apiKey: aiApiKey };
-    saveProviderConfigs(configs);
+    const persisted = loadProviderConfigs();
+    persisted.configs[prev] = { baseURL: aiBaseURL, model: aiModel, apiKey: aiApiKey };
+    saveProviderConfigs(persisted);
 
     // Restore target provider's cached config, or use defaults
-    const cached = configs[provider];
-    const defaults = PROVIDER_DEFAULTS[provider];
-    const restored = cached || defaults;
+    const cached = persisted.configs[provider];
+    const restored = cached ?? {
+      baseURL: getDefaultBaseURL(provider),
+      model: getDefaultModel(provider),
+      apiKey: loadApiKeyLocally(),
+    };
 
     set({
       aiProvider: provider,
@@ -195,6 +226,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   hydrate: async () => {
     if (get()._hydrated) return;
 
+    // Trigger migration of legacy provider configs before anything else
+    loadProviderConfigs();
+
     // Load API key from localStorage immediately
     const apiKey = loadApiKeyLocally();
     set({ aiApiKey: apiKey });
@@ -218,7 +252,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         syncProviderConfig(get());
         return;
       }
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
 
     set({ _hydrated: true });
   },
