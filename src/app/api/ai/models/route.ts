@@ -42,6 +42,17 @@ export async function GET(request: NextRequest) {
         break;
       }
 
+      case 'deepseek': {
+        const effectiveBaseURL = baseURL || 'https://api.deepseek.com';
+        const res = await fetch(`${effectiveBaseURL}/models`, {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
+        if (!res.ok) return Response.json({ models: [] });
+        const data = await res.json();
+        models = (data.data ?? []).map((m: { id: string }) => ({ id: m.id }));
+        break;
+      }
+
       default: {
         // openai
         const effectiveBaseURL = baseURL || 'https://api.openai.com/v1';
