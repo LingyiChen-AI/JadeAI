@@ -96,7 +96,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
           {t('notFound')}
         </h1>
         <Link href="/dashboard" className="mt-4 text-sm text-brand hover:text-brand">
-          {t('viewOnJadeAI')}
+          {t('viewOnBrand')}
         </Link>
       </div>
     );
@@ -142,7 +142,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
         </div>
 
         <Link href="/dashboard" className="mt-6 text-sm text-brand hover:text-brand">
-          {t('viewOnJadeAI')}
+          {t('viewOnBrand')}
         </Link>
       </div>
     );
@@ -155,7 +155,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
         {/* Top bar */}
         <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 text-sm font-semibold text-brand">JadeAI</span>
+            <span className="shrink-0 text-sm font-semibold text-brand">小逆offer</span>
             <span className="shrink-0 text-xs text-zinc-400">|</span>
             <span className="truncate text-sm text-zinc-600 dark:text-zinc-400">{resume.title}</span>
           </div>
@@ -163,7 +163,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
             href="/dashboard"
             className="shrink-0 text-sm font-medium text-brand hover:text-brand"
           >
-            {t('viewOnJadeAI')}
+            {t('viewOnBrand')}
           </Link>
         </div>
 

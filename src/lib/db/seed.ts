@@ -177,7 +177,7 @@ async function seed() {
         items: [
           {
             id: crypto.randomUUID(),
-            name: 'JadeAI 简历助手',
+            name: '小逆offer 简历助手',
             url: 'https://github.com/example/jadeai',
             startDate: '2024-10',
             endDate: '2025-02',

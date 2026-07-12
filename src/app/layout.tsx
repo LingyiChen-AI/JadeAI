@@ -4,13 +4,13 @@ import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
-const appName = process.env.APP_NAME || 'JadeAI';
+const appName = process.env.APP_NAME || '小逆offer';
 
 export const metadata: Metadata = {
   title: `${appName} - AI Resume Builder`,
   description: 'AI-powered intelligent resume builder with drag-and-drop editor',
   icons: {
-    icon: '/favicon.svg',
+    icon: '/favicon-offer.svg',
   },
 };
 

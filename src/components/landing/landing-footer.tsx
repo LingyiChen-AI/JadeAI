@@ -38,7 +38,7 @@ export function LandingFooter() {
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
             {/* Brand column */}
             <div className="sm:col-span-2 lg:col-span-1">
-              <Image src="/logo.svg" alt="JadeAI" width={100} height={30} />
+              <Image src="/logo-offer.svg" alt="小逆offer" width={100} height={30} />
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
                 AI-powered resume builder
               </p>

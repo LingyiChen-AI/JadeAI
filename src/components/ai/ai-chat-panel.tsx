@@ -11,6 +11,7 @@ import { useEditorStore } from '@/stores/editor-store';
 import { useSettingsStore, getAIHeaders } from '@/stores/settings-store';
 import { useAIChat } from '@/hooks/use-ai-chat';
 import { useMessagePagination } from '@/hooks/use-message-pagination';
+import { ensureAIApiKey } from '@/lib/ai/client-config';
 import { AIMessage } from './ai-message';
 import { AIInput } from './ai-input';
 
@@ -216,10 +217,18 @@ export function AIChatContent({ resumeId, hideTitle }: AIChatContentProps) {
   const setPendingAiMessage = useEditorStore((s) => s.setPendingAiMessage);
   useEffect(() => {
     if (pendingAiMessage && sessionsLoaded && activeSessionId) {
+      if (!ensureAIApiKey({
+        title: t('apiKeyMissing'),
+        description: t('apiKeyMissingHint'),
+        actionLabel: t('getApiKey'),
+      })) {
+        setPendingAiMessage(null);
+        return;
+      }
       sendMessage({ text: pendingAiMessage });
       setPendingAiMessage(null);
     }
-  }, [pendingAiMessage, sessionsLoaded, activeSessionId, sendMessage, setPendingAiMessage]);
+  }, [pendingAiMessage, sessionsLoaded, activeSessionId, sendMessage, setPendingAiMessage, t]);
 
   // Merge historical (paginated older) + chat (current session) messages, dedup by id
   const displayMessages = useMemo(() => {

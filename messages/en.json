@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "JadeAI",
+    "appName": "小逆offer",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -240,9 +240,10 @@
     "loadingMore": "Loading...",
     "bubbleTooltip": "Chat with AI Assistant",
     "apiKeyMissing": "API Key Not Configured",
-    "apiKeyMissingHint": "Please configure your AI API Key in Settings before using AI features.",
+    "apiKeyMissingHint": "Configure an API Key before using AI features. Get one at https://xiaoni-ai.top.",
     "apiKeyMissingBubble": "API Key not configured. Go to Settings.",
-    "goToSettings": "Go to Settings"
+    "goToSettings": "Go to Settings",
+    "getApiKey": "Get API Key"
   },
   "pdf": {
     "exporting": "Generating PDF...",
@@ -262,11 +263,13 @@
       "provider": "Model Protocol",
       "apiKey": "API Key",
       "apiKeyPlaceholder": "Enter your API Key...",
-      "apiKeyHint": "Your API Key is stored locally and sent directly to the model provider per request.",
+      "apiKeyHint": "Your API Key is stored locally. Get an API Key at https://xiaoni-ai.top.",
       "baseURL": "Base URL",
       "model": "Default Model",
       "modelPlaceholder": "Enter model name...",
-      "noModelsFound": "No models found. Enter a model name manually below."
+      "noModelsFound": "No models found. Enter a model name manually below.",
+      "baseURLLockedHint": "The API address is fixed to https://xiaoni-ai.top/v1 and cannot be changed.",
+      "defaultModelHint": "The default model is gpt-5.5. You can change it to another model when needed."
     },
     "appearance": {
       "title": "Appearance",
@@ -492,7 +495,7 @@
     "description": "Import a previously exported JSON file to replace current content",
     "dashboardDescription": "Import a previously exported JSON file to create a new resume",
     "selectFile": "Click to select or drag a .json file here",
-    "dragHint": "Supports .json files exported from JadeAI",
+    "dragHint": "Supports .json files exported from 小逆offer",
     "importing": "Importing...",
     "success": "Import successful!",
     "error": "Import failed. Please try again.",
@@ -689,7 +692,7 @@
     },
     "cta": {
       "title": "Ready to Build Your Best Resume?",
-      "subtitle": "Join thousands of job seekers who have landed interviews with JadeAI. No sign-up required.",
+      "subtitle": "Join thousands of job seekers who have landed interviews with 小逆offer. No sign-up required.",
       "button": "Create Your Resume Now"
     },
     "footer": {
@@ -713,7 +716,7 @@
         "terms": "Terms of Service",
         "cookies": "Cookie Policy"
       },
-      "copyright": "© {year} JadeAI. All rights reserved."
+      "copyright": "© {year} 小逆offer. All rights reserved."
     }
   },
   "linkedinPhoto": {
@@ -770,7 +773,7 @@
     "submit": "View Resume",
     "invalidPassword": "Invalid password. Please try again.",
     "notFound": "This resume is not available or has been removed.",
-    "viewOnJadeAI": "View on JadeAI"
+    "viewOnBrand": "View on 小逆offer"
   },
   "interview": {
     "nav": "Mock Interview",

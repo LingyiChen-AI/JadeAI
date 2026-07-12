@@ -31,6 +31,7 @@ import { useSettingsStore, getAIHeaders, type AIProvider } from '@/stores/settin
 import { useTourStore } from '@/stores/tour-store';
 import { usePathname, useRouter } from '@/i18n/routing';
 import { locales, localeNames } from '@/i18n/config';
+import { DEFAULT_AI_MODEL, FIXED_AI_BASE_URL } from '@/lib/ai/config';
 import { cn } from '@/lib/utils';
 
 const AI_PROVIDERS: { value: AIProvider; label: string }[] = [
@@ -56,7 +57,6 @@ export function SettingsDialog() {
     autoSaveInterval,
     setAIProvider,
     setAIApiKey,
-    setAIBaseURL,
     setAIModel,
     setAutoSave,
     setAutoSaveInterval,
@@ -89,15 +89,15 @@ export function SettingsDialog() {
       const res = await fetch('/api/ai/models', { headers: getAIHeaders() });
       const data = await res.json();
       const ids = (data.models || []).map((m: { id: string }) => m.id);
-      setFetchedModels(ids);
+      setFetchedModels(ids.length > 0 ? ids : [aiModel || DEFAULT_AI_MODEL]);
       setModelsFetched(true);
     } catch {
-      setFetchedModels([]);
+      setFetchedModels([aiModel || DEFAULT_AI_MODEL]);
       setModelsFetched(true);
     } finally {
       setModelsFetching(false);
     }
-  }, []);
+  }, [aiModel]);
 
   // Re-fetch models when apiKey or baseURL changes
   const prevKeyRef = useRef(aiApiKey);
@@ -213,10 +213,12 @@ export function SettingsDialog() {
             <div className="space-y-2">
               <Label>{t('ai.baseURL')}</Label>
               <Input
-                value={aiBaseURL}
-                onChange={(e) => setAIBaseURL(e.target.value)}
-                placeholder="https://api.openai.com/v1"
+                value={FIXED_AI_BASE_URL}
+                readOnly
+                disabled
+                placeholder={FIXED_AI_BASE_URL}
               />
+              <p className="text-xs text-zinc-400">{t('ai.baseURLLockedHint')}</p>
             </div>
 
             {/* Model — Combobox */}
@@ -295,6 +297,7 @@ export function SettingsDialog() {
                 </PopoverContent>
               </Popover>
             </div>
+            <p className="text-xs text-zinc-400">{t('ai.defaultModelHint')}</p>
           </TabsContent>
 
           {/* Appearance Tab */}

@@ -27,7 +27,7 @@ export function Header() {
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-1">
-            <Image src="/logo.svg" alt="JadeAI" width={120} height={36} priority />
+            <Image src="/logo-offer.svg" alt="小逆offer" width={120} height={36} priority />
           </Link>
           <nav className="hidden md:flex items-center gap-1">
             {NAV_ITEMS.map((item) => {

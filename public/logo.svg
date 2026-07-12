@@ -33,8 +33,8 @@
     <circle cx="45" cy="4" r="1.1" fill="#FCD34D" opacity="0.45"/>
   </g>
 
-  <!-- Text: JadeAI -->
-  <text x="54" y="33" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="26" font-weight="700" fill="#064E3B" letter-spacing="-0.5">
-    Jade<tspan fill="#10B981">AI</tspan>
+  <!-- Text: 小逆offer -->
+  <text x="54" y="33" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="24" font-weight="700" fill="#064E3B" letter-spacing="0">
+    小逆<tspan fill="#10B981">offer</tspan>
   </text>
 </svg>

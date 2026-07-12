@@ -1,12 +1,14 @@
 import { NextRequest } from 'next/server';
+import { DEFAULT_AI_MODEL, FIXED_AI_BASE_URL } from '@/lib/ai/config';
 
 export async function GET(request: NextRequest) {
   const provider = request.headers.get('x-provider') || 'openai';
   const apiKey = request.headers.get('x-api-key') || '';
-  const baseURL = request.headers.get('x-base-url') || '';
+  const currentModel = request.headers.get('x-model') || DEFAULT_AI_MODEL;
+  const fallbackModels = [{ id: currentModel }, ...(currentModel === DEFAULT_AI_MODEL ? [] : [{ id: DEFAULT_AI_MODEL }])];
 
   if (!apiKey) {
-    return Response.json({ models: [] });
+    return Response.json({ models: fallbackModels });
   }
 
   try {
@@ -14,27 +16,23 @@ export async function GET(request: NextRequest) {
 
     switch (provider) {
       case 'anthropic': {
-        const url = baseURL
-          ? `${baseURL.replace(/\/$/, '')}/v1/models`
-          : 'https://api.anthropic.com/v1/models';
+        const url = `${FIXED_AI_BASE_URL.replace(/\/$/, '')}/models`;
         const res = await fetch(url, {
           headers: {
             'x-api-key': apiKey,
             'anthropic-version': '2023-06-01',
           },
         });
-        if (!res.ok) return Response.json({ models: [] });
+        if (!res.ok) return Response.json({ models: fallbackModels });
         const data = await res.json();
         models = (data.data ?? []).map((m: { id: string }) => ({ id: m.id }));
         break;
       }
 
       case 'gemini': {
-        const url = baseURL
-          ? `${baseURL.replace(/\/$/, '')}/models?key=${apiKey}`
-          : `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+        const url = `${FIXED_AI_BASE_URL.replace(/\/$/, '')}/models?key=${apiKey}`;
         const res = await fetch(url);
-        if (!res.ok) return Response.json({ models: [] });
+        if (!res.ok) return Response.json({ models: fallbackModels });
         const data = await res.json();
         models = (data.models ?? []).map((m: { name: string }) => ({
           id: m.name.replace(/^models\//, ''),
@@ -44,19 +42,20 @@ export async function GET(request: NextRequest) {
 
       default: {
         // openai
-        const effectiveBaseURL = baseURL || 'https://api.openai.com/v1';
-        const res = await fetch(`${effectiveBaseURL}/models`, {
+        const res = await fetch(`${FIXED_AI_BASE_URL}/models`, {
           headers: { Authorization: `Bearer ${apiKey}` },
         });
-        if (!res.ok) return Response.json({ models: [] });
+        if (!res.ok) return Response.json({ models: fallbackModels });
         const data = await res.json();
         models = (data.data ?? data).map((m: { id: string }) => ({ id: m.id }));
         break;
       }
     }
 
+    if (!models.some((m) => m.id === currentModel)) models.unshift({ id: currentModel });
+    if (!models.some((m) => m.id === DEFAULT_AI_MODEL)) models.unshift({ id: DEFAULT_AI_MODEL });
     return Response.json({ models });
   } catch {
-    return Response.json({ models: [] });
+    return Response.json({ models: fallbackModels });
   }
 }

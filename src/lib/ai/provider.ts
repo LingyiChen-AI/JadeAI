@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { API_KEY_URL, DEFAULT_AI_MODEL, FIXED_AI_BASE_URL } from './config';
 
 export interface AIConfig {
   provider: string;
@@ -13,14 +14,14 @@ export interface AIConfig {
 export function extractAIConfig(request: NextRequest): AIConfig {
   const provider = request.headers.get('x-provider') || 'openai';
   const apiKey = request.headers.get('x-api-key') || '';
-  const baseURL = request.headers.get('x-base-url') || 'https://api.openai.com/v1';
-  const model = request.headers.get('x-model') || 'gpt-4o';
+  const baseURL = FIXED_AI_BASE_URL;
+  const model = request.headers.get('x-model') || DEFAULT_AI_MODEL;
   return { provider, apiKey, baseURL, model };
 }
 
 export function getModel(config: AIConfig, modelOverride?: string) {
   if (!config.apiKey) {
-    throw new AIConfigError('API key is required. Please configure it in Settings.');
+    throw new AIConfigError(`需要配置 API Key，请前往 ${API_KEY_URL} 获取 API Key。`);
   }
   const modelId = modelOverride || config.model;
 

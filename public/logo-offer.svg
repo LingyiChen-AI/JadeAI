@@ -1,0 +1,18 @@
+<svg width="180" height="48" viewBox="0 0 180 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="offer-f" x1="2" y1="2" x2="46" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+
+  <g>
+    <rect x="2" y="2" width="44" height="44" rx="11" fill="url(#offer-f)"/>
+    <text x="24" y="31" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="800" fill="white">逆</text>
+    <path d="M41 3.5L42.4 8L47 9.5L42.4 11L41 15.5L39.6 11L35 9.5L39.6 8Z" fill="#FCD34D"/>
+  </g>
+
+  <text x="54" y="33" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="24" font-weight="700" fill="#064E3B" letter-spacing="0">
+    小逆<tspan fill="#10B981">offer</tspan>
+  </text>
+</svg>

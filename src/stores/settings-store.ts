@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { DEFAULT_AI_MODEL, FIXED_AI_BASE_URL } from '@/lib/ai/config';
 
 export type AIProvider = 'openai' | 'anthropic' | 'gemini';
 
@@ -28,6 +29,7 @@ interface SettingsStore {
 
 const API_KEY_STORAGE_KEY = 'jade_api_key';
 const PROVIDER_CONFIGS_KEY = 'jade_provider_configs';
+const LEGACY_DEFAULT_MODELS = new Set(['gpt-4o', 'claude-sonnet-4-20250514', 'gemini-2.0-flash']);
 
 interface ProviderConfig {
   baseURL: string;
@@ -36,10 +38,16 @@ interface ProviderConfig {
 }
 
 const PROVIDER_DEFAULTS: Record<AIProvider, ProviderConfig> = {
-  openai: { baseURL: 'https://api.openai.com/v1', model: 'gpt-4o', apiKey: '' },
-  anthropic: { baseURL: 'https://api.anthropic.com', model: 'claude-sonnet-4-20250514', apiKey: '' },
-  gemini: { baseURL: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-2.0-flash', apiKey: '' },
+  openai: { baseURL: FIXED_AI_BASE_URL, model: DEFAULT_AI_MODEL, apiKey: '' },
+  anthropic: { baseURL: FIXED_AI_BASE_URL, model: DEFAULT_AI_MODEL, apiKey: '' },
+  gemini: { baseURL: FIXED_AI_BASE_URL, model: DEFAULT_AI_MODEL, apiKey: '' },
 };
+
+function normalizeModel(model?: string | null): string {
+  const trimmed = model?.trim();
+  if (!trimmed || LEGACY_DEFAULT_MODELS.has(trimmed)) return DEFAULT_AI_MODEL;
+  return trimmed;
+}
 
 function loadProviderConfigs(): Partial<Record<AIProvider, ProviderConfig>> {
   if (typeof window === 'undefined') return {};
@@ -79,8 +87,8 @@ function syncToServer(state: SettingsStore) {
         headers: getHeaders(),
         body: JSON.stringify({
           aiProvider: state.aiProvider,
-          aiBaseURL: state.aiBaseURL,
-          aiModel: state.aiModel,
+          aiBaseURL: FIXED_AI_BASE_URL,
+          aiModel: normalizeModel(state.aiModel),
           autoSave: state.autoSave,
           autoSaveInterval: state.autoSaveInterval,
         }),
@@ -94,8 +102,8 @@ function syncToServer(state: SettingsStore) {
 function syncProviderConfig(state: SettingsStore) {
   const configs = loadProviderConfigs();
   configs[state.aiProvider] = {
-    baseURL: state.aiBaseURL,
-    model: state.aiModel,
+    baseURL: FIXED_AI_BASE_URL,
+    model: normalizeModel(state.aiModel),
     apiKey: state.aiApiKey,
   };
   saveProviderConfigs(configs);
@@ -122,31 +130,31 @@ function loadApiKeyLocally(): string {
 }
 
 export function getAIHeaders(): Record<string, string> {
-  const { aiProvider, aiApiKey, aiBaseURL, aiModel } = useSettingsStore.getState();
+  const { aiProvider, aiApiKey, aiModel } = useSettingsStore.getState();
   const headers: Record<string, string> = {};
   if (aiProvider) headers['x-provider'] = aiProvider;
   if (aiApiKey) headers['x-api-key'] = aiApiKey;
-  if (aiBaseURL) headers['x-base-url'] = aiBaseURL;
-  if (aiModel) headers['x-model'] = aiModel;
+  headers['x-base-url'] = FIXED_AI_BASE_URL;
+  headers['x-model'] = normalizeModel(aiModel);
   return headers;
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   aiProvider: 'openai',
   aiApiKey: '',
-  aiBaseURL: 'https://api.openai.com/v1',
-  aiModel: 'gpt-4o',
+  aiBaseURL: FIXED_AI_BASE_URL,
+  aiModel: DEFAULT_AI_MODEL,
   autoSave: true,
   autoSaveInterval: 500,
   _hydrated: false,
   _syncing: false,
 
   setAIProvider: (provider) => {
-    const { aiProvider: prev, aiBaseURL, aiModel, aiApiKey } = get();
+    const { aiProvider: prev, aiModel, aiApiKey } = get();
 
     // Save current provider's config before switching
     const configs = loadProviderConfigs();
-    configs[prev] = { baseURL: aiBaseURL, model: aiModel, apiKey: aiApiKey };
+    configs[prev] = { baseURL: FIXED_AI_BASE_URL, model: normalizeModel(aiModel), apiKey: aiApiKey };
     saveProviderConfigs(configs);
 
     // Restore target provider's cached config, or use defaults
@@ -156,8 +164,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
     set({
       aiProvider: provider,
-      aiBaseURL: restored.baseURL,
-      aiModel: restored.model,
+      aiBaseURL: FIXED_AI_BASE_URL,
+      aiModel: normalizeModel(restored.model),
       aiApiKey: restored.apiKey,
     });
     saveApiKeyLocally(restored.apiKey);
@@ -170,8 +178,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     syncProviderConfig(get());
   },
 
-  setAIBaseURL: (url) => {
-    set({ aiBaseURL: url });
+  setAIBaseURL: () => {
+    set({ aiBaseURL: FIXED_AI_BASE_URL });
     syncToServer(get());
     syncProviderConfig(get());
   },
@@ -208,8 +216,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         const provider = (data.aiProvider === 'custom' || data.aiProvider === 'azure') ? 'openai' : data.aiProvider;
         set({
           ...(provider && { aiProvider: provider }),
-          ...(data.aiBaseURL && { aiBaseURL: data.aiBaseURL }),
-          ...(data.aiModel && { aiModel: data.aiModel }),
+          aiBaseURL: FIXED_AI_BASE_URL,
+          aiModel: normalizeModel(data.aiModel),
           ...(typeof data.autoSave === 'boolean' && { autoSave: data.autoSave }),
           ...(typeof data.autoSaveInterval === 'number' && { autoSaveInterval: data.autoSaveInterval }),
           _hydrated: true,
@@ -220,7 +228,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       }
     } catch { /* fall through */ }
 
-    set({ _hydrated: true });
+    set({ aiBaseURL: FIXED_AI_BASE_URL, aiModel: normalizeModel(get().aiModel), _hydrated: true });
   },
 }));
 

@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "JadeAI",
+    "appName": "小逆offer",
     "save": "保存",
     "cancel": "取消",
     "delete": "删除",
@@ -240,9 +240,10 @@
     "loadingMore": "加载中...",
     "bubbleTooltip": "与 AI 助手对话",
     "apiKeyMissing": "API Key 未配置",
-    "apiKeyMissingHint": "请先在设置中配置 AI 服务的 API Key，才能使用 AI 功能。",
+    "apiKeyMissingHint": "请配置 API Key 后再使用 AI 功能。请前往 https://xiaoni-ai.top 获取 API Key。",
     "apiKeyMissingBubble": "API Key 未配置，请前往设置配置",
-    "goToSettings": "前往设置"
+    "goToSettings": "前往设置",
+    "getApiKey": "获取 API Key"
   },
   "pdf": {
     "exporting": "正在生成 PDF...",
@@ -262,11 +263,13 @@
       "provider": "模型协议",
       "apiKey": "API Key",
       "apiKeyPlaceholder": "输入你的 API Key...",
-      "apiKeyHint": "API Key 保存在本地，每次请求直接发送给模型服务商。",
+      "apiKeyHint": "API Key 保存在本地。请前往 https://xiaoni-ai.top 获取 API Key。",
       "baseURL": "API 地址",
       "model": "默认模型",
       "modelPlaceholder": "输入模型名称...",
-      "noModelsFound": "未找到模型，请在下方手动输入模型名称。"
+      "noModelsFound": "未找到模型，请在下方手动输入模型名称。",
+      "baseURLLockedHint": "API 地址已固定为 https://xiaoni-ai.top/v1，不可更改。",
+      "defaultModelHint": "默认模型为 gpt-5.5，可按需改为其他模型。"
     },
     "appearance": {
       "title": "外观",
@@ -492,7 +495,7 @@
     "description": "导入之前导出的 JSON 文件，替换当前简历内容",
     "dashboardDescription": "导入之前导出的 JSON 文件，创建新简历",
     "selectFile": "点击选择或拖拽 .json 文件到此处",
-    "dragHint": "支持从 JadeAI 导出的 .json 文件",
+    "dragHint": "支持从小逆offer导出的 .json 文件",
     "importing": "导入中...",
     "success": "导入成功！",
     "error": "导入失败，请重试。",
@@ -689,7 +692,7 @@
     },
     "cta": {
       "title": "准备好打造你的最佳简历了吗？",
-      "subtitle": "已有数千名求职者通过 JadeAI 收获面试机会。无需注册，即刻开始。",
+      "subtitle": "已有数千名求职者通过小逆offer收获面试机会。无需注册，即刻开始。",
       "button": "立即创建简历"
     },
     "footer": {
@@ -713,7 +716,7 @@
         "terms": "服务条款",
         "cookies": "Cookie 政策"
       },
-      "copyright": "© {year} JadeAI. 保留所有权利。"
+      "copyright": "© {year} 小逆offer. 保留所有权利。"
     }
   },
   "linkedinPhoto": {
@@ -770,7 +773,7 @@
     "submit": "查看简历",
     "invalidPassword": "密码错误，请重试。",
     "notFound": "此简历不存在或已被删除。",
-    "viewOnJadeAI": "前往 JadeAI"
+    "viewOnBrand": "前往小逆offer"
   },
   "interview": {
     "nav": "面试模拟",
