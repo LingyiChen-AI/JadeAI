@@ -56,18 +56,18 @@ export function EducationSection({ section, onUpdate }: Props) {
               </Button>
             </div>
             <FieldWrapper>
-              <EditableText label={t('institution')} value={item.institution} onChange={(v) => updateItem(index, { institution: v })} />
-              <EditableText label={t('degree')} value={item.degree} onChange={(v) => updateItem(index, { degree: v })} />
+              <EditableText label={t('institution')} value={item.institution} onChange={(v) => updateItem(index, { institution: v })} changePath={`content.items.${item.id}.institution`} />
+              <EditableText label={t('degree')} value={item.degree} onChange={(v) => updateItem(index, { degree: v })} changePath={`content.items.${item.id}.degree`} />
             </FieldWrapper>
             <FieldWrapper>
-              <EditableText label={t('field')} value={item.field} onChange={(v) => updateItem(index, { field: v })} />
-              <EditableText label={t('gpa')} value={item.gpa || ''} onChange={(v) => updateItem(index, { gpa: v })} />
+              <EditableText label={t('field')} value={item.field} onChange={(v) => updateItem(index, { field: v })} changePath={`content.items.${item.id}.field`} />
+              <EditableText label={t('gpa')} value={item.gpa || ''} onChange={(v) => updateItem(index, { gpa: v })} changePath={`content.items.${item.id}.gpa`} />
             </FieldWrapper>
             <FieldWrapper>
-              <EditableDate label={t('startDate')} value={item.startDate} onChange={(v) => updateItem(index, { startDate: v })} />
-              <EditableDate label={t('endDate')} value={item.endDate} onChange={(v) => updateItem(index, { endDate: v })} />
+              <EditableDate label={t('startDate')} value={item.startDate} onChange={(v) => updateItem(index, { startDate: v })} changePath={`content.items.${item.id}.startDate`} />
+              <EditableDate label={t('endDate')} value={item.endDate} onChange={(v) => updateItem(index, { endDate: v })} changePath={`content.items.${item.id}.endDate`} />
             </FieldWrapper>
-            <EditableList label={t('highlights')} items={item.highlights} onChange={(v) => updateItem(index, { highlights: v })} />
+            <EditableList label={t('highlights')} items={item.highlights} onChange={(v) => updateItem(index, { highlights: v })} changePath={`content.items.${item.id}.highlights`} />
           </div>
         </div>
       ))}

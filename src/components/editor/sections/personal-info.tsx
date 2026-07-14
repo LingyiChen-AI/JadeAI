@@ -134,16 +134,17 @@ export function PersonalInfoSection({ section, onUpdate }: Props) {
       </div>
 
       <FieldWrapper>
-        <EditableText label={t('fullName')} value={content.fullName} onChange={(v) => onUpdate({ fullName: v })} />
-        <EditableText label={t('jobTitle')} value={content.jobTitle} onChange={(v) => onUpdate({ jobTitle: v })} />
+        <EditableText label={t('fullName')} value={content.fullName} onChange={(v) => onUpdate({ fullName: v })} changePath="content.fullName" />
+        <EditableText label={t('jobTitle')} value={content.jobTitle} onChange={(v) => onUpdate({ jobTitle: v })} changePath="content.jobTitle" />
       </FieldWrapper>
       <FieldWrapper>
-        <EditableText label={t('age')} value={content.age || ''} onChange={(v) => onUpdate({ age: v })} />
+        <EditableText label={t('age')} value={content.age || ''} onChange={(v) => onUpdate({ age: v })} changePath="content.age" />
         <EditableSelect
           label={t('gender')}
           value={content.gender || ''}
           onChange={(v) => onUpdate({ gender: v })}
           options={t('genderOptions').split(',').map((s) => ({ label: s, value: s }))}
+          changePath="content.gender"
         />
       </FieldWrapper>
       <FieldWrapper>
@@ -152,42 +153,46 @@ export function PersonalInfoSection({ section, onUpdate }: Props) {
           value={content.politicalStatus || ''}
           onChange={(v) => onUpdate({ politicalStatus: v })}
           options={t('politicalStatusOptions').split(',').map((s) => ({ label: s, value: s }))}
+          changePath="content.politicalStatus"
         />
         <EditableSelect
           label={t('ethnicity')}
           value={content.ethnicity || ''}
           onChange={(v) => onUpdate({ ethnicity: v })}
           options={t('ethnicityOptions').split(',').map((s) => ({ label: s, value: s }))}
+          changePath="content.ethnicity"
         />
       </FieldWrapper>
       <FieldWrapper>
-        <EditableText label={t('hometown')} value={content.hometown || ''} onChange={(v) => onUpdate({ hometown: v })} />
+        <EditableText label={t('hometown')} value={content.hometown || ''} onChange={(v) => onUpdate({ hometown: v })} changePath="content.hometown" />
         <EditableSelect
           label={t('maritalStatus')}
           value={content.maritalStatus || ''}
           onChange={(v) => onUpdate({ maritalStatus: v })}
           options={t('maritalStatusOptions').split(',').map((s) => ({ label: s, value: s }))}
+          changePath="content.maritalStatus"
         />
       </FieldWrapper>
       <FieldWrapper>
-        <EditableText label={t('yearsOfExperience')} value={content.yearsOfExperience || ''} onChange={(v) => onUpdate({ yearsOfExperience: v })} />
+        <EditableText label={t('yearsOfExperience')} value={content.yearsOfExperience || ''} onChange={(v) => onUpdate({ yearsOfExperience: v })} changePath="content.yearsOfExperience" />
         <EditableSelect
           label={t('educationLevel')}
           value={content.educationLevel || ''}
           onChange={(v) => onUpdate({ educationLevel: v })}
           options={t('educationLevelOptions').split(',').map((s) => ({ label: s, value: s }))}
+          changePath="content.educationLevel"
         />
       </FieldWrapper>
       <FieldWrapper>
-        <EditableText label={t('email')} value={content.email} onChange={(v) => onUpdate({ email: v })} type="email" />
-        <EditableText label={t('phone')} value={content.phone} onChange={(v) => onUpdate({ phone: v })} type="tel" />
+        <EditableText label={t('email')} value={content.email} onChange={(v) => onUpdate({ email: v })} type="email" changePath="content.email" />
+        <EditableText label={t('phone')} value={content.phone} onChange={(v) => onUpdate({ phone: v })} type="tel" changePath="content.phone" />
       </FieldWrapper>
       <FieldWrapper>
-        <EditableText label={t('wechat')} value={content.wechat || ''} onChange={(v) => onUpdate({ wechat: v })} />
-        <EditableText label={t('location')} value={content.location} onChange={(v) => onUpdate({ location: v })} />
+        <EditableText label={t('wechat')} value={content.wechat || ''} onChange={(v) => onUpdate({ wechat: v })} changePath="content.wechat" />
+        <EditableText label={t('location')} value={content.location} onChange={(v) => onUpdate({ location: v })} changePath="content.location" />
       </FieldWrapper>
       <FieldWrapper>
-        <EditableText label={t('website')} value={content.website || ''} onChange={(v) => onUpdate({ website: v })} />
+        <EditableText label={t('website')} value={content.website || ''} onChange={(v) => onUpdate({ website: v })} changePath="content.website" />
       </FieldWrapper>
 
     </div>

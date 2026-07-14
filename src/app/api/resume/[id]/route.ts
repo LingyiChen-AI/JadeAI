@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resumeRepository } from '@/lib/db/repositories/resume.repository';
+import {
+  InvalidResumeRevisionError,
+  ResumeRevisionConflictError,
+  resumeRepository,
+} from '@/lib/db/repositories/resume.repository';
 import { resolveUser, getUserIdFromRequest } from '@/lib/auth/helpers';
 
 export async function GET(
@@ -50,57 +54,37 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { title, template, themeConfig, sections } = body;
-
-    // Update resume metadata
-    if (title || template || themeConfig) {
-      await resumeRepository.update(id, {
-        ...(title && { title }),
-        ...(template && { template }),
-        ...(themeConfig && { themeConfig }),
-      });
+    const { expectedRevision, title, template, themeConfig, sections } = body;
+    if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
+      return NextResponse.json(
+        { error: 'expectedRevision must be a non-negative safe integer' },
+        { status: 400 },
+      );
+    }
+    if (sections !== undefined && !Array.isArray(sections)) {
+      return NextResponse.json({ error: 'sections must be an array' }, { status: 400 });
     }
 
-    // Sync sections: create new, update existing, delete removed
-    if (sections && Array.isArray(sections)) {
-      const existingSections = resume.sections || [];
-      const existingIds = new Set(existingSections.map((s: any) => s.id));
-      const incomingIds = new Set(sections.map((s: any) => s.id));
+    const updated = await resumeRepository.replaceContent(id, expectedRevision, {
+      title,
+      template,
+      themeConfig,
+      sections,
+    });
+    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-      // Delete sections that were removed by the user
-      for (const existing of existingSections) {
-        if (!incomingIds.has(existing.id)) {
-          await resumeRepository.deleteSection(existing.id);
-        }
-      }
-
-      for (const section of sections) {
-        if (existingIds.has(section.id)) {
-          // Update existing section
-          await resumeRepository.updateSection(section.id, {
-            title: section.title,
-            sortOrder: section.sortOrder,
-            visible: section.visible,
-            content: section.content,
-          });
-        } else {
-          // Create new section added by the user
-          await resumeRepository.createSection({
-            id: section.id,
-            resumeId: id,
-            type: section.type,
-            title: section.title,
-            sortOrder: section.sortOrder,
-            visible: section.visible,
-            content: section.content,
-          });
-        }
-      }
-    }
-
-    const updated = await resumeRepository.findById(id);
     return NextResponse.json(updated);
   } catch (error) {
+    if (error instanceof ResumeRevisionConflictError) {
+      return NextResponse.json(
+        { error: 'revision_conflict', currentRevision: error.currentRevision },
+        { status: 409 },
+      );
+    }
+    if (error instanceof InvalidResumeRevisionError) {
+      console.error('PUT /api/resume/[id] invalid stored revision');
+      return NextResponse.json({ error: 'Resume revision is invalid' }, { status: 503 });
+    }
     console.error('PUT /api/resume/[id] error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

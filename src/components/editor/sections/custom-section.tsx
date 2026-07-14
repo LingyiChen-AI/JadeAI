@@ -47,10 +47,10 @@ export function CustomSection({ section, onUpdate }: Props) {
               </Button>
             </div>
             <FieldWrapper>
-              <EditableText label="Title" value={item.title} onChange={(v) => updateItem(index, { title: v })} />
-              <EditableText label="Date" value={item.date || ''} onChange={(v) => updateItem(index, { date: v })} />
+              <EditableText label="Title" value={item.title} onChange={(v) => updateItem(index, { title: v })} changePath={`content.items.${item.id}.title`} />
+              <EditableText label="Date" value={item.date || ''} onChange={(v) => updateItem(index, { date: v })} changePath={`content.items.${item.id}.date`} />
             </FieldWrapper>
-            <EditableRichText label={t('description')} value={item.description} onChange={(v) => updateItem(index, { description: v })} />
+            <EditableRichText label={t('description')} value={item.description} onChange={(v) => updateItem(index, { description: v })} changePath={`content.items.${item.id}.description`} />
           </div>
         </div>
       ))}

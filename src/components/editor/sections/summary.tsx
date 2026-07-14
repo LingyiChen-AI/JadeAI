@@ -18,6 +18,7 @@ export function SummarySection({ section, onUpdate }: Props) {
       label={t('description')}
       value={content.text}
       onChange={(v) => onUpdate({ text: v })}
+      changePath="content.text"
       rows={4}
     />
   );

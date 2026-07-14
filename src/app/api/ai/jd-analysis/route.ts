@@ -6,6 +6,7 @@ import { resumeRepository } from '@/lib/db/repositories/resume.repository';
 import { analysisRepository } from '@/lib/db/repositories/analysis.repository';
 import { jdAnalysisInputSchema, jdAnalysisOutputSchema } from '@/lib/ai/jd-analysis-schema';
 import { extractJson } from '@/lib/ai/extract-json';
+import { serializeResumeForModel } from '@/lib/ai/model-context';
 
 const JD_ANALYSIS_PROMPT = `You are an expert resume analyst and career coach. Analyze the match between the provided resume and job description.
 
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const resumeContext = JSON.stringify(resume.sections);
+    const resumeContext = serializeResumeForModel(resume.sections);
     const aiConfig = extractAIConfig(request);
     const model = getModel(aiConfig);
 

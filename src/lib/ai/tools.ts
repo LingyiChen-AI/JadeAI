@@ -5,6 +5,11 @@ import { getModel, getJsonProviderOptions, type AIConfig } from '@/lib/ai/provid
 import { jdAnalysisOutputSchema } from '@/lib/ai/jd-analysis-schema';
 import { extractJson } from '@/lib/ai/extract-json';
 import { normalizeSectionContent } from '@/lib/resume/normalize-content';
+import {
+  restoreGitHostingUrls,
+  sanitizeResumeForModel,
+  serializeResumeForModel,
+} from '@/lib/ai/model-context';
 
 export function createExecutableTools(resumeId: string, aiConfig: AIConfig) {
   return {
@@ -100,6 +105,9 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
           );
         }
 
+        const originalField = (section.content as Record<string, unknown>)?.[actualField];
+        parsedValue = restoreGitHostingUrls(originalField, parsedValue);
+
         // GitHub sections: protect read-only fields for existing items, auto-fetch for new items
         if (section.type === 'github' && actualField === 'items' && Array.isArray(parsedValue)) {
           const existingItems = ((section.content as any)?.items || []) as any[];
@@ -133,9 +141,10 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
         // Coerce inner list fields (highlights/technologies/skills) to arrays so a
         // string written by the model can't crash the renderer (issue #87).
         const updatedContent = normalizeSectionContent(section.type, merged);
-        await resumeRepository.updateSection(sectionId, { content: updatedContent });
+        const updated = await resumeRepository.updateSectionWithRevision(resumeId, resume.revision, sectionId, { content: updatedContent });
+        if (!updated) return { success: false, error: 'Section not found' };
 
-        return { success: true, sectionType: section.type, field: actualField, updatedContent };
+        return { success: true, sectionId, sectionType: section.type, field: actualField };
       },
     }),
 
@@ -163,15 +172,16 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
           else parsedContent = { items: [] };
         }
 
-        const section = await resumeRepository.createSection({
-          resumeId,
+        const sectionId = crypto.randomUUID();
+        const section = await resumeRepository.createSectionWithRevision(resumeId, resume.revision, {
+          id: sectionId,
           type,
           title,
           sortOrder: maxOrder + 1,
           content: parsedContent,
         });
 
-        return { success: true, sectionType: type, sectionId: section?.id };
+        return { success: true, sectionType: type, sectionId };
       },
     }),
 
@@ -189,11 +199,14 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
         const section = resume.sections.find((s: any) => s.id === sectionId);
         if (!section) return { success: false, error: 'Section not found' };
 
-        const merged = { ...(section.content as Record<string, unknown>), [field]: improvedText };
+        const originalField = (section.content as Record<string, unknown>)?.[field];
+        const safeImprovedText = restoreGitHostingUrls(originalField, improvedText);
+        const merged = { ...(section.content as Record<string, unknown>), [field]: safeImprovedText };
         const updatedContent = normalizeSectionContent(section.type, merged);
-        await resumeRepository.updateSection(sectionId, { content: updatedContent });
+        const updated = await resumeRepository.updateSectionWithRevision(resumeId, resume.revision, sectionId, { content: updatedContent });
+        if (!updated) return { success: false, error: 'Section not found' };
 
-        return { success: true, sectionType: section.type, field, improvedText };
+        return { success: true, sectionId, sectionType: section.type, field };
       },
     }),
 
@@ -221,9 +234,10 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
           categories.push({ id: crypto.randomUUID(), name: category, skills });
         }
 
-        await resumeRepository.updateSection(skillsSection.id, { content: { categories } });
+        const updated = await resumeRepository.updateSectionWithRevision(resumeId, resume.revision, skillsSection.id, { content: { categories } });
+        if (!updated) return { success: false, error: 'Skills section not found' };
 
-        return { success: true, category, skills, sectionId: skillsSection.id };
+        return { success: true, sectionId: skillsSection.id, sectionType: skillsSection.type, category };
       },
     }),
 
@@ -237,7 +251,7 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
         if (!resume) return { success: false, error: 'Resume not found' };
 
         const model = getModel(aiConfig);
-        const resumeContext = JSON.stringify(resume.sections);
+        const resumeContext = serializeResumeForModel(resume.sections);
 
         const result = await generateText({
           model,
@@ -272,7 +286,7 @@ CRITICAL: You are a JSON API. Your entire response must be a single valid JSON o
         });
 
         // Translate each section concurrently (max 4 at a time)
-        const sections = resume.sections.map((s: any) => ({
+        const sections = resume.sections.map((s: any) => sanitizeResumeForModel({
           sectionId: s.id,
           type: s.type,
           title: s.title,
@@ -323,20 +337,33 @@ Rules:
         const typeById = new Map<string, string>(
           sections.map((s: { sectionId: string; type: string }) => [s.sectionId, s.type] as [string, string])
         );
+        const translatedUpdates: { sectionId: string; title: string; content: unknown }[] = [];
         for (const r of results) {
           if (!r.ok) { failed++; continue; }
           const translated = r.data;
           const sectionType: string = typeById.get(translated.sectionId) || '';
-          await resumeRepository.updateSection(translated.sectionId, {
-            title: translated.title,
+          const originalSection = resume.sections.find((s: any) => s.id === translated.sectionId);
+          const restoredContent = originalSection
+            ? restoreGitHostingUrls(originalSection.content, translated.content)
+            : translated.content;
+          translatedUpdates.push({
+            sectionId: translated.sectionId,
+            title: originalSection
+              ? restoreGitHostingUrls(originalSection.title, translated.title)
+              : translated.title,
             // A mistranslated structure could crash the renderer — normalize it (issue #87).
-            content: normalizeSectionContent(sectionType, translated.content),
+            content: normalizeSectionContent(sectionType, restoredContent),
           });
           succeeded++;
         }
 
-        // Update resume language
-        await resumeRepository.update(resumeId, { language: targetLanguage });
+        const updated = await resumeRepository.updateSectionsWithRevision(
+          resumeId,
+          resume.revision,
+          translatedUpdates,
+          targetLanguage,
+        );
+        if (!updated) return { success: false, error: 'Resume changed during translation; please retry' };
 
         return {
           success: true,

@@ -1,5 +1,5 @@
 import { db } from './index';
-import { resumes, resumeSections } from './schema';
+import { resumes, resumeSections } from './pg-schema';
 
 /**
  * Create a sample resume for a new user so the dashboard isn't empty.

@@ -44,12 +44,12 @@ export function SkillsSection({ section, onUpdate }: Props) {
           {index > 0 && <Separator className="mb-4" />}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <EditableText label={t('skillCategory')} value={cat.name} onChange={(v) => updateCategory(index, { name: v })} />
+              <EditableText label={t('skillCategory')} value={cat.name} onChange={(v) => updateCategory(index, { name: v })} changePath={`content.categories.${cat.id}.name`} />
               <Button variant="ghost" size="sm" className="mt-5 h-7 cursor-pointer p-1 text-zinc-400 hover:text-red-500" onClick={() => removeCategory(index)}>
                 <X className="h-3.5 w-3.5" />
               </Button>
             </div>
-            <EditableList label={t('technologies')} items={cat.skills} onChange={(v) => updateCategory(index, { skills: v })} />
+            <EditableList label={t('technologies')} items={cat.skills} onChange={(v) => updateCategory(index, { skills: v })} changePath={`content.categories.${cat.id}.skills`} />
           </div>
         </div>
       ))}

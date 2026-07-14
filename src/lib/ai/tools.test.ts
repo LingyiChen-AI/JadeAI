@@ -14,6 +14,14 @@ vi.mock('@/lib/db/repositories/resume.repository', () => ({
       if (s) Object.assign(s, data);
       return s;
     }),
+    updateSectionWithRevision: vi.fn(async (_resumeId: string, _revision: number, sectionId: string, data: any) => {
+      lastWrite = { sectionId, data };
+      const s = store.sections.find((x: any) => x.id === sectionId);
+      if (s) Object.assign(s, data);
+      return s ? { ...store, revision: store.revision + 1 } : null;
+    }),
+    createSectionWithRevision: vi.fn(),
+    updateSectionsWithRevision: vi.fn(),
   },
 }));
 
@@ -22,6 +30,7 @@ import { createExecutableTools } from './tools';
 function makeStore() {
   store = {
     id: 'r1',
+    revision: 0,
     sections: [
       { id: 'sec-proj', type: 'projects', title: 'Projects', content: { items: [projectItem] } },
       { id: 'sec-skills', type: 'skills', title: 'Skills', content: { categories: [] } },
@@ -112,5 +121,28 @@ describe('updateSection — list field validation (issue #69)', () => {
 
     expect(res.success).toBe(true);
     expect(lastWrite?.data.content.categories[0].skills).toEqual(['Go', 'Rust']);
+  });
+
+  it('returns a minimal tool result without the updated resume content', async () => {
+    const value = JSON.stringify([{ id: 'p2', name: 'New project', description: 'x' }]);
+    const res = await runUpdate({ sectionId: 'sec-proj', field: 'items', value });
+
+    expect(res).toEqual({
+      success: true,
+      sectionId: 'sec-proj',
+      sectionType: 'projects',
+      field: 'items',
+    });
+    expect(res).not.toHaveProperty('updatedContent');
+  });
+
+  it('restores a persisted Git URL when a model update omits it', async () => {
+    store.sections[0].content.items[0].url = 'https://github.com/acme/private.git';
+    const value = JSON.stringify([{ id: 'p1', name: '已翻译', description: '说明' }]);
+
+    await runUpdate({ sectionId: 'sec-proj', field: 'items', value });
+
+    expect(lastWrite?.data.content.items[0].url).toBe('https://github.com/acme/private.git');
+    expect(lastWrite?.data.content.items[0].name).toBe('已翻译');
   });
 });

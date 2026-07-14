@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../index';
-import { users, resumes } from '../schema';
+import { users, resumes } from '../pg-schema';
 import { resumeRepository } from './resume.repository';
 import { createSampleResume } from '../sample-resume';
 
@@ -13,6 +13,17 @@ export const userRepository = {
   async findByEmail(email: string) {
     const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
     return result[0] || null;
+  },
+
+  async findAdminByEmail(email: string) {
+    const result = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
+    return result[0]?.role === 'admin' ? result[0] : null;
+  },
+
+  async createAdmin(email: string, passwordHash: string) {
+    const id = crypto.randomUUID();
+    await db.insert(users).values({ id, email: email.trim().toLowerCase(), name: 'Administrator', authType: 'oauth', role: 'admin', passwordHash, status: 'active' });
+    return this.findById(id);
   },
 
   async findByFingerprint(fingerprint: string) {

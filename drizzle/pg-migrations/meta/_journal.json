@@ -29,6 +29,20 @@
       "when": 1774587349177,
       "tag": "0003_true_kree",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783917614082,
+      "tag": "0004_square_pete_wisdom",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783960013928,
+      "tag": "0005_omniscient_princess_powerful",
+      "breakpoints": true
     }
   ]
 }

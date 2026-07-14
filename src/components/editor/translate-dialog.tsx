@@ -13,10 +13,17 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useResumeStore } from '@/stores/resume-store';
+import { useEditorStore } from '@/stores/editor-store';
 import { LanguageSelect } from '@/components/ui/language-select';
 import { Languages, Loader2, CheckCircle2, AlertCircle, FileEdit, FilePlus2 } from 'lucide-react';
 import { getAIHeaders } from '@/stores/settings-store';
 import { cn } from '@/lib/utils';
+import {
+  recordAIWriteback,
+  snapshotResumeSections,
+  type AIWritebackWriter,
+} from '@/lib/resume/diff-ai-changes';
+import type { Resume, ResumeSection } from '@/types/resume';
 
 interface TranslateDialogProps {
   open: boolean;
@@ -32,10 +39,48 @@ interface Progress {
   total: number;
 }
 
+export async function recordOverwriteTranslationHistory({
+  resumeId,
+  userId,
+  serverRevision,
+  baseline,
+  translatedSections,
+}: {
+  resumeId: string;
+  userId: string;
+  serverRevision: number;
+  baseline: ResumeSection[] | null;
+  translatedSections: ResumeSection[];
+}, writer: AIWritebackWriter) {
+  if (!baseline) return null;
+  return recordAIWriteback({
+    resumeId,
+    userId,
+    before: baseline,
+    after: translatedSections,
+    source: 'overwrite-translation',
+    serverRevision,
+  }, writer);
+}
+
+export function mergeOverwriteTranslationResume(
+  current: Resume,
+  translatedSections: ResumeSection[],
+  language: string,
+  serverRevision: number,
+): Resume {
+  return {
+    ...current,
+    language,
+    revision: serverRevision,
+    sections: translatedSections,
+  };
+}
+
 /** Read an NDJSON stream line by line, calling onLine for each parsed JSON object. */
 async function readNDJSON(
   response: Response,
-  onLine: (data: Record<string, unknown>) => void
+  onLine: (data: Record<string, unknown>) => void | Promise<void>
 ) {
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
@@ -51,13 +96,13 @@ async function readNDJSON(
 
     for (const line of lines) {
       if (!line.trim()) continue;
-      onLine(JSON.parse(line));
+      await onLine(JSON.parse(line));
     }
   }
 
   // Handle remaining buffer
   if (buffer.trim()) {
-    onLine(JSON.parse(buffer));
+    await onLine(JSON.parse(buffer));
   }
 }
 
@@ -76,6 +121,7 @@ export function TranslateDialog({ open, onOpenChange, resumeId }: TranslateDialo
   const [progress, setProgress] = useState<Progress>({ completed: 0, total: 0 });
   const [failedCount, setFailedCount] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+  const overwriteBaselineRef = useRef<ResumeSection[] | null>(null);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -94,10 +140,25 @@ export function TranslateDialog({ open, onOpenChange, resumeId }: TranslateDialo
   }, [open]);
 
   const handleTranslate = useCallback(async () => {
+    const resumeStore = useResumeStore.getState();
+    const saved = await resumeStore.save();
+    if (!saved || !resumeStore.beginAiEditing(resumeId)) {
+      setState('error');
+      setErrorMessage(t('error'));
+      return;
+    }
+
     setState('translating');
     setErrorMessage('');
     setProgress({ completed: 0, total: 0 });
     setFailedCount(0);
+
+    if (mode === 'overwrite') {
+      const current = useResumeStore.getState().sections;
+      overwriteBaselineRef.current = snapshotResumeSections(current);
+    } else {
+      overwriteBaselineRef.current = null;
+    }
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -120,7 +181,7 @@ export function TranslateDialog({ open, onOpenChange, resumeId }: TranslateDialo
         throw new Error(data.error || 'Translation failed');
       }
 
-      await readNDJSON(res, (data) => {
+      await readNDJSON(res, async (data) => {
         if (data.type === 'progress') {
           setProgress({
             completed: data.completed as number,
@@ -129,13 +190,17 @@ export function TranslateDialog({ open, onOpenChange, resumeId }: TranslateDialo
 
           // In overwrite mode, apply each translated section to the store in real-time
           if (mode === 'overwrite') {
-            const section = data.section as { sectionId: string; title: string; content: any } | undefined;
+            const section = data.section as {
+              sectionId: string;
+              title: string;
+              content: ResumeSection['content'];
+            } | undefined;
             if (section) {
               const current = useResumeStore.getState().currentResume;
               if (current) {
                 useResumeStore.getState().setResume({
                   ...current,
-                  sections: current.sections.map((s: any) =>
+                  sections: current.sections.map((s) =>
                     s.id === section.sectionId
                       ? { ...s, title: section.title, content: section.content }
                       : s
@@ -158,13 +223,37 @@ export function TranslateDialog({ open, onOpenChange, resumeId }: TranslateDialo
           } else {
             // Overwrite mode: sync store and close
             const current = useResumeStore.getState().currentResume;
-            if (current) {
-              useResumeStore.getState().setResume({
-                ...current,
-                language: data.language as string,
-                sections: data.sections as any,
+            const translatedSections = (data.sections as ResumeSection[]) || [];
+            const baseline = overwriteBaselineRef.current;
+            const serverRevision = typeof data.revision === 'number'
+              ? data.revision
+              : current?.revision ?? 0;
+            if (current && baseline) {
+              await recordOverwriteTranslationHistory({
+                resumeId,
+                userId: current.userId,
+                baseline,
+                translatedSections,
+                serverRevision,
+              }, {
+                appendHistory: async (entry) => {
+                  await useEditorStore.getState().appendAIHistory(entry);
+                  const historyError = useEditorStore.getState().aiHistoryError;
+                  if (historyError) throw new Error(historyError);
+                },
+                mergeChanges: useEditorStore.getState().mergeAiChanges,
+                onPersistenceError: (error) => console.warn('AI history persistence degraded:', error),
               });
             }
+            if (current) {
+              useResumeStore.getState().setResume(mergeOverwriteTranslationResume(
+                current,
+                translatedSections,
+                data.language as string,
+                serverRevision,
+              ));
+            }
+            overwriteBaselineRef.current = null;
 
             setTimeout(() => {
               onOpenChange(false);
@@ -172,10 +261,12 @@ export function TranslateDialog({ open, onOpenChange, resumeId }: TranslateDialo
           }
         }
       });
-    } catch (err: any) {
-      if (err.name === 'AbortError') return;
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       setState('error');
-      setErrorMessage(err.message || t('error'));
+      setErrorMessage(err instanceof Error ? err.message : t('error'));
+    } finally {
+      useResumeStore.getState().endAiEditing(resumeId);
     }
   }, [resumeId, targetLanguage, mode, onOpenChange, t, router]);
 

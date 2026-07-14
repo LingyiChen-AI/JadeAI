@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   DndContext,
   closestCenter,
@@ -36,8 +37,9 @@ export function EditorCanvas({
   onRemoveSection,
   onReorderSections,
 }: EditorCanvasProps) {
+  const t = useTranslations('editor');
   const [activeId, setActiveId] = useState<string | null>(null);
-  const { setDragging } = useEditorStore();
+  const { setDragging, aiChanges, clearAllAiChanges, requestAiChangeFocus, setMobileActiveTab } = useEditorStore();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -75,11 +77,35 @@ export function EditorCanvas({
   );
 
   const activeSection = activeId ? sections.find((s) => s.id === activeId) : null;
+  const viewFirstChange = useCallback(() => {
+    const first = sections
+      .map((section) => aiChanges.find((change) => change.sectionId === section.id))
+      .find((change): change is NonNullable<typeof change> => Boolean(change)) ?? aiChanges[0];
+    if (!first) return;
+    setMobileActiveTab('edit');
+    requestAiChangeFocus(first);
+  }, [aiChanges, requestAiChangeFocus, sections, setMobileActiveTab]);
 
   return (
     <div className="h-full min-w-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950">
       <ScrollArea className="h-full">
         <div className="mx-auto max-w-3xl px-3 py-4 md:px-6 md:py-8">
+          {aiChanges.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+              <span className="inline-flex items-center gap-1.5 font-semibold">
+                <span className="rounded bg-amber-200 px-1.5 py-0.5 text-[10px] dark:bg-amber-800">AI</span>
+                {t('aiChangesCount', { count: aiChanges.length })}
+              </span>
+              <div className="flex items-center gap-3">
+                <button type="button" className="cursor-pointer underline-offset-2 hover:underline" onClick={viewFirstChange}>
+                  {t('viewFirstAiChange')}
+                </button>
+                <button type="button" className="cursor-pointer underline-offset-2 hover:underline" onClick={clearAllAiChanges}>
+                  {t('clearAiChanges')}
+                </button>
+              </div>
+            </div>
+          )}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}

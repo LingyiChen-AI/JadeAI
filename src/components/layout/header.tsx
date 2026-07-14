@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useUIStore } from '@/stores/ui-store';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
+import { AnnouncementCenter } from '@/components/announcements/announcement-center';
 
 const NAV_ITEMS: { href: string; i18nKey: string; match: string; tourId?: string }[] = [
   { href: '/dashboard', i18nKey: 'dashboard.nav', match: '/dashboard' },
@@ -55,6 +56,7 @@ export function Header() {
         </div>
         <div className="flex items-center gap-3">
           <LocaleSwitcher />
+          <AnnouncementCenter />
           <Button
             variant="ghost"
             size="icon-sm"

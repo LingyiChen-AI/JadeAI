@@ -171,7 +171,7 @@ export function AIChatBubble({ resumeId }: AIChatBubbleProps) {
         >
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-white" />
-            <span className="text-sm font-semibold text-white">AI Assistant</span>
+            <span className="text-sm font-semibold text-white">{t('panelTitle')}</span>
           </div>
           <button
             className="rounded p-1 text-white/80 hover:bg-white/20 hover:text-white"
@@ -203,6 +203,8 @@ export function AIChatBubble({ resumeId }: AIChatBubbleProps) {
         )}
         <button
           data-tour="ai-chat"
+          aria-label={hasApiKey ? t('bubbleTooltip') : t('apiKeyMissingBubble')}
+          title={hasApiKey ? t('bubbleTooltip') : t('apiKeyMissingBubble')}
           className="relative flex h-14 w-14 cursor-grab items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-hover text-white shadow-lg transition-transform hover:scale-110 active:cursor-grabbing active:scale-95"
           onMouseDown={onBubbleMouseDown}
           onClick={onBubbleClick}

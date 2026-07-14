@@ -128,6 +128,7 @@ export function GitHubSection({ section, onUpdate }: Props) {
                 label={t('repoUrl')}
                 value={item.repoUrl}
                 onChange={(v) => handleUrlChange(index, v)}
+                changePath={`content.items.${item.id}.repoUrl`}
               />
               {loadingIds.has(item.id) && (
                 <Loader2 className="absolute right-2 top-7 h-4 w-4 animate-spin text-zinc-400" />
@@ -158,7 +159,7 @@ export function GitHubSection({ section, onUpdate }: Props) {
                 </button>
               </div>
             )}
-            <EditableRichText label={t('description')} value={item.description} onChange={(v) => updateItem(index, { description: v })} />
+            <EditableRichText label={t('description')} value={item.description} onChange={(v) => updateItem(index, { description: v })} changePath={`content.items.${item.id}.description`} />
           </div>
         </div>
       ))}

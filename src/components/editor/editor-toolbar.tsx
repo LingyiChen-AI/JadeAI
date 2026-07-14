@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
-import { ArrowLeft, Undo2, Redo2, Download, Upload, Settings, Palette, Save, FileSearch, Languages, FileText, SpellCheck, Share2, MoreHorizontal } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowLeft, Undo2, Redo2, Download, Upload, Settings, Palette, Save, FileSearch, Languages, FileText, SpellCheck, Share2, MoreHorizontal, Sparkles, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -14,20 +16,32 @@ import {
 import { useEditorStore } from '@/stores/editor-store';
 import { useResumeStore } from '@/stores/resume-store';
 import { useUIStore } from '@/stores/ui-store';
-import { useSettingsStore } from '@/stores/settings-store';
 import { LocaleSwitcher } from '@/components/layout/locale-switcher';
+import { AIHistoryPanel } from '@/components/editor/ai-history-panel';
 
 interface EditorToolbarProps {
   resumeId: string;
+  userId: string;
 }
 
-export function EditorToolbar({ resumeId }: EditorToolbarProps) {
+export function EditorToolbar({ resumeId, userId }: EditorToolbarProps) {
   const t = useTranslations('editor.toolbar');
   const router = useRouter();
-  const { toggleThemeEditor, showThemeEditor, undo, redo, undoStack, redoStack } = useEditorStore();
-  const { isSaving, isDirty, currentResume, sections, reorderSections, save } = useResumeStore();
+  const { toggleThemeEditor, showThemeEditor, undo, redo, undoStack, redoStack, showAiChat, toggleAiChat } = useEditorStore();
+  const { isSaving, isDirty, saveError, currentResume, reorderSections, save } = useResumeStore();
+  const isAiEditing = useResumeStore((s) => s.aiEditingResumeId === resumeId);
   const { openModal } = useUIStore();
-  const autoSave = useSettingsStore((s) => s.autoSave);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  useEffect(() => {
+    if (saveError) toast.error(t(saveError === 'saveConflict' ? 'saveConflict' : 'saveFailed'));
+  }, [saveError, t]);
+
+  const handleBack = async () => {
+    if (isAiEditing) return;
+    await save();
+    router.push('/dashboard');
+  };
 
   const handleUndo = () => {
     const snapshot = undo();
@@ -44,12 +58,14 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
   };
 
   return (
+    <>
     <div className="flex h-12 items-center justify-between gap-2 border-b bg-white px-2 sm:px-3 dark:bg-background dark:border-zinc-800">
       <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.push('/dashboard')}
+          onClick={handleBack}
+          disabled={isAiEditing}
           className="h-8 w-8 shrink-0 cursor-pointer text-zinc-600"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -59,19 +75,19 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
           {currentResume?.title || ''}
         </span>
         <span className="hidden text-xs text-zinc-400 sm:inline">
-          {isSaving ? t('saving') : isDirty ? (autoSave ? '' : t('unsaved')) : t('autoSaved')}
+          {isAiEditing ? t('aiEditing') : isSaving ? t('saving') : saveError ? t(saveError === 'saveConflict' ? 'saveConflict' : 'saveFailed') : isDirty ? t('unsaved') : t('autoSaved')}
         </span>
-        {!autoSave && isDirty && !isSaving && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => save()}
-            className="cursor-pointer gap-1 text-brand hover:text-brand hover:bg-brand-muted"
-          >
-            <Save className="h-3.5 w-3.5" />
-            <span className="text-xs">{t('save')}</span>
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => save()}
+          disabled={!isDirty || isSaving || isAiEditing}
+          className="cursor-pointer gap-1 text-brand hover:bg-brand-muted hover:text-brand"
+          title={`${t('save')} (Ctrl+S)`}
+        >
+          <Save className="h-3.5 w-3.5" />
+          <span className="hidden text-xs sm:inline">{t('save')}</span>
+        </Button>
       </div>
 
       <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
@@ -80,7 +96,7 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
           variant="ghost"
           size="icon"
           onClick={handleUndo}
-          disabled={undoStack.length === 0}
+          disabled={undoStack.length === 0 || isAiEditing}
           className="h-8 w-8 cursor-pointer"
           title={t('undo')}
         >
@@ -90,7 +106,7 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
           variant="ghost"
           size="icon"
           onClick={handleRedo}
-          disabled={redoStack.length === 0}
+          disabled={redoStack.length === 0 || isAiEditing}
           className="h-8 w-8 cursor-pointer"
           title={t('redo')}
         >
@@ -100,6 +116,30 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
 
         {/* Desktop: show all secondary buttons */}
         <div className="hidden items-center gap-1 md:flex">
+          <Button
+            data-tour="ai-toolbar"
+            variant={showAiChat ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={toggleAiChat}
+            className="cursor-pointer text-brand hover:bg-brand-muted hover:text-brand"
+            title={t('aiAssistant')}
+          >
+            <Sparkles className="h-4 w-4" />
+            <span className="ml-1 text-xs hidden sm:inline">{t('aiAssistant')}</span>
+          </Button>
+          <Separator orientation="vertical" className="h-6" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setHistoryOpen(true)}
+            disabled={isAiEditing}
+            className="cursor-pointer"
+            title={t('aiHistory')}
+            aria-label={t('aiHistory')}
+          >
+            <History className="h-4 w-4" />
+            <span className="ml-1 hidden text-xs lg:inline">{t('aiHistory')}</span>
+          </Button>
           <Button
             data-tour="export"
             variant="ghost"
@@ -115,6 +155,7 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
             variant="ghost"
             size="sm"
             onClick={() => openModal('import')}
+            disabled={isAiEditing}
             className="cursor-pointer"
             title={t('import')}
           >
@@ -146,6 +187,7 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
             variant="ghost"
             size="sm"
             onClick={() => openModal('translate')}
+            disabled={isAiEditing}
             className="cursor-pointer"
             title={t('translate')}
           >
@@ -193,11 +235,19 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={toggleAiChat}>
+                <Sparkles className="mr-2 h-4 w-4 text-brand" />
+                {t('aiAssistant')}
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={isAiEditing} onClick={() => setHistoryOpen(true)}>
+                <History className="mr-2 h-4 w-4" />
+                {t('aiHistory')}
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openModal('export')}>
                 <Download className="mr-2 h-4 w-4" />
                 {t('exportPdf')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => openModal('import')}>
+              <DropdownMenuItem disabled={isAiEditing} onClick={() => openModal('import')}>
                 <Upload className="mr-2 h-4 w-4" />
                 {t('import')}
               </DropdownMenuItem>
@@ -209,7 +259,7 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
                 <FileSearch className="mr-2 h-4 w-4" />
                 {t('jdAnalysis')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => openModal('translate')}>
+              <DropdownMenuItem disabled={isAiEditing} onClick={() => openModal('translate')}>
                 <Languages className="mr-2 h-4 w-4" />
                 {t('translate')}
               </DropdownMenuItem>
@@ -236,6 +286,7 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
           variant={showThemeEditor ? 'secondary' : 'ghost'}
           size="icon"
           onClick={toggleThemeEditor}
+          disabled={isAiEditing}
           className="h-8 w-8 cursor-pointer sm:w-auto sm:px-3"
           title={t('theme')}
         >
@@ -246,5 +297,12 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
         <LocaleSwitcher />
       </div>
     </div>
+    <AIHistoryPanel
+      open={historyOpen}
+      onOpenChange={setHistoryOpen}
+      resumeId={resumeId}
+      userId={userId}
+    />
+    </>
   );
 }

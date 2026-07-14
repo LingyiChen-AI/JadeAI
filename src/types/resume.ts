@@ -184,6 +184,7 @@ export interface Resume {
   themeConfig: ThemeConfig;
   isDefault: boolean;
   language: string;
+  revision: number;
   sections: ResumeSection[];
   createdAt: Date;
   updatedAt: Date;

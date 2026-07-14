@@ -1,6 +1,6 @@
 import { eq, desc, sql } from 'drizzle-orm';
 import { db } from '../index';
-import { resumeShares } from '../schema';
+import { resumeShares } from '../pg-schema';
 
 export const shareRepository = {
   async findByResumeId(resumeId: string) {

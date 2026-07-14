@@ -1,6 +1,6 @@
 import { eq, desc, and } from 'drizzle-orm';
 import { db } from '../index';
-import { interviewSessions, interviewRounds, interviewMessages, interviewReports } from '../schema';
+import { interviewSessions, interviewRounds, interviewMessages, interviewReports } from '../pg-schema';
 import type {
   InterviewerConfig,
   InterviewSessionStatus,

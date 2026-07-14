@@ -4,6 +4,7 @@ import { getModel, extractAIConfig, AIConfigError } from '@/lib/ai/provider';
 import { resolveUser, getUserIdFromRequest } from '@/lib/auth/helpers';
 import { resumeRepository } from '@/lib/db/repositories/resume.repository';
 import { coverLetterInputSchema } from '@/lib/ai/cover-letter-schema';
+import { serializeResumeForModel } from '@/lib/ai/model-context';
 
 interface CoverLetterOutput {
   title: string;
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const resumeContext = JSON.stringify(resume.sections);
+    const resumeContext = serializeResumeForModel(resume.sections);
     const aiConfig = extractAIConfig(request);
     const model = getModel(aiConfig);
 

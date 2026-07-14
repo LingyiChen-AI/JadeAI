@@ -55,16 +55,16 @@ export function ProjectsSection({ section, onUpdate }: Props) {
               </Button>
             </div>
             <FieldWrapper>
-              <EditableText label={t('projectName')} value={item.name} onChange={(v) => updateItem(index, { name: v })} />
-              <EditableText label={t('website')} value={item.url || ''} onChange={(v) => updateItem(index, { url: v })} />
+              <EditableText label={t('projectName')} value={item.name} onChange={(v) => updateItem(index, { name: v })} changePath={`content.items.${item.id}.name`} />
+              <EditableText label={t('website')} value={item.url || ''} onChange={(v) => updateItem(index, { url: v })} changePath={`content.items.${item.id}.url`} />
             </FieldWrapper>
             <FieldWrapper>
-              <EditableDate label={t('startDate')} value={item.startDate || ''} onChange={(v) => updateItem(index, { startDate: v })} />
-              <EditableDate label={t('endDate')} value={item.endDate || ''} onChange={(v) => updateItem(index, { endDate: v })} />
+              <EditableDate label={t('startDate')} value={item.startDate || ''} onChange={(v) => updateItem(index, { startDate: v })} changePath={`content.items.${item.id}.startDate`} />
+              <EditableDate label={t('endDate')} value={item.endDate || ''} onChange={(v) => updateItem(index, { endDate: v })} changePath={`content.items.${item.id}.endDate`} />
             </FieldWrapper>
-            <EditableRichText label={t('description')} value={item.description} onChange={(v) => updateItem(index, { description: v })} />
-            <EditableList label={t('technologies')} items={item.technologies} onChange={(v) => updateItem(index, { technologies: v })} />
-            <EditableList label={t('highlights')} items={item.highlights} onChange={(v) => updateItem(index, { highlights: v })} />
+            <EditableRichText label={t('description')} value={item.description} onChange={(v) => updateItem(index, { description: v })} changePath={`content.items.${item.id}.description`} />
+            <EditableList label={t('technologies')} items={item.technologies} onChange={(v) => updateItem(index, { technologies: v })} changePath={`content.items.${item.id}.technologies`} />
+            <EditableList label={t('highlights')} items={item.highlights} onChange={(v) => updateItem(index, { highlights: v })} changePath={`content.items.${item.id}.highlights`} />
           </div>
         </div>
       ))}

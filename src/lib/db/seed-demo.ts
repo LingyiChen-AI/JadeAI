@@ -1,4 +1,4 @@
-import { users, resumes, resumeSections } from './schema';
+import { users, resumes, resumeSections } from './pg-schema';
 
 /**
  * Seed a demo-fingerprint user with a sample resume.

@@ -6,6 +6,7 @@ import { resumeRepository } from '@/lib/db/repositories/resume.repository';
 import { translateInputSchema } from '@/lib/ai/translate-schema';
 import { extractJson } from '@/lib/ai/extract-json';
 import { z } from 'zod/v4';
+import { restoreGitHostingUrls, sanitizeResumeForModel } from '@/lib/ai/model-context';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   zh: 'Simplified Chinese',
@@ -168,12 +169,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      return {
+      return sanitizeResumeForModel({
         sectionId: s.id,
         type: s.type,
         title: s.title,
         content,
-      };
+      });
     });
 
     const aiConfig = extractAIConfig(request);
@@ -199,20 +200,7 @@ export async function POST(request: NextRequest) {
             sectionsData,
             MAX_CONCURRENCY,
             async (section) => {
-              const translated = await translateSection(section, targetLanguage, model, aiConfig);
-
-              // Merge back stripped fields (e.g. avatar)
-              const saved = strippedFields.get(translated.sectionId);
-              const content = saved
-                ? { ...translated.content, ...saved }
-                : translated.content;
-
-              await resumeRepository.updateSection(translated.sectionId, {
-                title: translated.title,
-                content,
-              });
-
-              return { ...translated, content };
+              return translateSection(section, targetLanguage, model, aiConfig);
             },
             (_index, result) => {
               completed++;
@@ -235,8 +223,27 @@ export async function POST(request: NextRequest) {
             );
           }
 
-          // Update resume language
-          await resumeRepository.update(targetResumeId, { language: targetLanguage });
+          const translatedUpdates = results
+            .filter((result): result is PromiseFulfilledResult<z.infer<typeof singleSectionSchema>> => result.status === 'fulfilled')
+            .map(({ value: translated }) => {
+              const originalSection = allSections.find((item: any) => item.id === translated.sectionId);
+              const restoredContent = originalSection
+                ? restoreGitHostingUrls(originalSection.content, translated.content)
+                : translated.content;
+              const saved = strippedFields.get(translated.sectionId);
+              return {
+                sectionId: translated.sectionId,
+                title: originalSection
+                  ? restoreGitHostingUrls(originalSection.title, translated.title)
+                  : translated.title,
+                content: saved ? { ...restoredContent, ...saved } : restoredContent,
+              };
+            });
+          const currentTarget = await resumeRepository.findById(targetResumeId);
+          const updated = currentTarget
+            ? await resumeRepository.updateSectionsWithRevision(targetResumeId, currentTarget.revision, translatedUpdates, targetLanguage)
+            : null;
+          if (!updated) throw new Error('Resume changed during translation; please retry');
         } catch (err) {
           console.error('Unexpected error during translation:', err);
         }

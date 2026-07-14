@@ -6,6 +6,7 @@ import { resumeRepository } from '@/lib/db/repositories/resume.repository';
 import { analysisRepository } from '@/lib/db/repositories/analysis.repository';
 import { grammarCheckInputSchema, grammarCheckOutputSchema } from '@/lib/ai/grammar-check-schema';
 import { extractJson } from '@/lib/ai/extract-json';
+import { sanitizeResumeForModel } from '@/lib/ai/model-context';
 
 const GRAMMAR_CHECK_PROMPT = `You are an expert resume reviewer and writing coach. Analyze the provided resume sections for writing quality issues.
 
@@ -71,12 +72,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare sections data for AI analysis
-    const sectionsData = sectionsToCheck.map((s: any) => ({
+    const sectionsData = sanitizeResumeForModel(sectionsToCheck.map((s: any) => ({
       sectionId: s.id,
       sectionTitle: s.title,
       type: s.type,
       content: s.content,
-    }));
+    })));
 
     const aiConfig = extractAIConfig(request);
     const model = getModel(aiConfig);

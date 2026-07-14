@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { useEditor } from '@/hooks/use-editor';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import { useIsMobile } from '@/hooks/use-media-query';
@@ -23,10 +24,11 @@ import { ShareDialog } from '@/components/editor/share-dialog';
 import { CoverLetterDialog } from '@/components/editor/cover-letter-dialog';
 import { GrammarCheckDialog } from '@/components/editor/grammar-check-dialog';
 import { TourOverlay, type TourStepConfig } from '@/components/tour/tour-overlay';
-import { useEditorStore } from '@/stores/editor-store';
+import { getSectionsFingerprint, useEditorStore } from '@/stores/editor-store';
 import { useUIStore } from '@/stores/ui-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import { useTourStore, hasCompletedTour } from '@/stores/tour-store';
+import { useResumeStore } from '@/stores/resume-store';
 import { takePendingOptimizeMessage } from '@/lib/pending-optimize';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -34,25 +36,43 @@ import { cn } from '@/lib/utils';
 const EDITOR_TOUR_STEPS: TourStepConfig[] = [
   { target: 'sidebar', placement: 'right', i18nKey: 'sidebar' },
   { target: 'preview', placement: 'left', i18nKey: 'preview' },
-  { target: 'ai-chat', placement: 'top', i18nKey: 'aiChat' },
+  { target: 'ai-toolbar', placement: 'bottom', i18nKey: 'aiChat' },
   { target: 'export', placement: 'bottom', i18nKey: 'export' },
   { target: 'theme', placement: 'bottom', i18nKey: 'theme' },
 ];
 
 export default function EditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const toolbarT = useTranslations('editor.toolbar');
   const { isLoading: fpLoading } = useFingerprint();
-  const { resume, sections, updateSection, addSection, removeSection, reorderSections } = useEditor(id);
+  const { resume, sections, updateSection, addSection, removeSection, reorderSections, serverHead } = useEditor(id);
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { showThemeEditor, mobileActiveTab, setPendingAiMessage, setShowAiChat } = useEditorStore();
+  const {
+    showThemeEditor, mobileActiveTab, setPendingAiMessage, setShowAiChat,
+    loadAIHistory, closeAIHistoryScope,
+  } = useEditorStore();
   const { activeModal, openModal, closeModal } = useUIStore();
   const { hydrate, _hydrated } = useSettingsStore();
+  const save = useResumeStore((s) => s.save);
+  const isAiEditing = useResumeStore((s) => s.aiEditingResumeId === id);
   const startTour = useTourStore((s) => s.startTour);
 
   useEffect(() => {
     if (!_hydrated) hydrate();
   }, [_hydrated, hydrate]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        if (!isAiEditing) void save();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAiEditing, save]);
 
   // Catch unhandled promise rejections (e.g. "Failed to find Server Action")
   // to prevent page crash — show toast instead
@@ -80,6 +100,15 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     return () => clearTimeout(timer);
   }, [resume, startTour]);
 
+  useEffect(() => {
+    if (!serverHead || serverHead.resumeId !== id) return;
+    void loadAIHistory(serverHead.resumeId, serverHead.userId, {
+      revision: serverHead.revision,
+      contentFingerprint: getSectionsFingerprint(serverHead.sections),
+    });
+    return () => closeAIHistoryScope(serverHead.resumeId, serverHead.userId);
+  }, [id, serverHead, loadAIHistory, closeAIHistoryScope]);
+
   // Consume a copy-optimize message handed off via pending-optimize.ts (gated
   // on resume.id === id so it runs after useEditor's cleanup for the old id).
   useEffect(() => {
@@ -105,12 +134,17 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
 
   return (
     <div className="flex h-screen flex-col">
-      <EditorToolbar resumeId={id} />
+      <EditorToolbar resumeId={id} userId={resume.userId} />
+      {isAiEditing && (
+        <div role="status" className="border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-center text-xs font-medium text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+          {toolbarT('aiEditing')}
+        </div>
+      )}
       <EditorMobileTabBar />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar: hidden on mobile, shown on desktop */}
-        <div className="hidden md:block">
+        <div inert={isAiEditing} aria-disabled={isAiEditing} className={cn('hidden md:block', isAiEditing && 'pointer-events-none opacity-70')}>
           <EditorSidebar
             sections={sections}
             onAddSection={addSection}
@@ -119,8 +153,9 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         </div>
 
         {/* Canvas: always mounted, hidden on mobile when preview tab active */}
-        <div className={cn(
+        <div inert={isAiEditing} aria-disabled={isAiEditing} className={cn(
           "min-w-0 flex-1 overflow-hidden md:flex-[4]",
+          isAiEditing && "pointer-events-none opacity-70",
           isMobile && mobileActiveTab !== "edit" && "hidden"
         )}>
           <EditorCanvas
@@ -131,7 +166,11 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           />
         </div>
 
-        {showThemeEditor && <ThemeEditor />}
+        {showThemeEditor && (
+          <div inert={isAiEditing} aria-disabled={isAiEditing} className={cn(isAiEditing && 'pointer-events-none opacity-70')}>
+            <ThemeEditor />
+          </div>
+        )}
 
         {/* Preview: always mounted, hidden on mobile when edit tab active */}
         <div className={cn(
@@ -145,7 +184,8 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
       {/* Mobile sidebar FAB */}
       <button
         onClick={() => setSidebarOpen(true)}
-        className="fixed bottom-20 left-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white shadow-lg transition-transform hover:scale-105 active:scale-95 md:hidden"
+        disabled={isAiEditing}
+        className="fixed bottom-20 left-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 md:hidden"
         aria-label="Open sections"
       >
         <List className="h-5 w-5" />

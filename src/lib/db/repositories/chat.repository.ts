@@ -1,6 +1,6 @@
 import { eq, desc, and, lt } from 'drizzle-orm';
 import { db } from '../index';
-import { chatSessions, chatMessages } from '../schema';
+import { chatSessions, chatMessages } from '../pg-schema';
 
 export const chatRepository = {
   async findSessionsByResumeId(resumeId: string) {

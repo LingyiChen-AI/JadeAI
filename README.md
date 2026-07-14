@@ -168,7 +168,7 @@ The following resume sections support Markdown syntax:
 - **Bilingual UI** — Full Chinese (zh) and English (en) interface
 - **Dark Mode** — Light, dark, and system theme support
 - **Flexible Auth** — Google OAuth or browser fingerprint (zero-config)
-- **Dual Database** — SQLite (default, zero-config) or PostgreSQL
+- **PostgreSQL Database** — One consistent database for local and production environments
 
 ## Tech Stack
 
@@ -178,7 +178,7 @@ The following resume sections support Markdown syntax:
 | UI | React 19, Tailwind CSS 4, shadcn/ui, Radix UI |
 | Drag & Drop | @dnd-kit |
 | State | Zustand |
-| Database | Drizzle ORM (SQLite / PostgreSQL) |
+| Database | Drizzle ORM + PostgreSQL |
 | Auth | NextAuth.js v5 + FingerprintJS |
 | AI | Vercel AI SDK v6 + OpenAI / Anthropic |
 | PDF | Puppeteer Core + @sparticuz/chromium |
@@ -195,7 +195,7 @@ openssl rand -base64 32
 
 docker run -d -p 3000:3000 \
   -e AUTH_SECRET=<your-generated-secret> \
-  -v jadeai-data:/app/data \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/jadeai \
   twwch/jadeai:latest
 ```
 
@@ -206,19 +206,6 @@ Open [http://localhost:3000](http://localhost:3000). Database auto-migrates and 
 > **AI Configuration:** No server-side AI env vars needed. Each user configures their own API Key, Base URL, and Model in **Settings > AI** within the app.
 
 <details>
-<summary>With PostgreSQL</summary>
-
-```bash
-docker run -d -p 3000:3000 \
-  -e AUTH_SECRET=<your-generated-secret> \
-  -e DB_TYPE=postgresql \
-  -e DATABASE_URL=postgresql://user:pass@host:5432/jadeai \
-  twwch/jadeai:latest
-```
-
-</details>
-
-<details>
 <summary>With Google OAuth</summary>
 
 ```bash
@@ -227,7 +214,7 @@ docker run -d -p 3000:3000 \
   -e AUTH_SECRET=your-secret \
   -e GOOGLE_CLIENT_ID=xxx \
   -e GOOGLE_CLIENT_SECRET=xxx \
-  -v jadeai-data:/app/data \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/jadeai \
   twwch/jadeai:latest
 ```
 
@@ -255,8 +242,8 @@ cp .env.example .env.local
 Edit `.env.local`:
 
 ```bash
-# Database (defaults to SQLite, no config needed)
-DB_TYPE=sqlite
+# PostgreSQL database (required)
+DATABASE_URL=postgresql://user:password@localhost:5432/jadeai
 
 # Auth (defaults to fingerprint mode, no config needed)
 AUTH_ENABLED=false
@@ -264,7 +251,7 @@ AUTH_ENABLED=false
 
 > **AI Configuration:** No server-side env vars needed. Each user configures their own API Key, Base URL, and Model in **Settings > AI** within the app.
 
-See `.env.example` for all available options (Google OAuth, PostgreSQL, etc.).
+See `.env.example` for all available options (Google OAuth, etc.).
 
 #### Initialize Database & Run
 
@@ -287,9 +274,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `AUTH_SECRET` | Yes | — | Secret key for session encryption |
-| `DB_TYPE` | No | `sqlite` | Database type: `sqlite` or `postgresql` |
-| `DATABASE_URL` | When PostgreSQL | — | PostgreSQL connection string |
-| `SQLITE_PATH` | No | `./data/jade.db` | SQLite database file path |
+| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
 | `AUTH_ENABLED` | No | `false` | Enable Google OAuth (`true`) or use fingerprint mode (`false`) |
 | `GOOGLE_CLIENT_ID` | When OAuth | — | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | When OAuth | — | Google OAuth client secret |
@@ -305,8 +290,8 @@ Open [http://localhost:3000](http://localhost:3000).
 | `pnpm start` | Start production server |
 | `pnpm lint` | Run ESLint |
 | `pnpm type-check` | TypeScript type checking |
-| `pnpm db:generate` | Generate Drizzle migrations (SQLite) |
-| `pnpm db:generate:pg` | Generate Drizzle migrations (PostgreSQL) |
+| `pnpm db:generate` | Generate PostgreSQL Drizzle migrations |
+| `pnpm db:generate:pg` | Generate PostgreSQL Drizzle migrations |
 | `pnpm db:migrate` | Execute database migrations |
 | `pnpm db:studio` | Open Drizzle Studio (database GUI) |
 | `pnpm db:seed` | Seed database with sample data |
@@ -450,13 +435,6 @@ Contributions are welcome! Here's how to get started:
 <summary><b>How does AI configuration work?</b></summary>
 
 JadeAI does not require server-side AI API keys. Each user configures their own AI provider (OpenAI, Anthropic, or custom endpoint), API key, and model in **Settings > AI** within the app. API keys are stored in the browser's local storage and are never sent to the server for storage.
-
-</details>
-
-<details>
-<summary><b>Can I switch between SQLite and PostgreSQL?</b></summary>
-
-Yes. Set the `DB_TYPE` environment variable to `sqlite` or `postgresql`. SQLite is the default and requires zero configuration. For PostgreSQL, also set `DATABASE_URL`. Note that data is not automatically migrated between database types.
 
 </details>
 

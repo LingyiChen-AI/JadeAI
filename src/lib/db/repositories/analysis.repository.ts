@@ -1,6 +1,6 @@
 import { eq, desc } from 'drizzle-orm';
 import { db } from '../index';
-import { jdAnalyses, grammarChecks } from '../schema';
+import { jdAnalyses, grammarChecks } from '../pg-schema';
 
 export const analysisRepository = {
   // ── JD Analysis ──────────────────────────────────────────

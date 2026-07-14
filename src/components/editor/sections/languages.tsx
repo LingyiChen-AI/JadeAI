@@ -40,17 +40,17 @@ export function LanguagesSection({ section, onUpdate }: Props) {
           {index > 0 && <Separator className="mb-4" />}
           <div className="space-y-3">
             <FieldWrapper>
-              <EditableText label={t('language')} value={item.language} onChange={(v) => updateItem(index, { language: v })} />
+              <EditableText label={t('language')} value={item.language} onChange={(v) => updateItem(index, { language: v })} changePath={`content.items.${item.id}.language`} />
               <div className="flex items-end gap-1">
                 <div className="flex-1">
-                  <EditableText label={t('proficiency')} value={item.proficiency} onChange={(v) => updateItem(index, { proficiency: v })} />
+                  <EditableText label={t('proficiency')} value={item.proficiency} onChange={(v) => updateItem(index, { proficiency: v })} changePath={`content.items.${item.id}.proficiency`} />
                 </div>
                 <Button variant="ghost" size="sm" className="h-8 w-8 cursor-pointer p-0 text-zinc-400 hover:text-red-500" onClick={() => removeItem(index)}>
                   <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </FieldWrapper>
-            <EditableText label={t('description')} value={(item as any).description || ''} onChange={(v) => updateItem(index, { description: v } as any)} />
+            <EditableText label={t('description')} value={(item as any).description || ''} onChange={(v) => updateItem(index, { description: v } as any)} changePath={`content.items.${item.id}.description`} />
           </div>
         </div>
       ))}

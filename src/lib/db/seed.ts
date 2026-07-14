@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { db } from './index';
-import { users, resumes, resumeSections } from './schema';
+import { users, resumes, resumeSections } from './pg-schema';
 
 function loadAvatarBase64(): string {
   const imgPath = path.resolve(process.cwd(), 'images/demo-avatar.jpg');

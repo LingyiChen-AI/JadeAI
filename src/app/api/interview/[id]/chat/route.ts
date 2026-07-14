@@ -6,6 +6,7 @@ import { interviewRepository } from '@/lib/db/repositories/interview.repository'
 import { resumeRepository } from '@/lib/db/repositories/resume.repository';
 import { buildInterviewSystemPrompt } from '@/lib/ai/interview-prompts';
 import { dbReady } from '@/lib/db';
+import { serializeResumeForModel } from '@/lib/ai/model-context';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (session.resumeId) {
       const resume = await resumeRepository.findById(session.resumeId as string);
       if (resume) {
-        resumeContent = JSON.stringify(resume.sections);
+        resumeContent = serializeResumeForModel(resume.sections);
       }
     }
 
