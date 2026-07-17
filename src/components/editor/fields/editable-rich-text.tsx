@@ -104,7 +104,7 @@ export function EditableRichText({ label, value, onChange, placeholder, rows = 3
           suppressContentEditableWarning
           data-placeholder={placeholder || label}
           className="rich-text-editor w-full overflow-y-auto px-3 py-2 text-sm outline-none empty:before:pointer-events-none empty:before:text-zinc-400 empty:before:content-[attr(data-placeholder)] [&_ol]:list-decimal [&_ul]:list-disc [&_p]:min-h-[1.25em]"
-          style={{ minHeight: `${Math.max(3, rows) * 1.5}rem` }}
+          style={{ minHeight: `${Math.max(1, rows) * 1.5}rem` }}
           onInput={emit}
           onKeyDown={(event) => {
             if (event.key !== 'Tab') return;

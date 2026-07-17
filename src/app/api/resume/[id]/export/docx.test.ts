@@ -22,6 +22,15 @@ const resume = {
       type: 'summary', title: '简介 Summary', visible: true, sortOrder: 1,
       content: { text: '**加粗 Bold 987**\n\t1. 结果 Result 20%\n\n1. Second list' },
     },
+    {
+      type: 'work_experience', title: '经历', visible: true, sortOrder: 2,
+      content: {
+        items: [{
+          id: 'work-1', company: 'Company', position: 'Role', startDate: '2024', endDate: '2025',
+          current: false, description: '', technologies: [], highlights: ['**Highlight Bold** result'],
+        }],
+      },
+    },
   ],
 };
 
@@ -54,6 +63,7 @@ describe('DOCX font and rich-text export', () => {
     expect(fontFiles.every(([, bytes]) => bytes.byteLength < 2_000_000)).toBe(true);
     expect(documentXml).toContain('w:numPr');
     expect(documentXml).toContain('w:ilvl w:val="1"');
+    expect(documentXml).toMatch(/<w:rPr>[^]*?<w:b\/>[^]*?<w:t[^>]*>Highlight Bold<\/w:t>/);
     const numberingIds = [...documentXml.matchAll(/<w:numId w:val="(\d+)"/g)].map((match) => match[1]);
     expect(new Set(numberingIds).size).toBeGreaterThanOrEqual(2);
 

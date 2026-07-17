@@ -5,6 +5,7 @@ import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { EditableText } from '../fields/editable-text';
+import { EditableRichText } from '../fields/editable-rich-text';
 import { FieldWrapper } from '../fields/field-wrapper';
 import { generateId } from '@/lib/utils';
 import type { ResumeSection, LanguagesContent, LanguageItem } from '@/types/resume';
@@ -50,7 +51,7 @@ export function LanguagesSection({ section, onUpdate }: Props) {
                 </Button>
               </div>
             </FieldWrapper>
-            <EditableText label={t('description')} value={(item as any).description || ''} onChange={(v) => updateItem(index, { description: v } as any)} changePath={`content.items.${item.id}.description`} />
+            <EditableRichText label={t('description')} value={(item as any).description || ''} onChange={(v) => updateItem(index, { description: v } as any)} changePath={`content.items.${item.id}.description`} />
           </div>
         </div>
       ))}

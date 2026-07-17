@@ -8,6 +8,7 @@ import { EditableText } from '../fields/editable-text';
 import { EditableDate } from '../fields/editable-date';
 import { EditableRichText } from '../fields/editable-rich-text';
 import { EditableList } from '../fields/editable-list';
+import { EditableRichTextList } from '../fields/editable-rich-text-list';
 import { FieldWrapper } from '../fields/field-wrapper';
 import { generateId } from '@/lib/utils';
 import type { ResumeSection, WorkExperienceContent, WorkExperienceItem } from '@/types/resume';
@@ -74,7 +75,7 @@ export function WorkExperienceSection({ section, onUpdate }: Props) {
             </FieldWrapper>
             <EditableRichText label={t('description')} value={item.description} onChange={(v) => updateItem(index, { description: v })} changePath={`content.items.${item.id}.description`} />
             <EditableList label={t('technologies')} items={item.technologies || []} onChange={(v) => updateItem(index, { technologies: v })} changePath={`content.items.${item.id}.technologies`} />
-            <EditableList label={t('highlights')} items={item.highlights} onChange={(v) => updateItem(index, { highlights: v })} changePath={`content.items.${item.id}.highlights`} />
+            <EditableRichTextList label={t('highlights')} items={item.highlights} onChange={(v) => updateItem(index, { highlights: v })} changePath={`content.items.${item.id}.highlights`} />
           </div>
         </div>
       ))}

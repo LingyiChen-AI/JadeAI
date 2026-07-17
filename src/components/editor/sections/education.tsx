@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { EditableText } from '../fields/editable-text';
 import { EditableDate } from '../fields/editable-date';
-import { EditableList } from '../fields/editable-list';
+import { EditableRichTextList } from '../fields/editable-rich-text-list';
 import { FieldWrapper } from '../fields/field-wrapper';
 import { generateId } from '@/lib/utils';
 import type { ResumeSection, EducationContent, EducationItem } from '@/types/resume';
@@ -67,7 +67,7 @@ export function EducationSection({ section, onUpdate }: Props) {
               <EditableDate label={t('startDate')} value={item.startDate} onChange={(v) => updateItem(index, { startDate: v })} changePath={`content.items.${item.id}.startDate`} />
               <EditableDate label={t('endDate')} value={item.endDate} onChange={(v) => updateItem(index, { endDate: v })} changePath={`content.items.${item.id}.endDate`} />
             </FieldWrapper>
-            <EditableList label={t('highlights')} items={item.highlights} onChange={(v) => updateItem(index, { highlights: v })} changePath={`content.items.${item.id}.highlights`} />
+            <EditableRichTextList label={t('highlights')} items={item.highlights} onChange={(v) => updateItem(index, { highlights: v })} changePath={`content.items.${item.id}.highlights`} />
           </div>
         </div>
       ))}

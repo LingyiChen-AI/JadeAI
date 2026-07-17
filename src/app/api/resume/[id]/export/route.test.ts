@@ -114,6 +114,21 @@ describe('GET /api/resume/[id]/export', () => {
     expect(mocks.generateDocxBuffer).toHaveBeenCalledWith(resume);
   });
 
+  test('uses the registered legacy DOCX mapper when public catalog fidelity is unsupported', async () => {
+    mocks.resolveTemplateForResume.mockResolvedValue({
+      ...resolved,
+      source: 'public',
+      capabilities: { docxFidelity: 'unsupported' },
+    });
+
+    const response = await GET(request('docx'), { params: Promise.resolve({ id: 'resume-1' }) });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('x-jadeai-docx-fidelity')).toBe('high-fidelity');
+    expect(response.headers.get('x-jadeai-export-warning')).toBeNull();
+    expect(mocks.generateDocxBuffer).toHaveBeenCalledWith(resume);
+  });
+
   test('returns a stable safe error when DOCX font embedding fails', async () => {
     mocks.generateDocxBuffer.mockRejectedValueOnce(
       new DocxFontEmbeddingError(new Error('secret font parser diagnostics')),
@@ -145,7 +160,13 @@ describe('GET /api/resume/[id]/export', () => {
     vi.clearAllMocks();
     mocks.resolveUser.mockResolvedValue({ id: 'user-1' });
     mocks.findById.mockResolvedValue(resume);
-    mocks.resolveTemplateForResume.mockResolvedValue({ ...resolved, capabilities: { docxFidelity: 'unsupported' } });
+    mocks.resolveTemplateForResume.mockResolvedValue({
+      ...resolved,
+      kind: 'declarative-v1',
+      source: 'public',
+      manifest: {},
+      capabilities: { docxFidelity: 'unsupported' },
+    });
     const unsupported = await GET(request('docx'), { params: Promise.resolve({ id: 'resume-1' }) });
     expect(unsupported.status).toBe(422);
     expect(await unsupported.json()).toMatchObject({ code: 'template_docx_unsupported' });

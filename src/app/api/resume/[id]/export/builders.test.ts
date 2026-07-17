@@ -68,14 +68,22 @@ describe('legacy rich-text export contract', () => {
       const html = await generateHtml({
         ...resume,
         template,
-        sections: [{
-          type: 'custom', title: 'Custom', sortOrder: 0, visible: true,
-          content: { items: [{ id: 'custom-1', title: 'Item', description: '**Impact**' }] },
-        }],
+        sections: [
+          {
+            type: 'custom', title: 'Custom', sortOrder: 0, visible: true,
+            content: { items: [{ id: 'custom-1', title: 'Item', description: '**Impact**' }] },
+          },
+          {
+            type: 'work_experience', title: 'Work', sortOrder: 1, visible: true,
+            content: { items: [{ id: 'work-1', company: 'Company', position: 'Role', startDate: '2024', endDate: '2025', current: false, description: '', technologies: [], highlights: ['**Highlight**'] }] },
+          },
+        ],
       } as never, false);
 
       expect(html, template).toContain('<strong>Impact</strong>');
+      expect(html, template).toContain('<strong>Highlight</strong>');
       expect(html, template).not.toContain('**Impact**');
+      expect(html, template).not.toContain('**Highlight**');
     }
   });
 

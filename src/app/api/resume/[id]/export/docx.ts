@@ -283,7 +283,7 @@ function bodyParagraphs(text: string, theme: DocxTheme, extra?: { before?: numbe
 
 function bullet(text: string, theme: DocxTheme): Paragraph {
   return new Paragraph({
-    children: [run(text, theme)],
+    children: richRuns(text, theme),
     bullet: { level: 0 },
     spacing: { line: theme.lineSpacing, after: 40 },
   });
