@@ -16,7 +16,9 @@ import {
   TemplateCapabilitySchema,
   TemplateCatalogItemSchema,
   TemplateCategorySchema,
+  DeclarativeTemplateManifestSchema,
   TemplateManifestV1Schema,
+  TemplateManifestV2Schema,
   TemplateSnapshotSchema,
   TemplateTagSchema,
   TemplateVersionDetailSchema,
@@ -74,6 +76,22 @@ function validManifest() {
   };
 }
 
+function validManifestV2() {
+  return {
+    ...validManifest(),
+    schemaVersion: 2 as const,
+    rendererKind: 'declarative-v2' as const,
+    header: { variant: 'band' as const, contactLayout: 'separated' as const },
+    entry: { variant: 'timeline' as const },
+    section: { headingVariant: 'side-rule' as const },
+    skills: { variant: 'compact-grid' as const },
+    decoration: { variant: 'corner-accent' as const },
+    density: 'compact' as const,
+    palette: { secondary: '#334155', surface: '#f8fafc', border: '#cbd5e1' },
+    border: { widthPt: 1.5, radiusMm: 2 },
+  };
+}
+
 function validCapabilities() {
   return {
     supportedSections: ['personal_info', 'work_experience'] as const,
@@ -108,6 +126,22 @@ function validCatalogItem() {
 describe('template DTO schemas', () => {
   it('accepts the declarative-v1 manifest contract', () => {
     expect(TemplateManifestV1Schema.parse(validManifest())).toEqual(validManifest());
+  });
+
+  it('accepts the strict declarative-v2 manifest contract without changing v1 parsing', () => {
+    expect(TemplateManifestV2Schema.parse(validManifestV2())).toEqual(validManifestV2());
+    expect(DeclarativeTemplateManifestSchema.parse(validManifest())).toEqual(validManifest());
+    expect(DeclarativeTemplateManifestSchema.parse(validManifestV2())).toEqual(validManifestV2());
+    expect(TemplateManifestV2Schema.safeParse({ ...validManifestV2(), customCss: 'body{}' }).success).toBe(false);
+    expect(TemplateManifestV1Schema.safeParse(validManifestV2()).success).toBe(false);
+    expect(parseTemplateManifest(validManifestV2())).toEqual(validManifestV2());
+    expect(TemplateSnapshotSchema.safeParse({
+      rendererKind: 'declarative-v2',
+      schemaVersion: 2,
+      manifest: validManifestV2(),
+      manifestHash: HASH,
+      capabilities: validCapabilities(),
+    }).success).toBe(true);
   });
 
   it('validates category and tag slug/dimension contracts', () => {

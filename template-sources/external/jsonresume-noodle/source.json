@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-noodle",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Noodle",
+  "nameEn": "JSON Resume Noodle",
+  "category": "engineering",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "noodle",
+    "jsonresume-theme-noodle"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-noodle",
+    "packageVersion": "0.19.0",
+    "url": "https://github.com/ccitro/jsonresume-theme-noodle",
+    "revision": "3682b41faf468360b3fd2cee3e32933490f38848"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "a1436e5316bd543cf13606ac2a6b8e2c979e6b2284f9db4e4ec6ebace473e8b8",
+    "copyright": "jsonresume-theme-noodle contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "8a93fffc1a329802481212320336962305be167396b08667633a6361f8336ef6",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-noodle@0.19.0. Distinct compact professional layout. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

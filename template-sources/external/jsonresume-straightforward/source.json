@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-straightforward",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Straightforward",
+  "nameEn": "JSON Resume Straightforward",
+  "category": "ats",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "straightforward",
+    "jsonresume-theme-straightforward"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-straightforward",
+    "packageVersion": "0.5.0",
+    "url": "https://github.com/slugstack/jsonresume-theme-straightforward",
+    "revision": "9aa105623fd08ba9680d64cc7b50e9d2be534560"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "a27cd1eb000473ad057eb45f23438fb2afea8840886f45c29c2c72afb529feb3",
+    "copyright": "jsonresume-theme-straightforward contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "2149260f0011db49424525e73f577085cd781ca5ba17b3aec032e632d9bcf1a6",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-straightforward@0.5.0. Popular direct ATS layout. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-monochrome-noir",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Monochrome Noir",
+  "nameEn": "JSON Resume Monochrome Noir",
+  "category": "design-creative",
+  "tags": [
+    "layout-two-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "monochrome noir",
+    "jsonresume-theme-monochrome-noir"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-monochrome-noir",
+    "packageVersion": "1.1.3",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "jsonresume-theme-monochrome-noir contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "d384397a6cf86baacb4974d35a2e190d1aa927146a824711e2a66c1cb0344e0f",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-monochrome-noir@1.1.3. High-contrast monochrome system. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

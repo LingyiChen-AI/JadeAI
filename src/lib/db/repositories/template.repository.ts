@@ -77,6 +77,17 @@ export type TemplateSeedWriteReport = {
   tagLinksInserted: number;
 };
 
+export function planStableVersionUpdate(
+  current: string | null,
+  target: string,
+  allowPromotion: boolean,
+): 'initialize' | 'keep' | 'promote' {
+  if (current === null) return 'initialize';
+  if (current === target) return 'keep';
+  if (!allowPromotion) throw new Error(`template_seed_stable_version_conflict:${target.split('@')[0]}`);
+  return 'promote';
+}
+
 export interface TemplateTransaction {
   <T extends readonly Record<string, unknown>[] = readonly Record<string, unknown>[]>(
     strings: TemplateStringsArray,
@@ -107,6 +118,7 @@ function assertExactSet(code: string, actual: string[], expected: string[]): voi
 export async function writeVerifiedTemplateSeed(
   tx: TemplateTransaction,
   seed: VerifiedTemplateSeed,
+  options: { allowStablePromotion?: boolean } = {},
 ): Promise<TemplateSeedWriteReport> {
   const report: TemplateSeedWriteReport = {
     categoriesInserted: 0,
@@ -223,13 +235,16 @@ export async function writeVerifiedTemplateSeed(
     const [stable] = await tx<{ stable_version_id: string | null }[]>`
       SELECT stable_version_id FROM resume_templates WHERE id = ${template.id}
     `;
-    if (stable?.stable_version_id === null) {
+    const action = planStableVersionUpdate(
+      stable?.stable_version_id ?? null,
+      template.stableVersionId,
+      options.allowStablePromotion === true,
+    );
+    if (action === 'initialize' || action === 'promote') {
       await tx`
         UPDATE resume_templates SET stable_version_id = ${template.stableVersionId}
-        WHERE id = ${template.id} AND stable_version_id IS NULL
+        WHERE id = ${template.id}
       `;
-    } else if (stable?.stable_version_id !== template.stableVersionId) {
-      throw new Error(`template_seed_stable_version_conflict:${template.id}`);
     }
     const [published] = await tx<{ valid: boolean }[]>`
       SELECT EXISTS (
@@ -585,17 +600,19 @@ export function createTemplateRepository(sql: CatalogSql) {
       if (!row) return null;
       if (row.version_status === 'blocked') throw new TemplateRepositoryError('TEMPLATE_VERSION_BLOCKED', row.fallback_version);
       if (row.stable_status !== 'published' || row.version_status !== 'published') return null;
-      const rendererKind = row.renderer_kind === 'declarative-v1' ? 'declarative-v1' : 'legacy-react';
+      const rendererKind = row.renderer_kind === 'declarative-v2'
+        ? 'declarative-v2'
+        : row.renderer_kind === 'declarative-v1' ? 'declarative-v1' : 'legacy-react';
       const detail = {
         ...catalogRowValue(row),
         version: { id: row.version_id, version: versionNumber, publishedAt: toIsoDate(row.version_published_at) },
         rendererKind,
-        manifest: rendererKind === 'declarative-v1' ? parseJson<Record<string, unknown>>(row.manifest) : null,
+        manifest: rendererKind === 'legacy-react' ? null : parseJson<Record<string, unknown>>(row.manifest),
         manifestHash: row.manifest_hash,
         source: { kind: row.source_kind === 'native' ? 'official' : 'community', license: row.license_spdx },
       };
       const parsed = TemplateVersionDetailSchema.parse(detail);
-      if (parsed.rendererKind === 'declarative-v1' && hashManifest(parsed.manifest) !== parsed.manifestHash) {
+      if (parsed.rendererKind !== 'legacy-react' && hashManifest(parsed.manifest) !== parsed.manifestHash) {
         throw new TemplateRepositoryError('TEMPLATE_HASH_MISMATCH');
       }
       return parsed;

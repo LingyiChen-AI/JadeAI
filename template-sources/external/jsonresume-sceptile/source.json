@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-sceptile",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Sceptile",
+  "nameEn": "JSON Resume Sceptile",
+  "category": "ats",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "sceptile",
+    "jsonresume-theme-sceptile"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-sceptile",
+    "packageVersion": "1.0.5",
+    "url": "https://github.com/jugoncalves/jsonresume-theme-sceptile",
+    "revision": "f71aae8fd59acd4654ffce1309b5999fe0544c63"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "fca78101ae663c3e39e0e258b2a9bac475d6aef3f66ec138baff52133c0b8eb9",
+    "copyright": "jsonresume-theme-sceptile contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "a99b9564276f32384d30386f1989cf725012faf4811c3c69dc0d120d1f82fcea",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-sceptile@1.0.5. Compact established community theme. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

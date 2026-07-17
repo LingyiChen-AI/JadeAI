@@ -3,6 +3,240 @@
   "generatedFrom": "approved source packages",
   "themes": [
     {
+      "slug": "jsonresume-a11y",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-a11y/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-a11y contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-academic-cv-lite",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-academic-cv-lite/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-academic-cv-lite contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-architects-portfolio",
+      "version": "1.0.1",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-architects-portfolio/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-architects-portfolio contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-art-school-modern",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-art-school-modern/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-art-school-modern contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-asymmetric-timeline",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-asymmetric-timeline/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-asymmetric-timeline contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-bold-header-statement",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-bold-header-statement/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-bold-header-statement contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-careercup-good-resume",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-careercup-good-resume/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-the-careercup-good-resume contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-classy",
+      "version": "1.0.1",
+      "sourceUrl": "https://github.com/JaredCubilla/jsonresume-theme-classy",
+      "sourceRevision": "c5edc25186801533fa750d5e6d4d63a0b31b48be",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-classy/LICENSE",
+        "sha256": "fca78101ae663c3e39e0e258b2a9bac475d6aef3f66ec138baff52133c0b8eb9",
+        "copyright": "jsonresume-theme-classy contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-claude",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-claude/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-claude contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-colophon",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/dmnelson/jsonresume-theme-colophon",
+      "sourceRevision": "db5cb9563eb0552081636816fe4124284e4c6db9",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-colophon/LICENSE",
+        "sha256": "e498e69df24b15d8ff64c2094842d56e32692d0255df7b348bd55d4542adf59a",
+        "copyright": "jsonresume-theme-colophon contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-consultant-polished",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-consultant-polished/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "@jsonresume/jsonresume-theme-consultant-polished contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-cora",
+      "version": "1.0.1",
+      "sourceUrl": "https://github.com/lechuckcaptain/jsonresume-theme-cora",
+      "sourceRevision": "fd92f287746156868d36856f07ab8d9b138538ac",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-cora/LICENSE",
+        "sha256": "fca78101ae663c3e39e0e258b2a9bac475d6aef3f66ec138baff52133c0b8eb9",
+        "copyright": "jsonresume-theme-cora contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-creative-confidence",
+      "version": "1.0.1",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-creative-confidence/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-creative-confidence contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-creative-studio",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-creative-studio/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "@jsonresume/jsonresume-theme-creative-studio contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-diagonal-accent-bar",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-diagonal-accent-bar/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-diagonal-accent-bar contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-elegant",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-elegant/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-elegant contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-eloquent",
+      "version": "1.0.1",
+      "sourceUrl": "https://github.com/thibaudcolas/jsonresume-theme-eloquent",
+      "sourceRevision": "382a37f8b0c1ccc4f5c57b258ddeec8fa9802696",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-eloquent/LICENSE",
+        "sha256": "2d583a5dfe487c1feca3776334252d56b8e5b80862bf0b32e91ba6f306f3f9ba",
+        "copyright": "jsonresume-theme-eloquent contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-engineering",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-engineering/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-engineering contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
       "slug": "jsonresume-even",
       "version": "1.0.1",
       "sourceUrl": "https://github.com/rbardini/jsonresume-theme-even",
@@ -16,6 +250,227 @@
       "redistributedAssets": []
     },
     {
+      "slug": "jsonresume-executive-slate",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-executive-slate/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-executive-slate contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-flat",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-flat/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-flat contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-government-standard",
+      "version": "1.0.1",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-government-standard/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-government-standard contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-graph-paper-grid",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-graph-paper-grid/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-graph-paper-grid contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-jacrys",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jacrys/jsonresume-theme-jacrys",
+      "sourceRevision": "3aa7db71576fbcb27fcf06159dc0267bd2c58567",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-jacrys/LICENSE",
+        "sha256": "29baee045d4c789be43de0d4de5a1b317ade16a25c558bd21613debd358206a4",
+        "copyright": "jsonresume-theme-jacrys contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-kendall",
+      "version": "1.0.1",
+      "sourceUrl": "https://github.com/linuxbozo/jsonresume-theme-kendall",
+      "sourceRevision": "2fe915897ae683d6869c6e04d897398a8ca03e6b",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-kendall/LICENSE",
+        "sha256": "09f4303a3fb836b733cfb0a96eccda365f7710d28b2c3c603c742ec8246f3aff",
+        "copyright": "jsonresume-theme-kendall contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-lucide",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-lucide/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-lucide contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-macchiato",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/biosan/jsonresume-theme-macchiato",
+      "sourceRevision": "042539735b283de614ad1ba0dd3aeff43100bdc3",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-macchiato/LICENSE",
+        "sha256": "2a726d549105fa4f716438035af5a39ffe51c5a2b13a3aa2eed415e54020c8de",
+        "copyright": "jsonresume-theme-macchiato contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-marketing-narrative",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-marketing-narrative/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-marketing-narrative contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-material",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-material/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-material contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-mid-century-resume",
+      "version": "1.0.1",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-mid-century-resume/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-mid-century-resume contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-minyma",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "ISC",
+        "path": "template-sources/external/jsonresume-minyma/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-minyma contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-modern",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume-theme-modern",
+      "sourceRevision": "bfe54f7d1e7c7620174d4530cd7ac0de6396f8e7",
+      "themeLicense": {
+        "spdx": "ISC",
+        "path": "template-sources/external/jsonresume-modern/LICENSE",
+        "sha256": "c203808306d1ba51c670f56169e5457199f59e863dd0f1e988625fda444ad010",
+        "copyright": "jsonresume-theme-modern contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-modern-classic",
+      "version": "1.0.1",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-modern-classic/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-modern-classic contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-monochrome-noir",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-monochrome-noir/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-monochrome-noir contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-noodle",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/ccitro/jsonresume-theme-noodle",
+      "sourceRevision": "3682b41faf468360b3fd2cee3e32933490f38848",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-noodle/LICENSE",
+        "sha256": "a1436e5316bd543cf13606ac2a6b8e2c979e6b2284f9db4e4ec6ebace473e8b8",
+        "copyright": "jsonresume-theme-noodle contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-nordic-minimal",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-nordic-minimal/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-nordic-minimal contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
       "slug": "jsonresume-onepage",
       "version": "1.0.1",
       "sourceUrl": "https://github.com/ainsleyc/jsonresume-theme-onepage",
@@ -25,6 +480,201 @@
         "path": "template-sources/external/jsonresume-onepage/LICENSE",
         "sha256": "2b229caee7e7faec057638bb7cd195cfa22ecb0755b7f8660cd4d66afad097eb",
         "copyright": "Copyright (c) 2015 Ainsley Chong"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-operations-precision",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-operations-precision/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-operations-precision contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-paper-plus-plus",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-paper-plus-plus/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-paper-plus-plus contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-professional",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-professional/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-professional contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-projects",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/dmsemenov/jsonresume-theme-projects",
+      "sourceRevision": "9a34fa1978ffaa594df724fd9e0e0a481f9b5d50",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-projects/LICENSE",
+        "sha256": "a1436e5316bd543cf13606ac2a6b8e2c979e6b2284f9db4e4ec6ebace473e8b8",
+        "copyright": "jsonresume-theme-projects contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-pumpkin",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-pumpkin/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-pumpkin contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-sales-hunter",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-sales-hunter/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-sales-hunter contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-sceptile",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jugoncalves/jsonresume-theme-sceptile",
+      "sourceRevision": "f71aae8fd59acd4654ffce1309b5999fe0544c63",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-sceptile/LICENSE",
+        "sha256": "fca78101ae663c3e39e0e258b2a9bac475d6aef3f66ec138baff52133c0b8eb9",
+        "copyright": "jsonresume-theme-sceptile contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-sidebar-photo-strip",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-sidebar-photo-strip/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-sidebar-photo-strip contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-simplyelegant",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-simplyelegant/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-simplyelegant contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-stackoverflow",
+      "version": "1.0.1",
+      "sourceUrl": "https://github.com/phoinixi/jsonresume-theme-stackoverflow",
+      "sourceRevision": "9dcc3072031cc3278cd818747459356351d34788",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-stackoverflow/LICENSE",
+        "sha256": "a4d1d3e6ae84168e5f65e0b3357157dfeccf2e114c8c3a50a23fbbbddf3be3b4",
+        "copyright": "jsonresume-theme-stackoverflow contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-straightforward",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/slugstack/jsonresume-theme-straightforward",
+      "sourceRevision": "9aa105623fd08ba9680d64cc7b50e9d2be534560",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-straightforward/LICENSE",
+        "sha256": "a27cd1eb000473ad057eb45f23438fb2afea8840886f45c29c2c72afb529feb3",
+        "copyright": "jsonresume-theme-straightforward contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-tan-responsive",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/veeravn/jsonresume-theme-responsive",
+      "sourceRevision": "8a76cbca75510f0c8d19955204427cf9dc869835",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-tan-responsive/LICENSE",
+        "sha256": "d72726e4616da3dd072c8604bbb6ee6dfc1ce4d65021d7b9e3473fee3364b0f7",
+        "copyright": "jsonresume-theme-tan-responsive contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-typewriter-modern",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-typewriter-modern/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-typewriter-modern contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-university-first",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-university-first/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-university-first contributors"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-waterfall",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/jsonresume/jsonresume.org",
+      "sourceRevision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-waterfall/LICENSE",
+        "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+        "copyright": "jsonresume-theme-waterfall contributors"
       },
       "redistributedAssets": []
     }

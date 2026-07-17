@@ -262,6 +262,236 @@
       "bytes": 4730
     },
     {
+      "path": "templates/jsonresume-a11y/v1.0.0/preview-a1bcc152fbdce8c9.png",
+      "sha256": "a1bcc152fbdce8c97988173eeac179f4cbd7a4ac2785f0c2f73136f65e12825a",
+      "bytes": 125530
+    },
+    {
+      "path": "templates/jsonresume-a11y/v1.0.0/thumbnail-973c02b1e2037f25.png",
+      "sha256": "973c02b1e2037f2538087313fdd7f7048ae7b0d305ebb80e35aaef290a68b629",
+      "bytes": 21293
+    },
+    {
+      "path": "templates/jsonresume-academic-cv-lite/v1.0.0/preview-6aa0a8409263fbef.png",
+      "sha256": "6aa0a8409263fbefa13a7015e04e9c45be55381332fa96dbae4648b1534c9e73",
+      "bytes": 108773
+    },
+    {
+      "path": "templates/jsonresume-academic-cv-lite/v1.0.0/thumbnail-970aa9ff99673832.png",
+      "sha256": "970aa9ff9967383233c54e46564459501bff82801ac08c6c9462f28c71633a15",
+      "bytes": 18836
+    },
+    {
+      "path": "templates/jsonresume-architects-portfolio/v1.0.0/preview-c99c8a56c79ab507.png",
+      "sha256": "c99c8a56c79ab507dcd7c1d4aec66ae6aea9f01b8b009a8cf5bb7799562146cb",
+      "bytes": 90103
+    },
+    {
+      "path": "templates/jsonresume-architects-portfolio/v1.0.0/thumbnail-ac3db52c5d48173b.png",
+      "sha256": "ac3db52c5d48173bbaa494f14a2b20dcb158dff08e1105381483b4dec9605877",
+      "bytes": 15859
+    },
+    {
+      "path": "templates/jsonresume-architects-portfolio/v1.0.1/preview-426291a52ada0d58.png",
+      "sha256": "426291a52ada0d58aedbd250634f4cf2bbc9debc09fcb7cc58f6e0e8201711aa",
+      "bytes": 134242
+    },
+    {
+      "path": "templates/jsonresume-architects-portfolio/v1.0.1/thumbnail-2f5292fa0c244b5c.png",
+      "sha256": "2f5292fa0c244b5cf529322af4b1180fa5deb1e0678f091b10f5063c2b0bc603",
+      "bytes": 22797
+    },
+    {
+      "path": "templates/jsonresume-art-school-modern/v1.0.0/preview-781afa3ef26fb8a8.png",
+      "sha256": "781afa3ef26fb8a89582a320e31a10a2276f28680ba630007570ee7995cb58e4",
+      "bytes": 103722
+    },
+    {
+      "path": "templates/jsonresume-art-school-modern/v1.0.0/thumbnail-8a6c5a41d7cdea42.png",
+      "sha256": "8a6c5a41d7cdea420224ac4b78a1fa6a2c40f7144f4fb31a066a8d2026f28c87",
+      "bytes": 17661
+    },
+    {
+      "path": "templates/jsonresume-asymmetric-timeline/v1.0.0/preview-8b0b285876bc05e1.png",
+      "sha256": "8b0b285876bc05e1cce8a7821a5f8c062470ecb19b26e2b56ff0f0b8d0e62e2a",
+      "bytes": 135775
+    },
+    {
+      "path": "templates/jsonresume-asymmetric-timeline/v1.0.0/thumbnail-aeb94ee13f21056d.png",
+      "sha256": "aeb94ee13f21056dfa08e854ef6432de461e6fbde74fa19173f4e2bcdbcf2480",
+      "bytes": 23928
+    },
+    {
+      "path": "templates/jsonresume-bold-header-statement/v1.0.0/preview-74442c593f3e7545.png",
+      "sha256": "74442c593f3e754519fcf99b4e9f638e9b1980f2bf56586c0cb673aef6b7893c",
+      "bytes": 143452
+    },
+    {
+      "path": "templates/jsonresume-bold-header-statement/v1.0.0/thumbnail-9c4bba2cd0a92c52.png",
+      "sha256": "9c4bba2cd0a92c5232c3af53073accc8b928a31cff3eae267dd5ce6073cfcadc",
+      "bytes": 25044
+    },
+    {
+      "path": "templates/jsonresume-careercup-good-resume/v1.0.0/preview-02b8f37fa776c6b5.png",
+      "sha256": "02b8f37fa776c6b58bd4fb50f93a12a624829151d15784f8eb3bf5e30c9bbe53",
+      "bytes": 105495
+    },
+    {
+      "path": "templates/jsonresume-careercup-good-resume/v1.0.0/thumbnail-8165e0fbadca7ffa.png",
+      "sha256": "8165e0fbadca7ffad21260d0cbf20fc6ee859dbd6f3093042ff3efe2af653f96",
+      "bytes": 18120
+    },
+    {
+      "path": "templates/jsonresume-classy/v1.0.0/preview-e5e400da5ab551ee.png",
+      "sha256": "e5e400da5ab551eee286b4797bef83e069f8988773df11128549e5fcf333965d",
+      "bytes": 79630
+    },
+    {
+      "path": "templates/jsonresume-classy/v1.0.0/thumbnail-9ead805b3b7d1426.png",
+      "sha256": "9ead805b3b7d1426fc3246fe10b13d91c983042fabac44651c18ec1b9c97b876",
+      "bytes": 14231
+    },
+    {
+      "path": "templates/jsonresume-classy/v1.0.1/preview-23fddf4a4a704741.png",
+      "sha256": "23fddf4a4a70474135e394eaf9aae3726d03dc7e480c3fd830e714f098c3d570",
+      "bytes": 128709
+    },
+    {
+      "path": "templates/jsonresume-classy/v1.0.1/thumbnail-5469ca9d6b9ac5ca.png",
+      "sha256": "5469ca9d6b9ac5ca5fca6883b6099a12c0e97a14658421497a8f2505ce0f1548",
+      "bytes": 22196
+    },
+    {
+      "path": "templates/jsonresume-claude/v1.0.0/preview-bfd95cd8f8174bf0.png",
+      "sha256": "bfd95cd8f8174bf082876e33fde64ad44c40881215555a636e7df2578022943b",
+      "bytes": 125402
+    },
+    {
+      "path": "templates/jsonresume-claude/v1.0.0/thumbnail-6d167b87ab18773c.png",
+      "sha256": "6d167b87ab18773c0f3bbcadf973de8dfd9642ea7cbef9f093d90aea526e5021",
+      "bytes": 21607
+    },
+    {
+      "path": "templates/jsonresume-colophon/v1.0.0/preview-1dfa65eabb921f12.png",
+      "sha256": "1dfa65eabb921f125d1fc2d84b04e0d89accfdee9004c521a21bf8fd17995ae5",
+      "bytes": 143116
+    },
+    {
+      "path": "templates/jsonresume-colophon/v1.0.0/thumbnail-d4504c652d83074c.png",
+      "sha256": "d4504c652d83074c60108b5544f6670140ce1d780f3193f0ad56e2c5041f832f",
+      "bytes": 18078
+    },
+    {
+      "path": "templates/jsonresume-consultant-polished/v1.0.0/preview-60ab5e55948a85d3.png",
+      "sha256": "60ab5e55948a85d379b255f17079dbfa83fac87081cf39d4c6d23863c12cdf3e",
+      "bytes": 96825
+    },
+    {
+      "path": "templates/jsonresume-consultant-polished/v1.0.0/thumbnail-55f8805bf523c1d4.png",
+      "sha256": "55f8805bf523c1d41c9bdf541f9a2e0a66e9f2193bd625e3de5e31f04719ec4f",
+      "bytes": 17507
+    },
+    {
+      "path": "templates/jsonresume-cora/v1.0.0/preview-1d5fc2b7fe9ae5e7.png",
+      "sha256": "1d5fc2b7fe9ae5e761e1429b780957102116ff4a4e7c63b4599b1f11acfafc07",
+      "bytes": 98186
+    },
+    {
+      "path": "templates/jsonresume-cora/v1.0.0/thumbnail-836e808a5eb2ea1b.png",
+      "sha256": "836e808a5eb2ea1b08d7f0cb65e0e9b392dd4cebce55ecc126dc3e94758d928d",
+      "bytes": 16810
+    },
+    {
+      "path": "templates/jsonresume-cora/v1.0.1/preview-39bc4cde89097be2.png",
+      "sha256": "39bc4cde89097be2e1562693aef0eff7b58d20d1917960e6a887f41d04f77239",
+      "bytes": 131782
+    },
+    {
+      "path": "templates/jsonresume-cora/v1.0.1/thumbnail-eff199d47c8a3673.png",
+      "sha256": "eff199d47c8a3673429ff736c00b06d4eeccfb82cb5ecab13b7e2c8d7f3de72f",
+      "bytes": 22040
+    },
+    {
+      "path": "templates/jsonresume-creative-confidence/v1.0.0/preview-aa4b43dc9a180f0a.png",
+      "sha256": "aa4b43dc9a180f0a9a267ecd951ce1666dd23f19bdad8eba14681c80ad3222c5",
+      "bytes": 63554
+    },
+    {
+      "path": "templates/jsonresume-creative-confidence/v1.0.0/thumbnail-bdf1810f7596e9e8.png",
+      "sha256": "bdf1810f7596e9e8dfcca65dd5c6dcad7f5bf6e0ca595806bd7ff55a0f61b59b",
+      "bytes": 11645
+    },
+    {
+      "path": "templates/jsonresume-creative-confidence/v1.0.1/preview-389a1b8122f22c20.png",
+      "sha256": "389a1b8122f22c201661e82630cb016579971c488835c9763f0f8a619701ce0f",
+      "bytes": 101724
+    },
+    {
+      "path": "templates/jsonresume-creative-confidence/v1.0.1/thumbnail-53bdee745af7ec64.png",
+      "sha256": "53bdee745af7ec64d40aed8f2d2f877ddeb9010746cabf3dac4ca8779e9a0769",
+      "bytes": 17631
+    },
+    {
+      "path": "templates/jsonresume-creative-studio/v1.0.0/preview-7ed25b56c9f144e4.png",
+      "sha256": "7ed25b56c9f144e42f39635a057b53ff39abc8ee01b7e1d299a6b1b3ad2197ac",
+      "bytes": 155374
+    },
+    {
+      "path": "templates/jsonresume-creative-studio/v1.0.0/thumbnail-c24d787ee176200a.png",
+      "sha256": "c24d787ee176200a828bf7b85d87556c8d092bd6f10037420ef1a782544c382a",
+      "bytes": 20657
+    },
+    {
+      "path": "templates/jsonresume-diagonal-accent-bar/v1.0.0/preview-ab0ced6a49aa7d74.png",
+      "sha256": "ab0ced6a49aa7d74773adbf3ea0bbb5d7a8bf91c3a5efc4ecb5f94152a7df1c7",
+      "bytes": 109850
+    },
+    {
+      "path": "templates/jsonresume-diagonal-accent-bar/v1.0.0/thumbnail-689a20f38f034e3f.png",
+      "sha256": "689a20f38f034e3f6237cb7b7c384c71674c726efd8d0eed0cb86db99d5a7233",
+      "bytes": 19198
+    },
+    {
+      "path": "templates/jsonresume-elegant/v1.0.0/preview-9560eb351c73d73a.png",
+      "sha256": "9560eb351c73d73a829ab2480a0e3192db764099f1086d578439483ff532c990",
+      "bytes": 104147
+    },
+    {
+      "path": "templates/jsonresume-elegant/v1.0.0/thumbnail-dddc2cce3a3099fa.png",
+      "sha256": "dddc2cce3a3099fa37b37670fbb394a0d4c7c29449dc22aab04939628745a67e",
+      "bytes": 18213
+    },
+    {
+      "path": "templates/jsonresume-eloquent/v1.0.0/preview-131120d6b2bae80c.png",
+      "sha256": "131120d6b2bae80c0391a10858312f3160c9d2647c094544b220889947899ae6",
+      "bytes": 78034
+    },
+    {
+      "path": "templates/jsonresume-eloquent/v1.0.0/thumbnail-ffd7514da94dc3cc.png",
+      "sha256": "ffd7514da94dc3cce655a291a6ed9b4db9356581bdac8c0cc4be79e145666500",
+      "bytes": 14212
+    },
+    {
+      "path": "templates/jsonresume-eloquent/v1.0.1/preview-fb9e6608baf8f6b9.png",
+      "sha256": "fb9e6608baf8f6b95653f0ef634b927d11f66c0de12a4a1971692e95b6f535ae",
+      "bytes": 127293
+    },
+    {
+      "path": "templates/jsonresume-eloquent/v1.0.1/thumbnail-7fb4aef00b31b3b6.png",
+      "sha256": "7fb4aef00b31b3b685db30a1632071d1ed2c8dd5a566479a6d00dab65a5a9ad7",
+      "bytes": 22067
+    },
+    {
+      "path": "templates/jsonresume-engineering/v1.0.0/preview-a4d20528527a6d27.png",
+      "sha256": "a4d20528527a6d2761e3fb51838998ec0ad1e02a5026b412d648378ec285dee7",
+      "bytes": 146200
+    },
+    {
+      "path": "templates/jsonresume-engineering/v1.0.0/thumbnail-713047a91e92a92a.png",
+      "sha256": "713047a91e92a92acfb7469afcc101b7191e450946d47e0a99ee649866be232d",
+      "bytes": 26138
+    },
+    {
       "path": "templates/jsonresume-even/v1.0.1/preview-0e64c49dd729cb47.png",
       "sha256": "0e64c49dd729cb471bc7d340d9bd8494e5625f0c8ddbac74b205c8c2b9e25a66",
       "bytes": 132171
@@ -272,6 +502,216 @@
       "bytes": 21512
     },
     {
+      "path": "templates/jsonresume-executive-slate/v1.0.0/preview-20e514757bf9c998.png",
+      "sha256": "20e514757bf9c99882bcce21cb8f27acde4128584069740b001b77e2304d3147",
+      "bytes": 132280
+    },
+    {
+      "path": "templates/jsonresume-executive-slate/v1.0.0/thumbnail-1d4e49e179e3ee1c.png",
+      "sha256": "1d4e49e179e3ee1c6b13c7b095619ec60dbf66c1fdba38c981e114b2903bc844",
+      "bytes": 23202
+    },
+    {
+      "path": "templates/jsonresume-flat/v1.0.0/preview-3250f77fd941be52.png",
+      "sha256": "3250f77fd941be5270fd09aeea681f9ceb947c9d1dc0a8a1eb02ee0f21712d08",
+      "bytes": 129017
+    },
+    {
+      "path": "templates/jsonresume-flat/v1.0.0/thumbnail-2442a380b711673a.png",
+      "sha256": "2442a380b711673a8ae2a239fc87d6ee52c3f65ab63ecbf071f3f1c0aacda27d",
+      "bytes": 22431
+    },
+    {
+      "path": "templates/jsonresume-government-standard/v1.0.0/preview-315877c02c6bc155.png",
+      "sha256": "315877c02c6bc155734fb0f455f57a85dcf19d547e64e776a4d6ca84c41dcb4b",
+      "bytes": 55556
+    },
+    {
+      "path": "templates/jsonresume-government-standard/v1.0.0/thumbnail-3283979af6170752.png",
+      "sha256": "3283979af617075268bea5bf46f7e170d220430bee30c1748c81b53fe5aaf70a",
+      "bytes": 10440
+    },
+    {
+      "path": "templates/jsonresume-government-standard/v1.0.1/preview-ad89512a47dbaf04.png",
+      "sha256": "ad89512a47dbaf04f84b80205d078678a49214a76c91f661cc963693ccb08524",
+      "bytes": 107718
+    },
+    {
+      "path": "templates/jsonresume-government-standard/v1.0.1/thumbnail-28f171e74dbab83b.png",
+      "sha256": "28f171e74dbab83b3e7561f08a602e6b968e14e2b00f31c27eba1b8d025b197e",
+      "bytes": 18682
+    },
+    {
+      "path": "templates/jsonresume-graph-paper-grid/v1.0.0/preview-53061be705c7ecf1.png",
+      "sha256": "53061be705c7ecf14b105ab1c2b60d150961ef9eddadf82f6d423e031395184c",
+      "bytes": 94108
+    },
+    {
+      "path": "templates/jsonresume-graph-paper-grid/v1.0.0/thumbnail-37f8aba64e52e981.png",
+      "sha256": "37f8aba64e52e9811ab3de597b004a52f6acd9423b51d6ce302c1e21e3866beb",
+      "bytes": 16463
+    },
+    {
+      "path": "templates/jsonresume-jacrys/v1.0.0/preview-7ab19eeac7c59611.png",
+      "sha256": "7ab19eeac7c59611526b3e17e99f94fbf3dbfff67149ff6c99c496fabad5b43a",
+      "bytes": 105445
+    },
+    {
+      "path": "templates/jsonresume-jacrys/v1.0.0/thumbnail-0409cecf11800718.png",
+      "sha256": "0409cecf11800718252cea106652eaf4cd6fb1b8921a6ac072fb5b10981ffafa",
+      "bytes": 18752
+    },
+    {
+      "path": "templates/jsonresume-kendall/v1.0.0/preview-cfbbe4aa4f80fa8c.png",
+      "sha256": "cfbbe4aa4f80fa8c106303d43993f0a5463d51dd9ed9e74c8846d37e413e46d7",
+      "bytes": 105605
+    },
+    {
+      "path": "templates/jsonresume-kendall/v1.0.0/thumbnail-14c64d691d00defb.png",
+      "sha256": "14c64d691d00defbe70ff9a93a4532204adbe47ac6c34176cad2a9677aee6234",
+      "bytes": 18498
+    },
+    {
+      "path": "templates/jsonresume-kendall/v1.0.1/preview-f406ea66f2b929f2.png",
+      "sha256": "f406ea66f2b929f27436d14abef95fea38402f7cc240cc2c445385f342ee1733",
+      "bytes": 125446
+    },
+    {
+      "path": "templates/jsonresume-kendall/v1.0.1/thumbnail-9df8434e90f8d1a3.png",
+      "sha256": "9df8434e90f8d1a39e4e7a47671361b55b0228a0659b3d5cfa542ce86bd8f516",
+      "bytes": 21542
+    },
+    {
+      "path": "templates/jsonresume-lucide/v1.0.0/preview-0634fabbe5e39cfe.png",
+      "sha256": "0634fabbe5e39cfe25122aa45e7bd2b6047cc513a93be1562608242a9c5b1de9",
+      "bytes": 147078
+    },
+    {
+      "path": "templates/jsonresume-lucide/v1.0.0/thumbnail-86b719fb4441b517.png",
+      "sha256": "86b719fb4441b5177797a2bb1fe09aa51e12597961c828e824bd4ba2c89f2435",
+      "bytes": 18297
+    },
+    {
+      "path": "templates/jsonresume-macchiato/v1.0.0/preview-e3c687df63a57f3a.png",
+      "sha256": "e3c687df63a57f3a74e7aadf853d470727ccbc9631bc717a3d115fc7f3e9bcc0",
+      "bytes": 125274
+    },
+    {
+      "path": "templates/jsonresume-macchiato/v1.0.0/thumbnail-7edd2cfad72a99e4.png",
+      "sha256": "7edd2cfad72a99e4e4796afdf49111a539dce386bcb73dbec02761ed119744fa",
+      "bytes": 21874
+    },
+    {
+      "path": "templates/jsonresume-marketing-narrative/v1.0.0/preview-f029d6d508f2877a.png",
+      "sha256": "f029d6d508f2877a14b235033d0f11ceb7ecb5595e10b2dc1a0a70f5909a5f85",
+      "bytes": 108036
+    },
+    {
+      "path": "templates/jsonresume-marketing-narrative/v1.0.0/thumbnail-c305c4b069a09538.png",
+      "sha256": "c305c4b069a09538978c8fe04876c3f39cc6c9af207a61668e398fe801271b71",
+      "bytes": 19650
+    },
+    {
+      "path": "templates/jsonresume-material/v1.0.0/preview-b4f5821f9d01ab2c.png",
+      "sha256": "b4f5821f9d01ab2c3a6c3694f90b7b958f88adada44199157ab1850b652e299e",
+      "bytes": 118759
+    },
+    {
+      "path": "templates/jsonresume-material/v1.0.0/thumbnail-fb833d64776d452c.png",
+      "sha256": "fb833d64776d452c48f703db85c7d5a0eaf1bbe7fed27454fcdb782d97075391",
+      "bytes": 21012
+    },
+    {
+      "path": "templates/jsonresume-mid-century-resume/v1.0.0/preview-81e8a04cecd342f7.png",
+      "sha256": "81e8a04cecd342f7721322d2a45567a6f00d7069afb2b10187710224341b3939",
+      "bytes": 56335
+    },
+    {
+      "path": "templates/jsonresume-mid-century-resume/v1.0.0/thumbnail-a6af715b48160709.png",
+      "sha256": "a6af715b48160709c05e0477fecade2cb6149e4758561762277b3bb03de7f4bf",
+      "bytes": 10755
+    },
+    {
+      "path": "templates/jsonresume-mid-century-resume/v1.0.1/preview-5e56a0361c63d6d4.png",
+      "sha256": "5e56a0361c63d6d4b7a0504a1591c561a6c209aae42f8b05fd76d0d4f260bb9a",
+      "bytes": 101206
+    },
+    {
+      "path": "templates/jsonresume-mid-century-resume/v1.0.1/thumbnail-a6f5c3abd8558f7e.png",
+      "sha256": "a6f5c3abd8558f7e596b5bbdc409c9dbb6b85671488383d9969162048ab917e9",
+      "bytes": 17844
+    },
+    {
+      "path": "templates/jsonresume-minyma/v1.0.0/preview-6eb6fab69269cd36.png",
+      "sha256": "6eb6fab69269cd3659f1b17209bfc91b084148616af4eca6c4d1b0ab33f115cc",
+      "bytes": 140184
+    },
+    {
+      "path": "templates/jsonresume-minyma/v1.0.0/thumbnail-02748857ec9ed9bf.png",
+      "sha256": "02748857ec9ed9bf7ea5448cee3a81387b58103321f0c22ba704c6506cda367d",
+      "bytes": 16866
+    },
+    {
+      "path": "templates/jsonresume-modern-classic/v1.0.0/preview-fcebf52db67c3021.png",
+      "sha256": "fcebf52db67c302105d3cc61352d148deccf9173eb720ccc591fd826b2de53cc",
+      "bytes": 67038
+    },
+    {
+      "path": "templates/jsonresume-modern-classic/v1.0.0/thumbnail-345832750761eec7.png",
+      "sha256": "345832750761eec75411ef1790991261c428d577de8d02ea4c19df9b338372f8",
+      "bytes": 12115
+    },
+    {
+      "path": "templates/jsonresume-modern-classic/v1.0.1/preview-4aaca3f386f78b05.png",
+      "sha256": "4aaca3f386f78b0528f6049515f531a4f42744667fa742ae4e5b194d8849257f",
+      "bytes": 110739
+    },
+    {
+      "path": "templates/jsonresume-modern-classic/v1.0.1/thumbnail-8507ef38f294c94d.png",
+      "sha256": "8507ef38f294c94d01706209a169115df327cec6f06be38ae96eeb491ba2d1a0",
+      "bytes": 18770
+    },
+    {
+      "path": "templates/jsonresume-modern/v1.0.0/preview-695ebe5f2e18475c.png",
+      "sha256": "695ebe5f2e18475cb21276e25291b649da761ce27893c3c84fb3c561687a5446",
+      "bytes": 103649
+    },
+    {
+      "path": "templates/jsonresume-modern/v1.0.0/thumbnail-a2e553a2d8c5ce1b.png",
+      "sha256": "a2e553a2d8c5ce1b94e2656d5136d7e8a96d9ee0622fe71fbf3766877af6bb02",
+      "bytes": 18024
+    },
+    {
+      "path": "templates/jsonresume-monochrome-noir/v1.0.0/preview-67533a9d4f4d5839.png",
+      "sha256": "67533a9d4f4d5839a9063e11b7a29e28b50535dd285905cce1862282cca2d29e",
+      "bytes": 124740
+    },
+    {
+      "path": "templates/jsonresume-monochrome-noir/v1.0.0/thumbnail-2778b5ad0a9aee4b.png",
+      "sha256": "2778b5ad0a9aee4bf2cec7a8128ce8ab5a6f0a9d3294aebf81b8895bb84d22c6",
+      "bytes": 21599
+    },
+    {
+      "path": "templates/jsonresume-noodle/v1.0.0/preview-aa1968807b46ca30.png",
+      "sha256": "aa1968807b46ca301c3007416ead12e7f98bc0e30cf9e1de5bca97e27f1aecfe",
+      "bytes": 154268
+    },
+    {
+      "path": "templates/jsonresume-noodle/v1.0.0/thumbnail-b393ae7de4e04e22.png",
+      "sha256": "b393ae7de4e04e22c36ce6e18eda8f9fe159a86308dc261d1046c79f2550e359",
+      "bytes": 19971
+    },
+    {
+      "path": "templates/jsonresume-nordic-minimal/v1.0.0/preview-1d59dbfce01ef4d8.png",
+      "sha256": "1d59dbfce01ef4d861a3ead380b8ead52e109b81acddb0d292babadb6f2ed749",
+      "bytes": 148445
+    },
+    {
+      "path": "templates/jsonresume-nordic-minimal/v1.0.0/thumbnail-40ef87a8d58aa01f.png",
+      "sha256": "40ef87a8d58aa01f7ed24dbaa1d3c131b625ee6b675016acb42b6bd9532f0593",
+      "bytes": 19321
+    },
+    {
       "path": "templates/jsonresume-onepage/v1.0.1/preview-b1a82eb410fd2aae.png",
       "sha256": "b1a82eb410fd2aae447bc2a99d5652a9a3e93300a2102a1babb38c9da740b675",
       "bytes": 98835
@@ -280,6 +720,166 @@
       "path": "templates/jsonresume-onepage/v1.0.1/thumbnail-4e647e2a530a4e12.png",
       "sha256": "4e647e2a530a4e127f4584287ccbc651c42cd8ef6ecf538feeafca859f202b24",
       "bytes": 18287
+    },
+    {
+      "path": "templates/jsonresume-operations-precision/v1.0.0/preview-2aff4ae92e74ab32.png",
+      "sha256": "2aff4ae92e74ab32e790d3b599a716571b870e7d9676e0e2fbdb492091533d45",
+      "bytes": 158593
+    },
+    {
+      "path": "templates/jsonresume-operations-precision/v1.0.0/thumbnail-9419fcc52a13184e.png",
+      "sha256": "9419fcc52a13184e2177819f3de8af69964d4ef3661838a86d423d8b07e8d289",
+      "bytes": 19908
+    },
+    {
+      "path": "templates/jsonresume-paper-plus-plus/v1.0.0/preview-83866accc0a5da5f.png",
+      "sha256": "83866accc0a5da5f9758b4ca03284a11d8c0b73c5454bf96908b951fe849aaa2",
+      "bytes": 96793
+    },
+    {
+      "path": "templates/jsonresume-paper-plus-plus/v1.0.0/thumbnail-b4d1c25f1ffdd696.png",
+      "sha256": "b4d1c25f1ffdd6964a46b879035c6481ab57cd957a185008f4c1c90348ffe21a",
+      "bytes": 16997
+    },
+    {
+      "path": "templates/jsonresume-professional/v1.0.0/preview-cd6ea9b4a1e79889.png",
+      "sha256": "cd6ea9b4a1e798894e9fb8fa4f0eeacde7e11f28be9fdd80dd80166e21a0b09c",
+      "bytes": 122841
+    },
+    {
+      "path": "templates/jsonresume-professional/v1.0.0/thumbnail-2d4fe62fef4d47df.png",
+      "sha256": "2d4fe62fef4d47df2b299be954432517cc650bdffd8eaa5ece3ce48fea21072b",
+      "bytes": 21056
+    },
+    {
+      "path": "templates/jsonresume-projects/v1.0.0/preview-f0b25b35dec17167.png",
+      "sha256": "f0b25b35dec17167833c96f47fc554ca190ab77da8b36e50a912c638dd5ed17f",
+      "bytes": 105325
+    },
+    {
+      "path": "templates/jsonresume-projects/v1.0.0/thumbnail-671a8e8d5541f8bd.png",
+      "sha256": "671a8e8d5541f8bd7ed3a41468ff34ff88e7987e741dfa9b923f433f00e15a00",
+      "bytes": 18443
+    },
+    {
+      "path": "templates/jsonresume-pumpkin/v1.0.0/preview-f886fa80b6ea5203.png",
+      "sha256": "f886fa80b6ea52030a6e565f1cc74609c5caf7fc7751465c5a6e40d14e37439f",
+      "bytes": 109281
+    },
+    {
+      "path": "templates/jsonresume-pumpkin/v1.0.0/thumbnail-efe1c643181e1515.png",
+      "sha256": "efe1c643181e1515b0192332b31aedb0433b77a48923bacc9fd173602c80d33b",
+      "bytes": 19902
+    },
+    {
+      "path": "templates/jsonresume-sales-hunter/v1.0.0/preview-56e3477aa6399264.png",
+      "sha256": "56e3477aa639926469cc6774f9efbdb3350965182f628bfc24ee29cc7eaa4be5",
+      "bytes": 111090
+    },
+    {
+      "path": "templates/jsonresume-sales-hunter/v1.0.0/thumbnail-cd5f8eb1623df27c.png",
+      "sha256": "cd5f8eb1623df27c8adb6a6afac578f7aae307ed4e4d58bb0bdc172c7d2174ac",
+      "bytes": 19668
+    },
+    {
+      "path": "templates/jsonresume-sceptile/v1.0.0/preview-5877eda4094987fe.png",
+      "sha256": "5877eda4094987fe24a2817121065a29bbd29d6d169c135098dd8b0bf395f143",
+      "bytes": 143976
+    },
+    {
+      "path": "templates/jsonresume-sceptile/v1.0.0/thumbnail-4599cead051d0f4b.png",
+      "sha256": "4599cead051d0f4b2a70e309de3f8b8c052ec910d7cca96b4acf476216df189b",
+      "bytes": 17946
+    },
+    {
+      "path": "templates/jsonresume-sidebar-photo-strip/v1.0.0/preview-fdd4cb5ebffd39d6.png",
+      "sha256": "fdd4cb5ebffd39d6510b65fb34640cb7933dc18fcdee5a478fe5e6e370a07de9",
+      "bytes": 127221
+    },
+    {
+      "path": "templates/jsonresume-sidebar-photo-strip/v1.0.0/thumbnail-4c5f991901d3b81c.png",
+      "sha256": "4c5f991901d3b81cb82ae92c0c68bce0458f1dc41a80acbdb22bcc1f0c71360e",
+      "bytes": 22056
+    },
+    {
+      "path": "templates/jsonresume-simplyelegant/v1.0.0/preview-9fb9b57f06c9366f.png",
+      "sha256": "9fb9b57f06c9366fba5297d559d6e4084d67bb2e3d92615f712d86d4dad289f8",
+      "bytes": 114586
+    },
+    {
+      "path": "templates/jsonresume-simplyelegant/v1.0.0/thumbnail-4dd7957b6b3d93ef.png",
+      "sha256": "4dd7957b6b3d93efaa3197d68f14201ba47418e6d0436a6b05a0aa05610cc439",
+      "bytes": 20359
+    },
+    {
+      "path": "templates/jsonresume-stackoverflow/v1.0.0/preview-f8a0c906d27f2cfe.png",
+      "sha256": "f8a0c906d27f2cfe1b9a0d9b5f65317aacbdb697588ce26d10cc7e11818b69e4",
+      "bytes": 76925
+    },
+    {
+      "path": "templates/jsonresume-stackoverflow/v1.0.0/thumbnail-8c6eb0e12cfdd1bd.png",
+      "sha256": "8c6eb0e12cfdd1bd06290f32c8430112a422117b5ba5c63974c9443b3d2ff6a8",
+      "bytes": 13688
+    },
+    {
+      "path": "templates/jsonresume-stackoverflow/v1.0.1/preview-ed6e0884e360050c.png",
+      "sha256": "ed6e0884e360050c8a453548dbcd534898e9e40cf4c8ee2e79c3d4b4ed989796",
+      "bytes": 111902
+    },
+    {
+      "path": "templates/jsonresume-stackoverflow/v1.0.1/thumbnail-cdb5edd84690d7c2.png",
+      "sha256": "cdb5edd84690d7c2a1b7f9783e4c65b47c7e3409b65ca9565bc9ed5f664f79f7",
+      "bytes": 19033
+    },
+    {
+      "path": "templates/jsonresume-straightforward/v1.0.0/preview-eef6160e1c9e451e.png",
+      "sha256": "eef6160e1c9e451e63306fd940ccb2d038a6ff047cca1d95ebb2bb02bb47871c",
+      "bytes": 118119
+    },
+    {
+      "path": "templates/jsonresume-straightforward/v1.0.0/thumbnail-9b877901c5b17e4e.png",
+      "sha256": "9b877901c5b17e4e6e07b5aa69258c0505244a44c6a203c39b455fecd4c1f4eb",
+      "bytes": 20600
+    },
+    {
+      "path": "templates/jsonresume-tan-responsive/v1.0.0/preview-929ecdad20060a10.png",
+      "sha256": "929ecdad20060a1080b06a400f600d99cf2f0b4aecd8043e69c60f42c0c41753",
+      "bytes": 149577
+    },
+    {
+      "path": "templates/jsonresume-tan-responsive/v1.0.0/thumbnail-d6a13e9b437fc1a4.png",
+      "sha256": "d6a13e9b437fc1a45ec996de5f6b2b06000e94565987e17bf18ebeca8fd509f1",
+      "bytes": 18920
+    },
+    {
+      "path": "templates/jsonresume-typewriter-modern/v1.0.0/preview-d6ee58648be24851.png",
+      "sha256": "d6ee58648be24851fd796ea0856eb70df937ca05efda6a683502a52db6950781",
+      "bytes": 107941
+    },
+    {
+      "path": "templates/jsonresume-typewriter-modern/v1.0.0/thumbnail-28dfadeeb0809050.png",
+      "sha256": "28dfadeeb0809050df2a13805cb9290804833d47cd1b8e911bd3011188a76008",
+      "bytes": 19354
+    },
+    {
+      "path": "templates/jsonresume-university-first/v1.0.0/preview-84c1af20ae5a21c0.png",
+      "sha256": "84c1af20ae5a21c07640f6e2a4754ce9b7740ee8766eff42138b859e363662e9",
+      "bytes": 108143
+    },
+    {
+      "path": "templates/jsonresume-university-first/v1.0.0/thumbnail-a104840462b97832.png",
+      "sha256": "a104840462b97832761cd8d9208c7abebc3c6f3fffa01599edcf2d2f5e752edf",
+      "bytes": 19298
+    },
+    {
+      "path": "templates/jsonresume-waterfall/v1.0.0/preview-d45421b27bb05484.png",
+      "sha256": "d45421b27bb05484d91adabaecececc4b5ad2b7f358120678a66277bace68f98",
+      "bytes": 153178
+    },
+    {
+      "path": "templates/jsonresume-waterfall/v1.0.0/thumbnail-4fbb921e3481e0dd.png",
+      "sha256": "4fbb921e3481e0dd648095f5ca41cbe0d48bed94e4b8f8957d8431f1a35ca044",
+      "bytes": 19539
     },
     {
       "path": "templates/legal/v1.0.0/preview-baa8d06ea06ee3f4.png",

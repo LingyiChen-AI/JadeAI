@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-modern",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Modern",
+  "nameEn": "JSON Resume Modern",
+  "category": "ats",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "modern",
+    "jsonresume-theme-modern"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-modern",
+    "packageVersion": "0.0.18",
+    "url": "https://github.com/jsonresume/jsonresume-theme-modern",
+    "revision": "bfe54f7d1e7c7620174d4530cd7ac0de6396f8e7"
+  },
+  "license": {
+    "spdx": "ISC",
+    "path": "LICENSE",
+    "sha256": "c203808306d1ba51c670f56169e5457199f59e863dd0f1e988625fda444ad010",
+    "copyright": "jsonresume-theme-modern contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "58327164314b498efd411e5bed0c04d2549621589a3fedd061adbe1ffda8fe28",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-modern@0.0.18. Canonical JSON Resume modern theme. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

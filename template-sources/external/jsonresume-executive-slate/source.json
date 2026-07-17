@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-executive-slate",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Executive Slate",
+  "nameEn": "JSON Resume Executive Slate",
+  "category": "engineering",
+  "tags": [
+    "layout-two-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "executive slate",
+    "jsonresume-theme-executive-slate"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-executive-slate",
+    "packageVersion": "1.1.3",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "jsonresume-theme-executive-slate contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "5292c8bb19112bda573f30d1c4110fa212b75f2358c1d1a476c2f2cc14c47cbe",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-executive-slate@1.1.3. Executive information hierarchy. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

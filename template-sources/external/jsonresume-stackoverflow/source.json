@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-stackoverflow",
+  "version": "1.0.1",
+  "nameZh": "JSON Resume Stackoverflow",
+  "nameEn": "JSON Resume Stackoverflow",
+  "category": "engineering",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "stackoverflow",
+    "jsonresume-theme-stackoverflow"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-stackoverflow",
+    "packageVersion": "3.3.0",
+    "url": "https://github.com/phoinixi/jsonresume-theme-stackoverflow",
+    "revision": "9dcc3072031cc3278cd818747459356351d34788"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "a4d1d3e6ae84168e5f65e0b3357157dfeccf2e114c8c3a50a23fbbbddf3be3b4",
+    "copyright": "jsonresume-theme-stackoverflow contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "0add967feb2ede42da7232f6eb0e15d0b83f686476991d1ba1eec8abfa498294",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-stackoverflow@3.3.0. Developer profile presentation. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed. JadeAI 1.0.1 preserves the audited manifest and fixes split-header long-URL layout in the shared renderer."
+  }
+}

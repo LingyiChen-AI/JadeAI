@@ -174,21 +174,79 @@ const TemplateManifestV1BaseSchema = z.strictObject({
   features: TemplateFeaturesSchema,
 });
 
-export const TemplateManifestV1Schema = z
-  .preprocess((input, context) => {
-    const structure = validateJsonStructure(input);
-    if (structure.success) return input;
-    for (const issue of structure.error.issues) {
-      context.addIssue({ code: 'custom', path: issue.path, message: issue.message });
-    }
-    return z.NEVER;
-  }, TemplateManifestV1BaseSchema)
-  .superRefine((manifest, context) => {
-    const canonicalJson = canonicalizeJson(manifest);
-    if (new TextEncoder().encode(canonicalJson).byteLength > MAX_MANIFEST_BYTES) {
-      context.addIssue({ code: 'custom', message: 'manifest_too_large' });
-    }
-  });
+const TemplateHeaderV2Schema = z.strictObject({
+  variant: z.enum(['plain', 'centered', 'band', 'split', 'editorial']),
+  contactLayout: z.enum(['inline', 'wrapped', 'separated', 'sidebar']),
+});
+
+const TemplateEntryV2Schema = z.strictObject({
+  variant: z.enum(['stacked', 'compact', 'date-rail', 'timeline', 'two-column-grid']),
+});
+
+const TemplateSectionV2Schema = z.strictObject({
+  headingVariant: z.enum(['plain', 'underline', 'bordered', 'accent-block', 'small-caps', 'side-rule']),
+});
+
+const TemplateSkillsV2Schema = z.strictObject({
+  variant: z.enum(['text', 'tags', 'compact-grid']),
+});
+
+const TemplateDecorationV2Schema = z.strictObject({
+  variant: z.enum(['none', 'top-rule', 'side-rule', 'corner-accent', 'grid-lines']),
+});
+
+const TemplatePaletteV2Schema = z.strictObject({
+  secondary: ColorSchema,
+  surface: ColorSchema,
+  border: ColorSchema,
+});
+
+const TemplateBorderV2Schema = z.strictObject({
+  widthPt: z.number().min(0).max(4),
+  radiusMm: z.number().min(0).max(8),
+});
+
+const TemplateManifestV2BaseSchema = z.strictObject({
+  schemaVersion: z.literal(2),
+  rendererKind: z.literal('declarative-v2'),
+  layout: TemplateLayoutSchema,
+  typography: TemplateTypographySchema,
+  colors: TemplateColorsSchema,
+  spacing: TemplateSpacingSchema,
+  sectionSlots: z.array(SectionSlotSchema).max(MAX_SECTION_SLOTS),
+  sectionStyles: z.array(SectionStyleSchema).max(MAX_STYLE_RULES),
+  features: TemplateFeaturesSchema,
+  header: TemplateHeaderV2Schema,
+  entry: TemplateEntryV2Schema,
+  section: TemplateSectionV2Schema,
+  skills: TemplateSkillsV2Schema,
+  decoration: TemplateDecorationV2Schema,
+  density: z.enum(['comfortable', 'standard', 'compact']),
+  palette: TemplatePaletteV2Schema,
+  border: TemplateBorderV2Schema,
+});
+
+function boundedManifestSchema<T extends z.ZodType>(schema: T) {
+  return z
+    .preprocess((input, context) => {
+      const structure = validateJsonStructure(input);
+      if (structure.success) return input;
+      for (const issue of structure.error.issues) {
+        context.addIssue({ code: 'custom', path: issue.path, message: issue.message });
+      }
+      return z.NEVER;
+    }, schema)
+    .superRefine((manifest, context) => {
+      const canonicalJson = canonicalizeJson(manifest);
+      if (new TextEncoder().encode(canonicalJson).byteLength > MAX_MANIFEST_BYTES) {
+        context.addIssue({ code: 'custom', message: 'manifest_too_large' });
+      }
+    });
+}
+
+export const TemplateManifestV1Schema = boundedManifestSchema(TemplateManifestV1BaseSchema);
+export const TemplateManifestV2Schema = boundedManifestSchema(TemplateManifestV2BaseSchema);
+export const DeclarativeTemplateManifestSchema = z.union([TemplateManifestV1Schema, TemplateManifestV2Schema]);
 
 const TemplateVersionSchema = z.strictObject({
   id: IdSchema,
@@ -216,6 +274,11 @@ export const TemplateVersionDetailSchema = z.discriminatedUnion('rendererKind', 
   }),
   z.strictObject({
     ...TemplateVersionDetailSharedShape,
+    rendererKind: z.literal('declarative-v2'),
+    manifest: TemplateManifestV2Schema,
+  }),
+  z.strictObject({
+    ...TemplateVersionDetailSharedShape,
     rendererKind: z.literal('legacy-react'),
     manifest: z.null(),
   }),
@@ -238,13 +301,22 @@ export const TemplateBindingSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
-export const TemplateSnapshotSchema = z.strictObject({
-  rendererKind: z.literal('declarative-v1'),
-  schemaVersion: z.literal(1),
-  manifest: TemplateManifestV1Schema,
-  manifestHash: ManifestHashSchema,
-  capabilities: TemplateCapabilitySchema,
-});
+export const TemplateSnapshotSchema = z.discriminatedUnion('rendererKind', [
+  z.strictObject({
+    rendererKind: z.literal('declarative-v1'),
+    schemaVersion: z.literal(1),
+    manifest: TemplateManifestV1Schema,
+    manifestHash: ManifestHashSchema,
+    capabilities: TemplateCapabilitySchema,
+  }),
+  z.strictObject({
+    rendererKind: z.literal('declarative-v2'),
+    schemaVersion: z.literal(2),
+    manifest: TemplateManifestV2Schema,
+    manifestHash: ManifestHashSchema,
+    capabilities: TemplateCapabilitySchema,
+  }),
+]);
 
 const ThumbnailBlobSchema = z
   .instanceof(Blob)
@@ -264,17 +336,17 @@ const LocalTemplateMetadataSchema = z.strictObject({
 export const LocalTemplateRecordSchema = LocalTemplateMetadataSchema.extend({
   userId: IdSchema,
   localId: IdSchema,
-  manifest: TemplateManifestV1Schema,
+  manifest: DeclarativeTemplateManifestSchema,
   thumbnail: ThumbnailBlobSchema,
 });
 
 export const LocalTemplateExportRawSchema = z.strictObject({
   formatVersion: z.literal(1),
   metadata: LocalTemplateMetadataSchema,
-  manifest: TemplateManifestV1Schema,
+  manifest: DeclarativeTemplateManifestSchema,
   checksum: ManifestHashSchema,
 });
 
-export function parseTemplateManifest(input: unknown): z.output<typeof TemplateManifestV1Schema> {
-  return TemplateManifestV1Schema.parse(input);
+export function parseTemplateManifest(input: unknown): z.output<typeof DeclarativeTemplateManifestSchema> {
+  return DeclarativeTemplateManifestSchema.parse(input);
 }

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-pumpkin",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Pumpkin",
+  "nameEn": "JSON Resume Pumpkin",
+  "category": "design-creative",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "pumpkin",
+    "jsonresume-theme-pumpkin"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-pumpkin",
+    "packageVersion": "1.1.4",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "jsonresume-theme-pumpkin contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "12b1af0c1fe74ed1305734f76720b60022663bd5f2ef197f3d54c58ad963e3e1",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-pumpkin@1.1.4. Established colorful community theme. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

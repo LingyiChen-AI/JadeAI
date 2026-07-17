@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-flat",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Flat",
+  "nameEn": "JSON Resume Flat",
+  "category": "design-creative",
+  "tags": [
+    "layout-two-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "flat",
+    "jsonresume-theme-flat"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-flat",
+    "packageVersion": "0.3.7",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "jsonresume-theme-flat contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "47730e00e5190b466f10586917d51c7647a43cd6d0e530d5bdcb3143ff46d030",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-flat@0.3.7. Canonical flat visual style. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

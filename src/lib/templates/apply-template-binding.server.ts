@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 
 import { TEMPLATES } from '@/lib/constants';
-import type { TemplateCapability, TemplateManifestV1, TemplateSnapshot } from '@/types/template';
+import type { DeclarativeTemplateManifest, TemplateCapability, TemplateSnapshot } from '@/types/template';
 import type { ResolvedTemplate } from './resolve-template';
 
 import { hashManifest, normalizeManifest } from './normalize-manifest';
@@ -45,7 +45,7 @@ export function parseClientTemplateBindingChoice(input: unknown): ClientTemplate
   return { kind: 'local-snapshot', manifest: normalizeManifest(parsed.manifest) };
 }
 
-function deriveLocalCapabilities(manifest: TemplateManifestV1): TemplateCapability {
+function deriveLocalCapabilities(manifest: DeclarativeTemplateManifest): TemplateCapability {
   return {
     supportedSections: [...new Set(manifest.sectionSlots.map((slot) => slot.sectionType))],
     paperSizes: ['a4', 'letter'],
@@ -62,15 +62,16 @@ function deriveLocalCapabilities(manifest: TemplateManifestV1): TemplateCapabili
 export function toResumeTemplateBindingInput(choice: ClientTemplateBindingChoice): ResumeTemplateBindingInput {
   if (choice.kind !== 'local-snapshot') return choice;
   const manifest = normalizeManifest(choice.manifest);
+  const shared = {
+    manifest,
+    manifestHash: hashManifest(manifest),
+    capabilities: deriveLocalCapabilities(manifest),
+  };
   return {
     kind: 'local-snapshot',
-    snapshot: {
-      rendererKind: 'declarative-v1',
-      schemaVersion: 1,
-      manifest,
-      manifestHash: hashManifest(manifest),
-      capabilities: deriveLocalCapabilities(manifest),
-    },
+    snapshot: manifest.rendererKind === 'declarative-v2'
+      ? { ...shared, manifest, rendererKind: 'declarative-v2', schemaVersion: 2 }
+      : { ...shared, manifest, rendererKind: 'declarative-v1', schemaVersion: 1 },
   };
 }
 

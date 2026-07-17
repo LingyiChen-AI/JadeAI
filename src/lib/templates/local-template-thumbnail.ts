@@ -1,4 +1,4 @@
-import type { TemplateManifestV1 } from '@/types/template';
+import type { DeclarativeTemplateManifest } from '@/types/template';
 
 const FALLBACK_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+3n0YVwAAAABJRU5ErkJggg==';
 
@@ -7,7 +7,7 @@ function fallbackThumbnail(): Blob {
   return new Blob([bytes], { type: 'image/png' });
 }
 
-export async function createLocalTemplateThumbnail(manifest: TemplateManifestV1): Promise<Blob> {
+export async function createLocalTemplateThumbnail(manifest: DeclarativeTemplateManifest): Promise<Blob> {
   if (typeof document === 'undefined') return fallbackThumbnail();
   try {
     const canvas = document.createElement('canvas');

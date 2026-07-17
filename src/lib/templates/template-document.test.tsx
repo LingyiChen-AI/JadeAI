@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 
 import { DeclarativeTemplateDocument } from '@/components/preview/declarative-template-document';
 import type { Resume } from '@/types/resume';
-import type { TemplateManifestV1 } from '@/types/template';
+import type { TemplateManifestV1, TemplateManifestV2 } from '@/types/template';
 
 import {
   buildTemplateDocument,
@@ -31,6 +31,20 @@ const manifest: TemplateManifestV1 = {
   features: { showAvatar: true, showQrCodes: false, showPageNumbers: false, maxPages: 4 },
 };
 
+const v2Manifest: TemplateManifestV2 = {
+  ...manifest,
+  schemaVersion: 2,
+  rendererKind: 'declarative-v2',
+  header: { variant: 'band', contactLayout: 'separated' },
+  entry: { variant: 'timeline' },
+  section: { headingVariant: 'side-rule' },
+  skills: { variant: 'compact-grid' },
+  decoration: { variant: 'corner-accent' },
+  density: 'compact',
+  palette: { secondary: '#334155', surface: '#f8fafc', border: '#cbd5e1' },
+  border: { widthPt: 1.5, radiusMm: 2 },
+};
+
 function resume(): Resume {
   const now = new Date('2026-01-01T00:00:00.000Z');
   return {
@@ -48,6 +62,56 @@ function resume(): Resume {
 }
 
 describe('declarative template document', () => {
+  test('keeps declarative-v2 presentation metadata identical in React and HTML', () => {
+    const document = buildTemplateDocument(normalizeResumeForTemplate(resume()), v2Manifest);
+    const outputs = [serializeTemplateDocumentHtml(document), renderToStaticMarkup(<DeclarativeTemplateDocument document={document} />)];
+
+    expect(document.kind).toBe('template-document-v2');
+    for (const output of outputs) {
+      expect(output).toContain('data-renderer-kind="declarative-v2"');
+      expect(output).toContain('data-header-variant="band"');
+      expect(output).toContain('data-contact-layout="separated"');
+      expect(output).toContain('data-entry-variant="timeline"');
+      expect(output).toContain('data-section-heading="side-rule"');
+      expect(output).toContain('data-skills-variant="compact-grid"');
+      expect(output).toContain('data-decoration="corner-accent"');
+      expect(output).toContain('data-density="compact"');
+      expect(output).toContain('#f8fafc');
+      expect(output).toContain('#cbd5e1');
+    }
+  });
+
+  test('keeps split headers in two explicit columns so long contact links cannot create implicit narrow columns', () => {
+    const splitManifest: TemplateManifestV2 = {
+      ...v2Manifest,
+      header: { variant: 'split', contactLayout: 'sidebar' },
+      sectionSlots: [
+        { sectionType: 'personal_info', placement: 'header', order: 0 },
+        ...v2Manifest.sectionSlots,
+      ],
+    };
+    const source = resume();
+    source.sections = source.sections.map((section) => section.type === 'personal_info'
+      ? {
+          ...section,
+          content: {
+            fullName: 'Alex Chen',
+            website: 'https://portfolio.example.test/alex-chen/platform-engineering',
+            customLinks: [{ label: 'Technical writing', url: 'https://blog.example.test/articles/platform-reliability' }],
+          } as unknown as Resume['sections'][number]['content'],
+        }
+      : section);
+
+    const document = buildTemplateDocument(normalizeResumeForTemplate(source), splitManifest);
+    const reactHtml = renderToStaticMarkup(<DeclarativeTemplateDocument document={document} />);
+
+    expect(reactHtml).toContain('grid-template-columns:minmax(24mm, auto) minmax(0, 1fr)');
+    expect(reactHtml).toMatch(/<h2 style="[^"]*grid-column:1[^"]*">Profile<\/h2>/);
+    expect(reactHtml.match(/data-block="contact" style="[^"]*grid-column:2/g)).toHaveLength(2);
+    expect(reactHtml).toMatch(/href="https:\/\/portfolio\.example\.test[^\"]+"[^>]+overflow-wrap:anywhere/);
+    expect(reactHtml).toMatch(/href="https:\/\/blog\.example\.test[^\"]+"[^>]+overflow-wrap:anywhere/);
+  });
+
   test('keeps React and HTML text, links, section order, colors and layout metadata identical', () => {
     const view = normalizeResumeForTemplate(resume());
     expect(JSON.stringify(view)).not.toMatch(/user-secret-id|resume-secret-id|revision|createdAt|updatedAt|aiState|model-internal-secret/);

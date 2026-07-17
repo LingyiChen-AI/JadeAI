@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-eloquent",
+  "version": "1.0.1",
+  "nameZh": "JSON Resume Eloquent",
+  "nameEn": "JSON Resume Eloquent",
+  "category": "engineering",
+  "tags": [
+    "layout-two-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "eloquent",
+    "jsonresume-theme-eloquent"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-eloquent",
+    "packageVersion": "5.0.0",
+    "url": "https://github.com/thibaudcolas/jsonresume-theme-eloquent",
+    "revision": "382a37f8b0c1ccc4f5c57b258ddeec8fa9802696"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "2d583a5dfe487c1feca3776334252d56b8e5b80862bf0b32e91ba6f306f3f9ba",
+    "copyright": "jsonresume-theme-eloquent contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "ea57a8ca131cb12688b549c57a476ff6e172f1a033685b7bf6696859bd67158b",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-eloquent@5.0.0. Polished long-form typography. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed. JadeAI 1.0.1 preserves the audited manifest and fixes split-header long-URL layout in the shared renderer."
+  }
+}

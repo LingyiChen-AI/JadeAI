@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-consultant-polished",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Consultant Polished",
+  "nameEn": "JSON Resume Consultant Polished",
+  "category": "ats",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "consultant polished",
+    "@jsonresume/jsonresume-theme-consultant-polished"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "@jsonresume/jsonresume-theme-consultant-polished",
+    "packageVersion": "1.0.3",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "@jsonresume/jsonresume-theme-consultant-polished contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "55fc08ddd8c848fdcc8ad93224cca033fc267881e3da570bc3fd42b91a7036b5",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by @jsonresume/jsonresume-theme-consultant-polished@1.0.3. Polished consulting layout. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

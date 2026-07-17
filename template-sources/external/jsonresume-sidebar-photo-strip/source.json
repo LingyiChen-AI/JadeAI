@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-sidebar-photo-strip",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Sidebar Photo Strip",
+  "nameEn": "JSON Resume Sidebar Photo Strip",
+  "category": "design-creative",
+  "tags": [
+    "layout-sidebar",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "sidebar photo strip",
+    "jsonresume-theme-sidebar-photo-strip"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-sidebar-photo-strip",
+    "packageVersion": "1.1.3",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "jsonresume-theme-sidebar-photo-strip contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "6d5253f33b0057fdfb8fc48379bfce07330502a134e9687669019d8114a4d955",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-sidebar-photo-strip@1.1.3. Photo-led sidebar composition. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-kendall",
+  "version": "1.0.1",
+  "nameZh": "JSON Resume Kendall",
+  "nameEn": "JSON Resume Kendall",
+  "category": "engineering",
+  "tags": [
+    "layout-sidebar",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "kendall",
+    "jsonresume-theme-kendall"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-kendall",
+    "packageVersion": "0.2.0",
+    "url": "https://github.com/linuxbozo/jsonresume-theme-kendall",
+    "revision": "2fe915897ae683d6869c6e04d897398a8ca03e6b"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "09f4303a3fb836b733cfb0a96eccda365f7710d28b2c3c603c742ec8246f3aff",
+    "copyright": "jsonresume-theme-kendall contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "8b3924458c776c3b20a8bdc4e992a68e9850ea4b589647545b06a6ad509860d4",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-kendall@0.2.0. Recognizable two-column layout. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed. JadeAI 1.0.1 preserves the audited manifest and fixes split-header long-URL layout in the shared renderer."
+  }
+}

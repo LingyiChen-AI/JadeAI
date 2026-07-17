@@ -210,7 +210,7 @@ export const resumeTemplateVersions = pgTable('resume_template_versions', {
   unique('resume_template_versions_template_id_id_unique').on(table.templateId, table.id),
   index('resume_template_versions_template_status_version_idx').on(table.templateId, table.status, table.version),
   index('resume_template_versions_manifest_hash_idx').on(table.manifestHash),
-  check('resume_template_versions_renderer_kind_check', sql`${table.rendererKind} in ('legacy-react', 'declarative-v1')`),
+  check('resume_template_versions_renderer_kind_check', sql`${table.rendererKind} in ('legacy-react', 'declarative-v1', 'declarative-v2')`),
   check('resume_template_versions_status_check', sql`${table.status} in ('draft', 'published', 'deprecated', 'blocked')`),
   check('resume_template_versions_manifest_hash_check', sql`${table.manifestHash} ~ '^[0-9a-f]{64}$'`),
   check('resume_template_versions_thumbnail_path_check', sql`${table.thumbnailPath} ~ '^templates/[a-z0-9]+(?:-[a-z0-9]+)*/v(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)/thumbnail-[0-9a-f]{16}\\.png$'`),

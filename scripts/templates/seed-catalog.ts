@@ -87,9 +87,13 @@ export function parseTemplateApplyCli(
   };
 }
 
-export function parseSeedCatalogCli(args: string[], databaseUrl: string): Omit<TemplateCliTarget, 'flags'> {
-  const target = parseTemplateApplyCli(args, databaseUrl);
-  return { databaseName: target.databaseName, safeTarget: target.safeTarget };
+export function parseSeedCatalogCli(args: string[], databaseUrl: string): Omit<TemplateCliTarget, 'flags'> & { allowStablePromotion: boolean } {
+  const target = parseTemplateApplyCli(args, databaseUrl, ['--promote-stable']);
+  return {
+    databaseName: target.databaseName,
+    safeTarget: target.safeTarget,
+    allowStablePromotion: target.flags.has('--promote-stable'),
+  };
 }
 
 function canonicalize(value: unknown): string {
@@ -222,7 +226,7 @@ type UnifiedCatalogEntry = {
   category: string;
   tags: string[];
   aliases: string[];
-  rendererKind: 'legacy-react' | 'declarative-v1';
+  rendererKind: 'legacy-react' | 'declarative-v1' | 'declarative-v2';
   source: Record<string, unknown>;
   license: { spdx: string; path: string; sha256: string; copyright: string };
   provenance: Record<string, unknown>;
@@ -252,20 +256,36 @@ export async function buildUnifiedCatalogSeed(options: {
   const catalog = options.catalog ?? JSON.parse(
     await readFile(path.join(rootDir, 'template-sources/catalog.json'), 'utf8'),
   ) as UnifiedCatalog;
+  const publicationLedger = JSON.parse(
+    await readFile(path.join(rootDir, 'template-sources/external/publication-ledger.json'), 'utf8'),
+  ) as { events: Array<{ action: string; reference: string; at: string }> };
+  const firstPublishedAt = new Map<string, number>();
+  for (const event of publicationLedger.events) {
+    if (event.action !== 'publish') continue;
+    const separator = event.reference.lastIndexOf('@');
+    if (separator < 1) continue;
+    const templateId = event.reference.slice(0, separator);
+    const timestamp = Math.floor(new Date(event.at).getTime() / 1_000);
+    const current = firstPublishedAt.get(templateId);
+    if (Number.isFinite(timestamp) && (current === undefined || timestamp < current)) {
+      firstPublishedAt.set(templateId, timestamp);
+    }
+  }
   if (catalog.schemaVersion !== 1 || catalog.templates.length < 1) throw new Error('template_seed_catalog_shape_invalid');
   const publishedAt = options.publishedAt ?? LEGACY_CATALOG_PUBLISHED_AT;
   for (const entry of catalog.templates) {
-    const expectedHash = entry.rendererKind === 'declarative-v1'
+    const isDeclarative = entry.rendererKind === 'declarative-v1' || entry.rendererKind === 'declarative-v2';
+    const expectedHash = isDeclarative
       ? hashManifest(entry.manifest)
       : sha256(canonicalize(entry.manifest));
     if (expectedHash !== entry.manifestHash) throw new Error(`template_seed_manifest_hash_mismatch:${entry.id}`);
     if (!TemplateCapabilitySchema.safeParse(entry.capabilities).success) {
       throw new Error(`template_seed_capabilities_invalid:${entry.id}`);
     }
-    if (entry.rendererKind === 'declarative-v1') {
+    if (isDeclarative) {
       if (
-        entry.manifest.schemaVersion !== 1
-        || entry.manifest.rendererKind !== 'declarative-v1'
+        entry.manifest.schemaVersion !== (entry.rendererKind === 'declarative-v2' ? 2 : 1)
+        || entry.manifest.rendererKind !== entry.rendererKind
         || entry.publication?.status !== 'published'
         || entry.publication.stable !== true
       ) throw new Error(`template_seed_manifest_contract_invalid:${entry.id}`);
@@ -282,7 +302,7 @@ export async function buildUnifiedCatalogSeed(options: {
       { id: `${tag.id}:en`, tagId: tag.id, locale: 'en', alias: tag.nameEn, normalizedAlias: normalizeAlias(tag.nameEn) },
     ])),
     templates: catalog.templates.map((entry) => {
-      const isExternal = entry.rendererKind === 'declarative-v1';
+      const isExternal = entry.rendererKind === 'declarative-v1' || entry.rendererKind === 'declarative-v2';
       const sourceUrl = isExternal ? String(entry.source.url) : String(entry.source.preview);
       const sourceRevision = isExternal
         ? String(entry.source.revision)
@@ -301,9 +321,10 @@ export async function buildUnifiedCatalogSeed(options: {
         licenseHash: entry.license.sha256,
         searchText: normalizeAlias([entry.nameZh, entry.nameEn, entry.slug, ...entry.aliases, ...entry.tags].join(' ')),
         stableVersionId: `${entry.id}@${entry.version}`,
-        publishedAt: entry.publication?.publishedAt
-          ? Math.floor(new Date(entry.publication.publishedAt).getTime() / 1_000)
-          : publishedAt,
+        publishedAt: firstPublishedAt.get(entry.id)
+          ?? (entry.publication?.publishedAt
+            ? Math.floor(new Date(entry.publication.publishedAt).getTime() / 1_000)
+            : publishedAt),
         tagIds: [...entry.tags],
       };
     }),
@@ -355,6 +376,7 @@ export async function seedUnifiedCatalog(options: {
   databaseUrl: string;
   rootDir?: string;
   publishedAt?: number;
+  allowStablePromotion?: boolean;
 }): Promise<TemplateSeedWriteReport> {
   const rootDir = options.rootDir ?? ROOT;
   await buildUnifiedCatalogSeed({ rootDir, publishedAt: options.publishedAt });
@@ -364,7 +386,9 @@ export async function seedUnifiedCatalog(options: {
       const transaction: TemplateTransaction = asTemplateTransaction(tx);
       await transaction`SELECT pg_advisory_xact_lock(1784160000)`;
       const reverified = await buildUnifiedCatalogSeed({ rootDir, publishedAt: options.publishedAt });
-      return writeVerifiedTemplateSeed(transaction, reverified);
+      return writeVerifiedTemplateSeed(transaction, reverified, {
+        allowStablePromotion: options.allowStablePromotion,
+      });
     });
   } finally {
     await client.end();
@@ -376,7 +400,10 @@ async function main(): Promise<void> {
   if (!databaseUrl) throw new Error('DATABASE_URL is required');
   const target = parseSeedCatalogCli(process.argv.slice(2), databaseUrl);
   console.error(`[template-seed] applying to ${target.safeTarget}`);
-  const report = await seedUnifiedCatalog({ databaseUrl });
+  const report = await seedUnifiedCatalog({
+    databaseUrl,
+    allowStablePromotion: target.allowStablePromotion,
+  });
   console.log(JSON.stringify(report));
 }
 

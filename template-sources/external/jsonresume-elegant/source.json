@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-elegant",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Elegant",
+  "nameEn": "JSON Resume Elegant",
+  "category": "engineering",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "elegant",
+    "jsonresume-theme-elegant"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-elegant",
+    "packageVersion": "1.16.1",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "jsonresume-theme-elegant contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "99cf39261d7e2333329dacb7937fe67abc75d1e777a5d82f42df1cc917d753ca",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-elegant@1.16.1. Mature elegant community design. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

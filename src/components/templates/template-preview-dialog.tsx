@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TemplateVersionDetailSchema } from '@/lib/templates/schema';
 import type { Resume } from '@/types/resume';
-import type { TemplateCatalogItem, TemplateManifestV1, TemplateVersionDetail } from '@/types/template';
+import type { DeclarativeTemplateManifest, TemplateCatalogItem, TemplateVersionDetail } from '@/types/template';
 
 import { buildLegacyPreviewResume } from './legacy-preview-fixture';
 import { loadLegacyTemplateAdapter } from './legacy-template-registry';
@@ -19,14 +19,14 @@ export function templatePreviewDescription(name: string, template: string): stri
   return template.replace('{name}', name);
 }
 
-export function templatePreviewBranch(detail: PreviewDiscriminant): 'legacy-react' | 'declarative-v1' {
+export function templatePreviewBranch(detail: PreviewDiscriminant): 'legacy-react' | 'declarative-v1' | 'declarative-v2' {
   if (detail.rendererKind === 'legacy-react') {
     if (detail.manifest !== null) throw new Error('invalid_legacy_manifest');
     return 'legacy-react';
   }
-  if (detail.rendererKind === 'declarative-v1') {
+  if (detail.rendererKind === 'declarative-v1' || detail.rendererKind === 'declarative-v2') {
     if (!detail.manifest || typeof detail.manifest !== 'object') throw new Error('invalid_declarative_manifest');
-    return 'declarative-v1';
+    return detail.rendererKind;
   }
   throw new Error('unknown_template_renderer');
 }
@@ -38,7 +38,7 @@ type Props = {
   labels: { loading: string; error: string; retry: string; useTemplate: string; creating: string; copyTemplate: string; description: string };
   onClose(): void;
   onUse(): void;
-  onCopy?(manifest: TemplateManifestV1, name: string): void;
+  onCopy?(manifest: DeclarativeTemplateManifest, name: string): void;
 };
 
 export const TEMPLATE_PREVIEW_FOOTER_CLASSES = 'shrink-0 border-t bg-background p-3';
@@ -121,8 +121,8 @@ export function TemplatePreviewDialog({ item, locale, creating, labels, onClose,
         <div className="min-h-0 flex-1 overflow-y-auto bg-zinc-100 p-4 dark:bg-zinc-900">
           {status === 'loading' && <div className="flex h-full items-center justify-center gap-2 text-sm text-zinc-500"><Loader2 className="animate-spin" />{labels.loading}</div>}
           {status === 'error' && <div className="flex h-full flex-col items-center justify-center gap-3 text-sm"><p>{labels.error}</p><Button variant="outline" onClick={() => setAttempt((value) => value + 1)}>{labels.retry}</Button></div>}
-          {status === 'ready' && detail?.rendererKind === 'declarative-v1' && (
-            <Image data-renderer-kind="declarative-v1" src={assetUrl(detail.fullPreviewPath)} alt="" width="1200" height="900" loading="lazy" unoptimized className="mx-auto h-auto w-full max-w-[794px] bg-white object-contain shadow-sm" />
+          {status === 'ready' && (detail?.rendererKind === 'declarative-v1' || detail?.rendererKind === 'declarative-v2') && (
+            <Image data-renderer-kind={detail.rendererKind} src={assetUrl(detail.fullPreviewPath)} alt="" width="1200" height="900" loading="lazy" unoptimized className="mx-auto h-auto w-full max-w-[794px] bg-white object-contain shadow-sm" />
           )}
           {status === 'ready' && detail?.rendererKind === 'legacy-react' && LegacyRenderer && (
             <div data-renderer-kind="legacy-react" className="mx-auto w-full max-w-[794px] bg-white p-8 shadow-sm">
@@ -134,7 +134,7 @@ export function TemplatePreviewDialog({ item, locale, creating, labels, onClose,
           creating={creating}
           labels={labels}
           onUse={onUse}
-          {...(detail?.rendererKind === 'declarative-v1' && onCopy
+          {...((detail?.rendererKind === 'declarative-v1' || detail?.rendererKind === 'declarative-v2') && onCopy
             ? { onCopy: () => onCopy(detail.manifest, itemName) }
             : {})}
         />

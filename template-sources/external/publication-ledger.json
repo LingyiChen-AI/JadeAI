@@ -3,12 +3,362 @@
   "events": [
     {
       "action": "publish",
+      "reference": "jsonresume-a11y@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-a11y@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-academic-cv-lite@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-academic-cv-lite@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-architects-portfolio@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-architects-portfolio@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-art-school-modern@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-art-school-modern@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-asymmetric-timeline@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-asymmetric-timeline@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-bold-header-statement@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-bold-header-statement@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-careercup-good-resume@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-careercup-good-resume@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-classy@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-classy@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-claude@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-claude@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-colophon@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-colophon@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-consultant-polished@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-consultant-polished@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-cora@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-cora@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-creative-confidence@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-creative-confidence@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-creative-studio@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-creative-studio@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-diagonal-accent-bar@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-diagonal-accent-bar@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-elegant@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-elegant@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-eloquent@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-eloquent@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-engineering@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-engineering@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
       "reference": "jsonresume-even@1.0.1",
       "at": "2026-07-16T20:00:00.000Z"
     },
     {
       "action": "promote-stable",
       "reference": "jsonresume-even@1.0.1",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-executive-slate@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-executive-slate@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-flat@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-flat@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-government-standard@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-government-standard@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-graph-paper-grid@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-graph-paper-grid@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-jacrys@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-jacrys@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-kendall@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-kendall@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-lucide@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-lucide@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-macchiato@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-macchiato@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-marketing-narrative@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-marketing-narrative@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-material@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-material@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-mid-century-resume@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-mid-century-resume@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-minyma@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-minyma@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-modern@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-modern@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-modern-classic@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-modern-classic@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-monochrome-noir@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-monochrome-noir@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-noodle@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-noodle@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-nordic-minimal@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-nordic-minimal@1.0.0",
       "at": "2026-07-16T20:00:00.000Z"
     },
     {
@@ -20,6 +370,256 @@
       "action": "promote-stable",
       "reference": "jsonresume-onepage@1.0.1",
       "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-operations-precision@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-operations-precision@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-paper-plus-plus@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-paper-plus-plus@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-professional@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-professional@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-projects@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-projects@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-pumpkin@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-pumpkin@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-sales-hunter@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-sales-hunter@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-sceptile@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-sceptile@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-sidebar-photo-strip@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-sidebar-photo-strip@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-simplyelegant@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-simplyelegant@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-stackoverflow@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-stackoverflow@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-straightforward@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-straightforward@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-tan-responsive@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-tan-responsive@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-typewriter-modern@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-typewriter-modern@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-university-first@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-university-first@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-waterfall@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-waterfall@1.0.0",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-architects-portfolio@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-architects-portfolio@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-classy@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-classy@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-cora@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-cora@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-creative-confidence@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-creative-confidence@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-eloquent@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-eloquent@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-government-standard@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-government-standard@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-kendall@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-kendall@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-mid-century-resume@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-mid-century-resume@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-modern-classic@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-modern-classic@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-stackoverflow@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-stackoverflow@1.0.1",
+      "at": "2026-07-17T17:36:46.568Z"
     }
   ]
 }

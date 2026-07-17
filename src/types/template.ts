@@ -3,11 +3,13 @@ import type { z } from 'zod/v4';
 import type {
   LocalTemplateExportRawSchema,
   LocalTemplateRecordSchema,
+  DeclarativeTemplateManifestSchema,
   TemplateBindingSchema,
   TemplateCapabilitySchema,
   TemplateCatalogItemSchema,
   TemplateCategorySchema,
   TemplateManifestV1Schema,
+  TemplateManifestV2Schema,
   TemplateSnapshotSchema,
   TemplateTagSchema,
   TemplateVersionDetailSchema,
@@ -19,6 +21,8 @@ export type TemplateTagDimension = TemplateTag['dimension'];
 export type TemplateCapability = z.output<typeof TemplateCapabilitySchema>;
 export type TemplateCatalogItem = z.output<typeof TemplateCatalogItemSchema>;
 export type TemplateManifestV1 = z.output<typeof TemplateManifestV1Schema>;
+export type TemplateManifestV2 = z.output<typeof TemplateManifestV2Schema>;
+export type DeclarativeTemplateManifest = z.output<typeof DeclarativeTemplateManifestSchema>;
 export type TemplateVersionDetail = z.output<typeof TemplateVersionDetailSchema>;
 export type DeclarativeTemplateVersionDetail = Extract<TemplateVersionDetail, { rendererKind: 'declarative-v1' }>;
 export type LegacyTemplateVersionDetail = Extract<TemplateVersionDetail, { rendererKind: 'legacy-react' }>;

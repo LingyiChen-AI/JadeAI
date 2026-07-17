@@ -69,6 +69,7 @@ describe.sequential('template platform PostgreSQL migration', () => {
       '0004_square_pete_wisdom.sql',
       '0005_omniscient_princess_powerful.sql',
       '0006_template_platform.sql',
+      '0007_ambitious_warhawk.sql',
     ];
     const sql = await readFile(resolve(process.cwd(), 'drizzle/pg-migrations', names[ordinal]!), 'utf8');
     for (const statement of sql.split('--> statement-breakpoint').map((part) => part.trim()).filter(Boolean)) {
@@ -92,7 +93,7 @@ describe.sequential('template platform PostgreSQL migration', () => {
     await client.end();
   });
 
-  test('migrates a fresh database through ordinal 0006', async () => {
+  test('migrates a fresh database through ordinal 0007', async () => {
     await migrateAll();
 
     const rows = await client<{ exists: boolean }[]>`
@@ -104,7 +105,7 @@ describe.sequential('template platform PostgreSQL migration', () => {
     const journal = await client<{ count: number }[]>`
       SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations
     `;
-    expect(journal[0]?.count).toBe(7);
+    expect(journal[0]?.count).toBe(8);
   });
 
   test('creates every Task 4 table, Resume column, and explicitly planned index', async () => {
@@ -614,17 +615,21 @@ describe.sequential('template platform PostgreSQL migration', () => {
     expect(backfillModule).toHaveProperty('formatBackfillCliReport');
     const url = 'postgresql://user:secret@127.0.0.1:32769/jadeai_template_test_task4';
     const seedTarget = (seedModule as {
-      parseSeedCatalogCli: (args: string[], databaseUrl: string) => { databaseName: string; safeTarget: string };
+      parseSeedCatalogCli: (args: string[], databaseUrl: string) => { databaseName: string; safeTarget: string; allowStablePromotion: boolean };
     }).parseSeedCatalogCli(['--apply=jadeai_template_test_task4'], url);
     expect(seedTarget).toEqual({
       databaseName: 'jadeai_template_test_task4',
       safeTarget: '127.0.0.1:32769/jadeai_template_test_task4',
+      allowStablePromotion: false,
     });
     expect(seedTarget.safeTarget).not.toContain('secret');
     expect(() => (seedModule as { parseSeedCatalogCli: (args: string[], databaseUrl: string) => unknown })
       .parseSeedCatalogCli([], url)).toThrow('template_cli_apply_required');
     expect(() => (seedModule as { parseSeedCatalogCli: (args: string[], databaseUrl: string) => unknown })
       .parseSeedCatalogCli(['--apply=wrong'], url)).toThrow('template_cli_apply_mismatch');
+    expect((seedModule as {
+      parseSeedCatalogCli: (args: string[], databaseUrl: string) => { allowStablePromotion: boolean };
+    }).parseSeedCatalogCli(['--apply=jadeai_template_test_task4', '--promote-stable'], url).allowStablePromotion).toBe(true);
 
     const backfillTarget = (backfillModule as {
       parseBackfillCli: (args: string[], databaseUrl: string) => { databaseName: string; safeTarget: string; includeResumeIds: boolean };
@@ -694,16 +699,16 @@ describe.sequential('template platform PostgreSQL migration', () => {
     });
   });
 
-  test('seeds the 50+2 unified catalog idempotently with valid declarative stable versions', async () => {
+  test('seeds the 50+52 unified catalog idempotently with valid declarative stable versions', async () => {
     await migrateAll();
     const first = await seedUnifiedCatalog({ databaseUrl });
     expect(first).toEqual({
       categoriesInserted: 12,
       tagsInserted: 17,
       aliasesInserted: 34,
-      templatesInserted: 52,
-      versionsInserted: 52,
-      tagLinksInserted: 204,
+      templatesInserted: 102,
+      versionsInserted: 102,
+      tagLinksInserted: 304,
     });
     const [counts] = await client<{
       templates: number;
@@ -714,13 +719,13 @@ describe.sequential('template platform PostgreSQL migration', () => {
       SELECT
         (SELECT count(*)::int FROM resume_templates) AS templates,
         (SELECT count(*)::int FROM resume_template_versions) AS versions,
-        (SELECT count(*)::int FROM resume_template_versions WHERE renderer_kind = 'declarative-v1') AS declarative,
+        (SELECT count(*)::int FROM resume_template_versions WHERE renderer_kind IN ('declarative-v1', 'declarative-v2')) AS declarative,
         (SELECT count(*)::int
           FROM resume_templates AS template
           LEFT JOIN resume_template_versions AS version ON version.id = template.stable_version_id
           WHERE version.id IS NULL OR version.template_id <> template.id OR version.status <> 'published') AS invalid_stable
     `;
-    expect(counts).toEqual({ templates: 52, versions: 52, declarative: 2, invalid_stable: 0 });
+    expect(counts).toEqual({ templates: 102, versions: 102, declarative: 52, invalid_stable: 0 });
     const second = await seedUnifiedCatalog({ databaseUrl });
     expect(second).toEqual({
       categoriesInserted: 0,
@@ -1064,7 +1069,7 @@ describe.sequential('template platform PostgreSQL migration', () => {
     });
   });
 
-  test('keeps a unified 52+948 catalog indexed lookup below the 200ms p95 budget', async () => {
+  test('keeps a unified 102+898 catalog indexed lookup below the 200ms p95 budget', async () => {
     await migrateAll();
     await seedUnifiedCatalog({ databaseUrl });
     await client`
@@ -1081,7 +1086,7 @@ describe.sequential('template platform PostgreSQL migration', () => {
         'published', 'fixture ' || value,
         value % 100,
         1784160000 + value
-      FROM generate_series(1, 948) AS value
+      FROM generate_series(1, 898) AS value
     `;
     await client`
       INSERT INTO resume_template_versions (
@@ -1095,7 +1100,7 @@ describe.sequential('template platform PostgreSQL migration', () => {
         'templates/fixture-' || value || '/v1.0.0/thumbnail-' || substring(md5(value::text), 1, 16) || '.png',
         'templates/fixture-' || value || '/v1.0.0/preview-' || substring(md5((value + 1000)::text), 1, 16) || '.png',
         '{}', 'published', 1784160000 + value
-      FROM generate_series(1, 948) AS value
+      FROM generate_series(1, 898) AS value
     `;
     await client`
       UPDATE resume_templates
@@ -1105,7 +1110,7 @@ describe.sequential('template platform PostgreSQL migration', () => {
     await client`
       INSERT INTO resume_template_tags (template_id, tag_id)
       SELECT 'fixture-' || value, tag_id
-      FROM generate_series(1, 948) AS value
+      FROM generate_series(1, 898) AS value
       CROSS JOIN (VALUES ('layout-single-column'), ('style-legacy'), ('capability-bilingual')) AS tags(tag_id)
     `;
 

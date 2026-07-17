@@ -152,7 +152,7 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
   const resolvedTemplate = resume.resolvedTemplate ?? resolveSavedTemplateSnapshot(resume.templateSnapshot);
   const legacySlug = resolvedTemplate?.kind === 'legacy-react' ? resolvedTemplate.slug : safeResume.template;
 
-  if (resolvedTemplate?.kind === 'declarative-v1') {
+  if (resolvedTemplate?.kind === 'declarative-v1' || resolvedTemplate?.kind === 'declarative-v2') {
     const document = buildTemplateDocument(normalizeResumeForTemplate(safeResume), resolvedTemplate.manifest);
     return <DeclarativeTemplateDocument document={document} />;
   }

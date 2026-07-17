@@ -38,8 +38,8 @@ import { TemplateFilters } from './template-filters';
 import { TemplatePreviewDialog } from './template-preview-dialog';
 import { LocalTemplateManager } from './local-template-manager';
 import { createLocalTemplateThumbnail } from '@/lib/templates/local-template-thumbnail';
-import { TemplateManifestV1Schema } from '@/lib/templates/schema';
-import type { TemplateManifestV1 } from '@/types/template';
+import { DeclarativeTemplateManifestSchema } from '@/lib/templates/schema';
+import type { DeclarativeTemplateManifest } from '@/types/template';
 
 const TOUR_STEPS: TourStepConfig[] = [
   { target: 'tpl-preview', placement: 'bottom', i18nKey: 'tplPreview' },
@@ -135,7 +135,7 @@ export function TemplateCatalog() {
     }
   };
 
-  const handleUseLocal = async (manifest: TemplateManifestV1) => {
+  const handleUseLocal = async (manifest: DeclarativeTemplateManifest) => {
     const resume = await createResume({ binding: { kind: 'local-snapshot', manifest } });
     if (resume) router.push(`/editor/${resume.id}`);
   };
@@ -143,7 +143,7 @@ export function TemplateCatalog() {
   const handleCopyPublic = async (manifest: unknown, name: string) => {
     if (!user) return;
     try {
-      const parsed = TemplateManifestV1Schema.parse(manifest);
+      const parsed = DeclarativeTemplateManifestSchema.parse(manifest);
       const timestamp = new Date().toISOString();
       await localLibrary.save({
         userId: user.id,

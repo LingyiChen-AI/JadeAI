@@ -36,6 +36,16 @@ type PublishedExternalCatalog = Omit<ExternalCatalog, 'templates'> & {
   }>;
 };
 
+type PublicationLedger = {
+  schemaVersion: 1;
+  events: Array<{ action: string; reference: string; at: string }>;
+};
+
+type PublishedAssetManifest = {
+  schemaVersion: 1;
+  assets: Array<{ path: string; sha256: string; bytes: number }>;
+};
+
 function sha256(value: string | Uint8Array): string {
   return createHash('sha256').update(value).digest('hex');
 }
@@ -60,7 +70,7 @@ export function parsePublicationActions(args: string[]): PublicationActions {
   return { published, stable };
 }
 
-function publicationCatalog(catalog: ExternalCatalog, actions: PublicationActions): PublishedExternalCatalog {
+function publicationCatalog(catalog: ExternalCatalog, actions: PublicationActions, publishedAt: string): PublishedExternalCatalog {
   const catalogReferences = catalog.templates.map((entry) => `${entry.slug}@${entry.version}`).sort();
   if (catalogReferences.join('\0') !== actions.published.join('\0')) throw new Error('template_publication_set_mismatch');
   if (catalogReferences.join('\0') !== actions.stable.join('\0')) throw new Error('template_stable_set_mismatch');
@@ -77,8 +87,8 @@ function publicationCatalog(catalog: ExternalCatalog, actions: PublicationAction
       publication: {
         status: 'published',
         stable: true,
-        publishedAt: '2026-07-16T20:00:00.000Z',
-        promotedAt: '2026-07-16T20:00:00.000Z',
+        publishedAt,
+        promotedAt: publishedAt,
       },
     })),
   } as PublishedExternalCatalog;
@@ -97,7 +107,27 @@ export async function buildExternalRelease(options: {
     if (!assets) throw new Error('template_render_assets_missing');
     return { source, ...assets };
   });
-  const external = publicationCatalog(await buildExternalCatalog(renderInputs), options.actions);
+  const generatedExternal = publicationCatalog(await buildExternalCatalog(renderInputs), options.actions, new Date().toISOString());
+  let existingExternal: PublishedExternalCatalog | null = null;
+  try {
+    existingExternal = JSON.parse(await readFile(
+      path.join(options.outputRoot, 'template-sources/external/catalog.json'),
+      'utf8',
+    )) as PublishedExternalCatalog;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+  const external: PublishedExternalCatalog = {
+    ...generatedExternal,
+    templates: generatedExternal.templates.map((entry) => existingExternal?.templates.find((existing) => (
+      existing.slug === entry.slug
+      && existing.version === entry.version
+      && existing.manifestHash === entry.manifestHash
+      && existing.source.revision === entry.source.revision
+      && existing.publication.status === 'published'
+      && existing.publication.stable === true
+    )) ?? entry),
+  };
   const legacySlugs = new Set(legacy.templates.map((entry) => entry.slug));
   if (external.templates.some((entry) => legacySlugs.has(entry.slug))) throw new Error('template_catalog_slug_conflict');
   const unified = {
@@ -119,28 +149,58 @@ export async function buildExternalRelease(options: {
       redistributedAssets: entry.provenance.assetInventory,
     })),
   };
+  let existingLedger: PublicationLedger | null = null;
+  try {
+    existingLedger = JSON.parse(await readFile(
+      path.join(options.outputRoot, 'template-sources/external/publication-ledger.json'),
+      'utf8',
+    )) as PublicationLedger;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+  const generatedEvents = external.templates.flatMap((entry) => [
+    { action: 'publish', reference: `${entry.slug}@${entry.version}`, at: entry.publication.publishedAt },
+    { action: 'promote-stable', reference: `${entry.slug}@${entry.version}`, at: entry.publication.promotedAt },
+  ]);
   const publicationLedger = {
     schemaVersion: 1,
-    events: external.templates.flatMap((entry) => [
-      { action: 'publish', reference: `${entry.slug}@${entry.version}`, at: entry.publication.publishedAt },
-      { action: 'promote-stable', reference: `${entry.slug}@${entry.version}`, at: entry.publication.promotedAt },
-    ]),
+    events: [...new Map([...(existingLedger?.events ?? []), ...generatedEvents]
+      .map((event) => [`${event.action}:${event.reference}`, event] as const)).values()],
   };
   const files = new Map<string, Uint8Array>();
-  const assetInventory: Array<{ path: string; sha256: string; bytes: number }> = [];
+  let existingAssetManifest: PublishedAssetManifest | null = null;
+  try {
+    existingAssetManifest = JSON.parse(await readFile(
+      path.join(options.outputRoot, 'public/templates/asset-manifest.json'),
+      'utf8',
+    )) as PublishedAssetManifest;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+  const assetInventory = new Map(
+    (existingAssetManifest?.assets ?? []).map((asset) => [asset.path, asset] as const),
+  );
   for (const entry of legacy.templates) {
     for (const asset of [entry.thumbnail, entry.preview]) {
       const bytes = await readFile(path.join(options.sourceRoot, 'public', asset.path));
       files.set(`public/${asset.path}`, bytes);
-      assetInventory.push({ path: asset.path, sha256: asset.sha256, bytes: bytes.byteLength });
+      assetInventory.set(asset.path, { path: asset.path, sha256: asset.sha256, bytes: bytes.byteLength });
     }
   }
   for (const entry of external.templates) {
     const rendered = options.rendered.assets.get(entry.slug)!;
-    files.set(`public/${entry.thumbnail.path}`, rendered.thumbnail);
-    files.set(`public/${entry.preview.path}`, rendered.preview);
-    assetInventory.push({ path: entry.thumbnail.path, sha256: entry.thumbnail.sha256, bytes: rendered.thumbnail.byteLength });
-    assetInventory.push({ path: entry.preview.path, sha256: entry.preview.sha256, bytes: rendered.preview.byteLength });
+    const resolvedAssets = await Promise.all(([
+      ['thumbnail', entry.thumbnail, rendered.thumbnail],
+      ['preview', entry.preview, rendered.preview],
+    ] as const).map(async ([kind, asset, generated]) => {
+      if (sha256(generated) === asset.sha256) return generated;
+      return verifiedBytes(options.outputRoot, `public/${asset.path}`, asset.sha256)
+        .catch(() => { throw new Error(`template_release_immutable_${kind}_missing`); });
+    }));
+    files.set(`public/${entry.thumbnail.path}`, resolvedAssets[0]);
+    files.set(`public/${entry.preview.path}`, resolvedAssets[1]);
+    assetInventory.set(entry.thumbnail.path, { path: entry.thumbnail.path, sha256: entry.thumbnail.sha256, bytes: resolvedAssets[0].byteLength });
+    assetInventory.set(entry.preview.path, { path: entry.preview.path, sha256: entry.preview.sha256, bytes: resolvedAssets[1].byteLength });
     for (const relativePath of ['source.json', 'manifest.json', 'LICENSE', 'conversion.md']) {
       const sourcePath = path.join(options.sourceRoot, 'template-sources/external', entry.slug, relativePath);
       files.set(`template-sources/external/${entry.slug}/${relativePath}`, await readFile(sourcePath));
@@ -153,7 +213,7 @@ export async function buildExternalRelease(options: {
   files.set('template-sources/catalog.json', stableJson(unified));
   files.set('public/templates/asset-manifest.json', stableJson({
     schemaVersion: 1,
-    assets: assetInventory.sort((left, right) => left.path.localeCompare(right.path)),
+    assets: [...assetInventory.values()].sort((left, right) => left.path.localeCompare(right.path)),
   }));
   await publishImmutableTemplateBundle(options.outputRoot, files);
 }
@@ -220,7 +280,14 @@ export async function verifyExternalRelease(root: string): Promise<{
     await verifiedBytes(root, `public/${entry.thumbnail.path}`, entry.thumbnail.sha256);
     await verifiedBytes(root, `public/${entry.preview.path}`, entry.preview.sha256);
   }
-  if (assetManifest.assets.length !== unified.templates.length * 2) throw new Error('template_release_asset_manifest_count');
+  if (assetManifest.assets.length < unified.templates.length * 2) throw new Error('template_release_asset_manifest_count');
+  const manifestAssets = new Map(assetManifest.assets.map((asset) => [asset.path, asset] as const));
+  for (const entry of unified.templates) {
+    for (const asset of [entry.thumbnail, entry.preview]) {
+      const published = manifestAssets.get(asset.path);
+      if (!published || published.sha256 !== asset.sha256) throw new Error('template_release_current_asset_missing');
+    }
+  }
   const expectedAssetPaths = assetManifest.assets.map((asset) => asset.path).sort();
   const publishedPngs = await listPublishedPngs(root);
   if (expectedAssetPaths.join('\0') !== publishedPngs.join('\0')) throw new Error('template_release_asset_set_drift');
@@ -243,7 +310,7 @@ export async function verifyExternalRelease(root: string): Promise<{
   return {
     externalTemplates: external.templates.length,
     templates: unified.templates.length,
-    assets: unified.templates.length * 2,
+    assets: assetManifest.assets.length,
     licenses: licenses.themes.length,
   };
 }

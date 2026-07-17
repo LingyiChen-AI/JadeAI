@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-a11y",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume A11y",
+  "nameEn": "JSON Resume A11y",
+  "category": "ats",
+  "tags": [
+    "layout-two-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "a11y",
+    "jsonresume-theme-a11y"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-a11y",
+    "packageVersion": "2.5.0",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "jsonresume-theme-a11y contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "231fe20de15ca44907dbac47af316f411ab4215ff230a8b9c6cce2d991511665",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-a11y@2.5.0. Accessibility-oriented reading order. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

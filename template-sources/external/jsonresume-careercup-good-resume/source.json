@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-careercup-good-resume",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Careercup Good Resume",
+  "nameEn": "JSON Resume Careercup Good Resume",
+  "category": "ats",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "careercup good resume",
+    "jsonresume-theme-the-careercup-good-resume"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-the-careercup-good-resume",
+    "packageVersion": "0.1.2",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "jsonresume-theme-the-careercup-good-resume contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "fd0df260c4454c0dbfeeb4791bf06094c91eedc92cc8565f14dfef7b3cb91a46",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-the-careercup-good-resume@0.1.2. Interview-focused resume format. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

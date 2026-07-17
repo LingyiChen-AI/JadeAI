@@ -5,13 +5,13 @@ import { useTranslations } from 'next-intl';
 
 import { DeclarativeTemplateDocument } from '@/components/preview/declarative-template-document';
 import { buildTemplateDocument, normalizeResumeForTemplate } from '@/lib/templates/template-document';
-import { TEMPLATE_FONT_FAMILIES, TemplateManifestV1Schema } from '@/lib/templates/schema';
+import { DeclarativeTemplateManifestSchema, TEMPLATE_FONT_FAMILIES } from '@/lib/templates/schema';
 import { cn } from '@/lib/utils';
-import type { TemplateManifestV1 } from '@/types/template';
+import type { DeclarativeTemplateManifest, TemplateManifestV1 } from '@/types/template';
 
 type LocalTemplateEditorProps = {
-  value: TemplateManifestV1;
-  onChange(value: TemplateManifestV1): void;
+  value: DeclarativeTemplateManifest;
+  onChange(value: DeclarativeTemplateManifest): void;
   disabled?: boolean;
 };
 
@@ -46,8 +46,8 @@ export function LocalTemplateEditor({ value, onChange, disabled = false }: Local
     [value],
   );
 
-  const commit = (field: string, candidate: TemplateManifestV1) => {
-    const parsed = TemplateManifestV1Schema.safeParse(candidate);
+  const commit = (field: string, candidate: DeclarativeTemplateManifest) => {
+    const parsed = DeclarativeTemplateManifestSchema.safeParse(candidate);
     if (!parsed.success) {
       setInvalidField(field);
       return;
@@ -76,7 +76,7 @@ export function LocalTemplateEditor({ value, onChange, disabled = false }: Local
   const numeric = (
     field: string,
     current: number,
-    update: (next: number) => TemplateManifestV1,
+    update: (next: number) => DeclarativeTemplateManifest,
     min: number,
     max: number,
     step: number,

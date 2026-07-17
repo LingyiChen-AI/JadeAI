@@ -4,6 +4,7 @@ import type { TemplateDocument } from '@/lib/templates/template-document';
 import { QrCodesPreview } from './qr-codes-preview';
 
 export function DeclarativeTemplateDocument({ document }: { document: TemplateDocument }) {
+  const presentation = document.presentation;
   const hasColumns = document.layout.type !== 'single-column';
   const sidebarWidth = `${document.layout.sidebarWidthPercent}%`;
   const style = {
@@ -17,6 +18,11 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
     '--template-section-gap': `${document.spacing.sectionGapMm}mm`,
     '--template-column-gap': `${document.layout.columnGapMm}mm`,
     '--template-sidebar-width': `${document.layout.sidebarWidthPercent}%`,
+    '--template-secondary': presentation?.palette.secondary,
+    '--template-surface': presentation?.palette.surface,
+    '--template-border': presentation?.palette.border,
+    '--template-border-width': presentation ? `${presentation.border.widthPt}pt` : undefined,
+    '--template-radius': presentation ? `${presentation.border.radiusMm}mm` : undefined,
     color: document.colors.text,
     backgroundColor: document.colors.background,
     fontFamily: '"Noto Sans SC", sans-serif',
@@ -31,6 +37,15 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
         : `minmax(0, 1fr) ${sidebarWidth}`
       : undefined,
     gap: hasColumns ? `${document.layout.columnGapMm}mm` : undefined,
+    borderTop: presentation?.decoration.variant === 'top-rule' ? `${presentation.border.widthPt}pt solid ${document.colors.accent}` : undefined,
+    borderLeft: presentation?.decoration.variant === 'side-rule' ? `${presentation.border.widthPt}pt solid ${document.colors.accent}` : undefined,
+    borderRadius: presentation ? `${presentation.border.radiusMm}mm` : undefined,
+    backgroundImage: presentation?.decoration.variant === 'corner-accent'
+      ? `linear-gradient(135deg, ${presentation.palette.surface} 0 14mm, transparent 14mm)`
+      : presentation?.decoration.variant === 'grid-lines'
+        ? `linear-gradient(${presentation.palette.border} 1px, transparent 1px), linear-gradient(90deg, ${presentation.palette.border} 1px, transparent 1px)`
+        : undefined,
+    backgroundSize: presentation?.decoration.variant === 'grid-lines' ? '6mm 6mm' : undefined,
   } as CSSProperties;
 
   const sectionColumn = (placement: TemplateDocument['sections'][number]['placement']) => {
@@ -67,6 +82,14 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
   return (
     <article
       className="declarative-resume"
+      data-renderer-kind={presentation ? 'declarative-v2' : undefined}
+      data-header-variant={presentation?.header.variant}
+      data-contact-layout={presentation?.header.contactLayout}
+      data-entry-variant={presentation?.entry.variant}
+      data-section-heading={presentation?.section.headingVariant}
+      data-skills-variant={presentation?.skills.variant}
+      data-decoration={presentation?.decoration.variant}
+      data-density={presentation?.density}
       data-layout={document.layout.type}
       data-sidebar-position={document.layout.sidebarPosition}
       data-page-numbers={document.page.showPageNumbers}
@@ -74,6 +97,19 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
       style={style}
     >
       {document.sections.map((section) => {
+        const isHeader = section.placement === 'header';
+        const isSplitHeader = isHeader && presentation?.header.variant === 'split';
+        const v2HeadingStyle: CSSProperties = presentation?.section.headingVariant === 'underline'
+          ? { borderBottom: `${presentation.border.widthPt}pt solid ${presentation.palette.border}`, paddingBottom: '1mm' }
+          : presentation?.section.headingVariant === 'bordered'
+            ? { border: `${presentation.border.widthPt}pt solid ${presentation.palette.border}`, borderRadius: `${presentation.border.radiusMm}mm`, padding: '1mm 2mm' }
+            : presentation?.section.headingVariant === 'accent-block'
+              ? { background: document.colors.accent, color: document.colors.background, borderRadius: `${presentation.border.radiusMm}mm`, padding: '1mm 2mm' }
+              : presentation?.section.headingVariant === 'small-caps'
+                ? { fontSize: `${document.typography.baseFontSizePt}pt`, textTransform: 'uppercase', letterSpacing: 0 }
+                : presentation?.section.headingVariant === 'side-rule'
+                  ? { borderLeft: `${presentation.border.widthPt * 2}pt solid ${document.colors.accent}`, paddingLeft: '2mm' }
+                  : {};
         const styleAttributes = Object.fromEntries(
           Object.entries(section.styleVariants).map(([element, variant]) => [`data-style-${element}`, variant]),
         );
@@ -86,7 +122,13 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
           {...styleAttributes}
           style={{
             gridColumn: sectionColumn(section.placement),
-            marginBottom: `${document.spacing.sectionGapMm}mm`,
+            marginBottom: `${document.spacing.sectionGapMm * (presentation?.density === 'compact' ? 0.7 : presentation?.density === 'comfortable' ? 1.25 : 1)}mm`,
+            ...(isHeader && presentation?.header.variant === 'centered' ? { textAlign: 'center' as const } : {}),
+            ...(isHeader && presentation?.header.variant === 'band' ? { background: presentation.palette.secondary, color: document.colors.background, padding: '5mm', borderRadius: `${presentation.border.radiusMm}mm` } : {}),
+            ...(isSplitHeader ? { display: 'grid', gridTemplateColumns: 'minmax(24mm, auto) minmax(0, 1fr)', gap: '2mm 4mm', alignItems: 'start' } : {}),
+            ...(isHeader && presentation?.header.variant === 'editorial' ? { borderBottom: `${presentation.border.widthPt * 2}pt solid ${document.colors.accent}`, paddingBottom: '3mm' } : {}),
+            ...(!isHeader && presentation?.entry.variant === 'timeline' ? { borderLeft: `${presentation.border.widthPt}pt solid ${presentation.palette.border}`, paddingLeft: '4mm' } : {}),
+            ...(section.type === 'skills' && presentation?.skills.variant === 'compact-grid' ? { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1mm 4mm' } : {}),
             ...variantStyle('divider', section.styleVariants.divider),
           }}
         >
@@ -98,7 +140,9 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
             margin: '0 0 2mm',
             borderBottom: section.headingVariant === 'bordered' ? `1px solid ${document.colors.accent}` : undefined,
             paddingBottom: section.headingVariant === 'bordered' ? '1mm' : undefined,
+            gridColumn: isSplitHeader ? 1 : undefined,
             ...(section.headingVariant === 'compact' ? { fontSize: `${document.typography.baseFontSizePt}pt`, marginBottom: '1mm' } : {}),
+            ...v2HeadingStyle,
           }}>{section.title}</h2>
           {section.blocks.map((block, blockIndex) => {
             const element = block.kind === 'contact' ? 'contact' : block.kind === 'list' ? 'bullet' : block.kind === 'qr' ? 'qr' : 'body';
@@ -108,7 +152,7 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
               : blockVariant === 'muted' ? document.colors.muted : document.colors.text;
             if (block.kind === 'list') {
               return (
-                <ul key={blockIndex} data-block="list" style={{ margin: '0 0 1.5mm', paddingLeft: '5mm', ...variantStyle('bullet', section.styleVariants.bullet) }}>
+                <ul key={blockIndex} data-block="list" style={{ margin: '0 0 1.5mm', paddingLeft: '5mm', gridColumn: isSplitHeader ? 2 : undefined, ...variantStyle('bullet', section.styleVariants.bullet) }}>
                   {block.textRuns.map((textRun, textIndex) => (
                     <li key={textIndex} data-tone={textRun.tone} style={textRun.tone === 'muted' ? variantStyle('date', section.styleVariants.date) : undefined}>{textRun.text}</li>
                   ))}
@@ -116,10 +160,16 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
               );
             }
             if (block.kind === 'qr' && block.images.length === 0) {
-              return <div key={blockIndex} data-block="qr" style={variantStyle('qr', section.styleVariants.qr)}><QrCodesPreview items={block.links.map((link, index) => ({ id: `${section.type}:${blockIndex}:${index}`, label: link.label, url: link.href }))} /></div>;
+              return <div key={blockIndex} data-block="qr" style={{ gridColumn: isSplitHeader ? 2 : undefined, ...variantStyle('qr', section.styleVariants.qr) }}><QrCodesPreview items={block.links.map((link, index) => ({ id: `${section.type}:${blockIndex}:${index}`, label: link.label, url: link.href }))} /></div>;
             }
             return (
-            <p key={blockIndex} data-block={block.kind} style={{ margin: '0 0 1.5mm', whiteSpace: 'pre-wrap', ...variantStyle(element, section.styleVariants[element]) }}>
+            <p key={blockIndex} data-block={block.kind} style={{
+              margin: presentation?.entry.variant === 'compact' ? '0 0 .7mm' : '0 0 1.5mm',
+              whiteSpace: 'pre-wrap',
+              gridColumn: isSplitHeader ? 2 : undefined,
+              ...(block.kind === 'contact' && (presentation?.header.contactLayout === 'inline' || presentation?.header.contactLayout === 'separated') ? { display: 'flex', flexWrap: 'wrap', gap: '1mm 4mm' } : {}),
+              ...variantStyle(element, section.styleVariants[element]),
+            }}>
               {block.images.map((image, imageIndex) => (
                 // Data URLs are saved Resume content; Next Image cannot optimize them without changing bytes.
                 // eslint-disable-next-line @next/next/no-img-element
@@ -132,11 +182,13 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
                   style={{
                     color: textRun.tone === 'muted' ? document.colors.muted : textRun.tone === 'accent' ? document.colors.accent : blockTextColor,
                     ...(textRun.tone === 'muted' ? variantStyle('date', section.styleVariants.date) : {}),
+                    ...(textRun.tone === 'muted' && presentation?.entry.variant === 'date-rail' ? { display: 'inline-block', minWidth: '24mm', color: presentation.palette.secondary } : {}),
+                    ...(section.type === 'skills' && presentation?.skills.variant === 'tags' ? { display: 'inline-block', background: presentation.palette.surface, border: `${presentation.border.widthPt}pt solid ${presentation.palette.border}`, borderRadius: `${presentation.border.radiusMm}mm`, padding: '.5mm 2mm', margin: '.5mm' } : {}),
                   }}
                 >{textRun.text}{' '}</span>
               ))}
               {block.links.map((link, linkIndex) => (
-                <a key={`link:${linkIndex}`} href={link.href} rel="noreferrer noopener" style={{ color: document.colors.accent }}>{link.label}{' '}</a>
+                <a key={`link:${linkIndex}`} href={link.href} rel="noreferrer noopener" style={{ color: document.colors.accent, overflowWrap: 'anywhere' }}>{link.label}{' '}</a>
               ))}
             </p>
             );

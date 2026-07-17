@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-minyma",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Minyma",
+  "nameEn": "JSON Resume Minyma",
+  "category": "design-creative",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "minyma",
+    "jsonresume-theme-minyma"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-minyma",
+    "packageVersion": "0.0.5",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "ISC",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "jsonresume-theme-minyma contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "fbbeee6f0a6861ede3c08fc35124048838d760b48a54b37d880eb646114ef7fc",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-minyma@0.0.5. Minimal international composition. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

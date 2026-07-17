@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-diagonal-accent-bar",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Diagonal Accent Bar",
+  "nameEn": "JSON Resume Diagonal Accent Bar",
+  "category": "design-creative",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "diagonal accent bar",
+    "jsonresume-theme-diagonal-accent-bar"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-diagonal-accent-bar",
+    "packageVersion": "1.1.3",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "jsonresume-theme-diagonal-accent-bar contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "2f03069cec6a4e007c9a95b0c8548c6c47fc4ce46cb6cede0e9424480fe2c504",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-diagonal-accent-bar@1.1.3. Strong geometric accent system. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

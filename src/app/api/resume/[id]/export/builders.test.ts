@@ -2,10 +2,10 @@ import { describe, expect, test } from 'vitest';
 
 import { generateHtml } from './builders';
 import type { ResolvedTemplate } from '@/lib/templates/resolve-template';
-import type { TemplateManifestV1 } from '@/types/template';
+import type { TemplateManifestV1, TemplateManifestV2 } from '@/types/template';
 import { TEMPLATES } from '@/lib/constants';
 
-function resolution(showPageNumbers: boolean): ResolvedTemplate {
+function resolution(showPageNumbers: boolean): Extract<ResolvedTemplate, { kind: 'declarative-v1' }> {
   const manifest: TemplateManifestV1 = {
     schemaVersion: 1,
     rendererKind: 'declarative-v1',
@@ -21,6 +21,25 @@ function resolution(showPageNumbers: boolean): ResolvedTemplate {
     capabilities: { supportedSections: [], paperSizes: ['a4'], supportsAvatar: false, atsCompatible: false, supportsZh: true, supportsEn: true, supportsHtml: true, supportsPdf: true, docxFidelity: 'generic' },
     degraded: false,
   };
+}
+
+function splitResolution(): ResolvedTemplate {
+  const base = resolution(false);
+  const manifest: TemplateManifestV2 = {
+    ...base.manifest,
+    schemaVersion: 2,
+    rendererKind: 'declarative-v2',
+    sectionSlots: [{ sectionType: 'personal_info', placement: 'header', order: 0 }],
+    header: { variant: 'split', contactLayout: 'sidebar' },
+    entry: { variant: 'stacked' },
+    section: { headingVariant: 'plain' },
+    skills: { variant: 'text' },
+    decoration: { variant: 'none' },
+    density: 'standard',
+    palette: { secondary: '#334155', surface: '#f8fafc', border: '#cbd5e1' },
+    border: { widthPt: 1, radiusMm: 0 },
+  };
+  return { ...base, kind: 'declarative-v2', manifest };
 }
 
 const resume = { title: 'Resume', language: 'en', template: 'classic', sections: [] };
@@ -59,6 +78,25 @@ describe('declarative export HTML', () => {
     expect(html).toContain('src="data:image/svg+xml;base64,');
     expect(html).not.toContain('src="https://example.com/work"');
     expect(html).toContain('[data-image-role="avatar"] { max-width: 32mm;');
+  });
+
+  test('pins split-header headings and contact blocks to explicit columns', async () => {
+    const html = await generateHtml({
+      ...resume,
+      sections: [{
+        type: 'personal_info', title: 'Profile', sortOrder: 0, visible: true,
+        content: {
+          fullName: 'Alex Chen',
+          website: 'https://portfolio.example.test/alex-chen/platform-engineering',
+          customLinks: [{ label: 'Technical writing', url: 'https://blog.example.test/articles/platform-reliability' }],
+        },
+      }],
+    } as never, true, splitResolution());
+
+    expect(html).toContain('grid-template-columns: minmax(24mm, auto) minmax(0, 1fr)');
+    expect(html).toContain('[data-header-variant="split"] [data-placement="header"] > h2 { grid-column: 1;');
+    expect(html).toContain('[data-header-variant="split"] [data-placement="header"] > [data-block] { grid-column: 2;');
+    expect(html).not.toContain('[data-contact-layout="sidebar"] [data-section="personal_info"]');
   });
 });
 

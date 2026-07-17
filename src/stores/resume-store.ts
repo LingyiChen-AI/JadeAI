@@ -196,15 +196,18 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   setTemplateBinding: (binding, previewResolution) => {
     if (get().aiEditingResumeId === get().currentResume?.id) return;
     const localInput = binding.kind === 'local-snapshot' ? toResumeTemplateBindingInput(binding) : null;
-    const resolvedTemplate = previewResolution ?? (localInput?.kind === 'local-snapshot'
-      ? {
-          kind: 'declarative-v1' as const,
-          source: 'local-snapshot' as const,
-          manifest: localInput.snapshot.manifest,
-          capabilities: localInput.snapshot.capabilities,
-          degraded: false,
-        }
-      : undefined);
+    let resolvedTemplate = previewResolution;
+    if (!resolvedTemplate && localInput?.kind === 'local-snapshot') {
+      resolvedTemplate = localInput.snapshot.rendererKind === 'declarative-v2'
+        ? {
+            kind: 'declarative-v2', source: 'local-snapshot', manifest: localInput.snapshot.manifest,
+            capabilities: localInput.snapshot.capabilities, degraded: false,
+          }
+        : {
+            kind: 'declarative-v1', source: 'local-snapshot', manifest: localInput.snapshot.manifest,
+            capabilities: localInput.snapshot.capabilities, degraded: false,
+          };
+    }
     set((state) => ({
       currentResume: state.currentResume
         ? {

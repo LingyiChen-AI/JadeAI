@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-tan-responsive",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Tan Responsive",
+  "nameEn": "JSON Resume Tan Responsive",
+  "category": "engineering",
+  "tags": [
+    "layout-two-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "tan responsive",
+    "jsonresume-theme-tan-responsive"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-tan-responsive",
+    "packageVersion": "0.0.7",
+    "url": "https://github.com/veeravn/jsonresume-theme-responsive",
+    "revision": "8a76cbca75510f0c8d19955204427cf9dc869835"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "d72726e4616da3dd072c8604bbb6ee6dfc1ce4d65021d7b9e3473fee3364b0f7",
+    "copyright": "jsonresume-theme-tan-responsive contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "dc51946c481b23cc9c7bbcbb90cf381e5d4f3d9d5f8e7ea736e3f6f08f90a583",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-tan-responsive@0.0.7. Responsive professional hierarchy. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

@@ -60,14 +60,15 @@ export function createRuntimeVersionLoader(
     `;
     if (!row) return null;
 
-    const manifest = row.renderer_kind === 'declarative-v1'
+    const declarative = row.renderer_kind === 'declarative-v1' || row.renderer_kind === 'declarative-v2';
+    const manifest = declarative
       ? parseJson(row.manifest)
       : { ok: true as const, value: null };
     const capabilities = parseJson(row.capabilities);
 
     let status: TemplateRuntimeVersion['status'];
     if (row.template_status === 'blocked' || row.version_status === 'blocked' || row.stable_status === 'blocked') status = 'blocked';
-    else if (!['legacy-react', 'declarative-v1'].includes(row.renderer_kind)) status = 'invalid';
+    else if (!['legacy-react', 'declarative-v1', 'declarative-v2'].includes(row.renderer_kind)) status = 'invalid';
     else if (!['published', 'unlisted'].includes(row.template_status)) status = 'invalid';
     else if (row.template_published_at === null || row.version_published_at === null) status = 'invalid';
     else if (row.stable_status !== 'published' || row.stable_published_at === null) status = 'invalid';
@@ -79,7 +80,9 @@ export function createRuntimeVersionLoader(
     return {
       slug: row.slug,
       version: row.version,
-      rendererKind: row.renderer_kind === 'declarative-v1' ? 'declarative-v1' : 'legacy-react',
+      rendererKind: row.renderer_kind === 'declarative-v2'
+        ? 'declarative-v2'
+        : row.renderer_kind === 'declarative-v1' ? 'declarative-v1' : 'legacy-react',
       status,
       manifest: manifest.value,
       manifestHash: row.manifest_hash,

@@ -1,0 +1,2 @@
+ALTER TABLE "resume_template_versions" DROP CONSTRAINT "resume_template_versions_renderer_kind_check";--> statement-breakpoint
+ALTER TABLE "resume_template_versions" ADD CONSTRAINT "resume_template_versions_renderer_kind_check" CHECK ("resume_template_versions"."renderer_kind" in ('legacy-react', 'declarative-v1', 'declarative-v2'));

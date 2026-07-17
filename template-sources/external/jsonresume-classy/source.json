@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-classy",
+  "version": "1.0.1",
+  "nameZh": "JSON Resume Classy",
+  "nameEn": "JSON Resume Classy",
+  "category": "ats",
+  "tags": [
+    "layout-two-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "classy",
+    "jsonresume-theme-classy"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-classy",
+    "packageVersion": "1.0.9",
+    "url": "https://github.com/JaredCubilla/jsonresume-theme-classy",
+    "revision": "c5edc25186801533fa750d5e6d4d63a0b31b48be"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "fca78101ae663c3e39e0e258b2a9bac475d6aef3f66ec138baff52133c0b8eb9",
+    "copyright": "jsonresume-theme-classy contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "899cdb0875e1dc740d87f7c2b11a9eb9aa4516f696e91f3f4dc1136a32ee18e7",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-classy@1.0.9. Established formal presentation. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed. JadeAI 1.0.1 preserves the audited manifest and fixes split-header long-URL layout in the shared renderer."
+  }
+}

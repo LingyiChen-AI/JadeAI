@@ -1,8 +1,8 @@
 import { TEMPLATES } from '@/lib/constants';
-import type { TemplateCapability, TemplateManifestV1, TemplateVersionDetail } from '@/types/template';
+import type { TemplateCapability, TemplateManifestV1, TemplateManifestV2, TemplateVersionDetail } from '@/types/template';
 
 import { hashManifest } from './normalize-manifest';
-import { TemplateCapabilitySchema, TemplateManifestV1Schema, TemplateSnapshotSchema } from './schema';
+import { TemplateCapabilitySchema, TemplateManifestV1Schema, TemplateManifestV2Schema, TemplateSnapshotSchema } from './schema';
 
 export type TemplateResolutionReason =
   | 'invalid_local_snapshot'
@@ -14,7 +14,7 @@ export type TemplateResolutionReason =
 export type TemplateRuntimeVersion = {
   slug: string;
   version: string;
-  rendererKind: 'declarative-v1' | 'legacy-react';
+  rendererKind: 'declarative-v1' | 'declarative-v2' | 'legacy-react';
   status: 'published' | 'deprecated' | 'blocked' | 'invalid';
   manifest: unknown | null;
   manifestHash: string;
@@ -37,6 +37,13 @@ export type ResolvedTemplate =
       manifest: TemplateManifestV1;
     })
   | (ResolutionBase & {
+      kind: 'declarative-v2';
+      source: 'local-snapshot' | 'public' | 'fallback';
+      slug?: string;
+      version?: string;
+      manifest: TemplateManifestV2;
+    })
+  | (ResolutionBase & {
       kind: 'legacy-react';
       source: 'public' | 'legacy' | 'fallback' | 'classic';
       slug: string;
@@ -57,6 +64,12 @@ export type TemplateBindingSource = {
 export function resolveSavedTemplateSnapshot(snapshotValue: unknown): ResolvedTemplate | null {
   const snapshot = TemplateSnapshotSchema.safeParse(snapshotValue);
   if (!snapshot.success || hashManifest(snapshot.data.manifest) !== snapshot.data.manifestHash) return null;
+  if (snapshot.data.rendererKind === 'declarative-v2') {
+    return {
+      kind: 'declarative-v2', source: 'local-snapshot', manifest: snapshot.data.manifest,
+      capabilities: snapshot.data.capabilities, degraded: false,
+    };
+  }
   return {
     kind: 'declarative-v1',
     source: 'local-snapshot',
@@ -137,11 +150,21 @@ function resolveRuntimeVersion(
     };
   }
 
+  const source = inheritedReason ? 'fallback' as const : 'public' as const;
+  if (version.rendererKind === 'declarative-v2') {
+    const manifest = TemplateManifestV2Schema.safeParse(version.manifest);
+    if (!manifest.success || hashManifest(manifest.data) !== version.manifestHash) return null;
+    return {
+      kind: 'declarative-v2', source, slug: version.slug, version: version.version,
+      manifest: manifest.data, capabilities: capabilities.data,
+      degraded: inheritedReason !== undefined,
+      ...(inheritedReason ? { reason: inheritedReason } : {}),
+    };
+  }
   const manifest = TemplateManifestV1Schema.safeParse(version.manifest);
   if (!manifest.success || hashManifest(manifest.data) !== version.manifestHash) return null;
   return {
-    kind: 'declarative-v1',
-    source: inheritedReason ? 'fallback' : 'public',
+    kind: 'declarative-v1', source,
     slug: version.slug,
     version: version.version,
     manifest: manifest.data,

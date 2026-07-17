@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-graph-paper-grid",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Graph Paper Grid",
+  "nameEn": "JSON Resume Graph Paper Grid",
+  "category": "design-creative",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "graph paper grid",
+    "jsonresume-theme-graph-paper-grid"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-graph-paper-grid",
+    "packageVersion": "1.1.3",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "jsonresume-theme-graph-paper-grid contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "76ed82d4b5574e64889c1ac357ae8f9cd259765873a7472cd24335887fed4d39",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-graph-paper-grid@1.1.3. Structured graph-paper motif. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

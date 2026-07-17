@@ -1,4 +1,4 @@
-import type { LocalTemplateRecord, TemplateManifestV1 } from '@/types/template';
+import type { DeclarativeTemplateManifest, LocalTemplateRecord } from '@/types/template';
 
 import { LocalTemplateExportRawSchema, LocalTemplateRecordSchema, parseTemplateManifest } from './schema';
 import { canonicalizeJson } from './security';
@@ -9,7 +9,7 @@ type LocalTemplateImportContext = {
   userId: string;
   localId?: () => string;
   now?: () => Date;
-  thumbnail: Blob | ((manifest: TemplateManifestV1) => Promise<Blob>);
+  thumbnail: Blob | ((manifest: DeclarativeTemplateManifest) => Promise<Blob>);
 };
 
 export class LocalTemplatePackageError extends Error {

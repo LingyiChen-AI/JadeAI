@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-projects",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Projects",
+  "nameEn": "JSON Resume Projects",
+  "category": "engineering",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "projects",
+    "jsonresume-theme-projects"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-projects",
+    "packageVersion": "0.30.0",
+    "url": "https://github.com/dmsemenov/jsonresume-theme-projects",
+    "revision": "9a34fa1978ffaa594df724fd9e0e0a481f9b5d50"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "a1436e5316bd543cf13606ac2a6b8e2c979e6b2284f9db4e4ec6ebace473e8b8",
+    "copyright": "jsonresume-theme-projects contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "3050f38cf8ce6cb27ee3e36c377793e99cbc3f4208bad4afc0879b27bf56630b",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-projects@0.30.0. Project-heavy technical portfolio. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

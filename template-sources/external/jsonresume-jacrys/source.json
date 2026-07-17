@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-jacrys",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Jacrys",
+  "nameEn": "JSON Resume Jacrys",
+  "category": "engineering",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "jacrys",
+    "jsonresume-theme-jacrys"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-jacrys",
+    "packageVersion": "1.0.4",
+    "url": "https://github.com/jacrys/jsonresume-theme-jacrys",
+    "revision": "3aa7db71576fbcb27fcf06159dc0267bd2c58567"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "29baee045d4c789be43de0d4de5a1b317ade16a25c558bd21613debd358206a4",
+    "copyright": "jsonresume-theme-jacrys contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "e1ca7dcf83e3b156ce2ee0aa75835c5b8381e9157027f76487e8a5ba993ea8d4",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-jacrys@1.0.4. Clean professional sidebar design. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

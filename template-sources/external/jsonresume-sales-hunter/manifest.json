@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 2,
+  "rendererKind": "declarative-v2",
+  "layout": {
+    "type": "single-column",
+    "sidebarPosition": "right",
+    "sidebarWidthPercent": 32,
+    "columnGapMm": 5
+  },
+  "typography": {
+    "fontFamily": "noto-sans-sc",
+    "baseFontSizePt": 9.75,
+    "lineHeight": 1.4500000000000002,
+    "headingScale": 1.25
+  },
+  "colors": {
+    "text": "#18181b",
+    "muted": "#71717a",
+    "accent": "#0369a1",
+    "background": "#ffffff"
+  },
+  "spacing": {
+    "pageMarginMm": 11,
+    "sectionGapMm": 4
+  },
+  "sectionSlots": [
+    {
+      "sectionType": "personal_info",
+      "placement": "header",
+      "order": 0
+    },
+    {
+      "sectionType": "summary",
+      "placement": "main",
+      "order": 1
+    },
+    {
+      "sectionType": "skills",
+      "placement": "main",
+      "order": 2
+    },
+    {
+      "sectionType": "languages",
+      "placement": "main",
+      "order": 3
+    },
+    {
+      "sectionType": "work_experience",
+      "placement": "main",
+      "order": 4
+    },
+    {
+      "sectionType": "projects",
+      "placement": "main",
+      "order": 5
+    },
+    {
+      "sectionType": "education",
+      "placement": "main",
+      "order": 6
+    },
+    {
+      "sectionType": "certifications",
+      "placement": "main",
+      "order": 7
+    },
+    {
+      "sectionType": "github",
+      "placement": "main",
+      "order": 8
+    },
+    {
+      "sectionType": "custom",
+      "placement": "main",
+      "order": 9
+    },
+    {
+      "sectionType": "qr_codes",
+      "placement": "footer",
+      "order": 10
+    }
+  ],
+  "sectionStyles": [
+    {
+      "sectionType": "work_experience",
+      "element": "heading",
+      "variant": "bordered"
+    },
+    {
+      "sectionType": "projects",
+      "element": "heading",
+      "variant": "compact"
+    },
+    {
+      "sectionType": "skills",
+      "element": "body",
+      "variant": "compact"
+    },
+    {
+      "sectionType": "personal_info",
+      "element": "contact",
+      "variant": "accent"
+    }
+  ],
+  "features": {
+    "showAvatar": true,
+    "showQrCodes": false,
+    "showPageNumbers": false,
+    "maxPages": 3
+  },
+  "header": {
+    "variant": "centered",
+    "contactLayout": "separated"
+  },
+  "entry": {
+    "variant": "compact"
+  },
+  "section": {
+    "headingVariant": "plain"
+  },
+  "skills": {
+    "variant": "text"
+  },
+  "decoration": {
+    "variant": "top-rule"
+  },
+  "density": "compact",
+  "palette": {
+    "secondary": "#075985",
+    "surface": "#f0f9ff",
+    "border": "#bae6fd"
+  },
+  "border": {
+    "widthPt": 1.5,
+    "radiusMm": 2
+  }
+}

@@ -50,6 +50,13 @@
       "when": 1784170798448,
       "tag": "0006_template_platform",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784304795297,
+      "tag": "0007_ambitious_warhawk",
+      "breakpoints": true
     }
   ]
 }

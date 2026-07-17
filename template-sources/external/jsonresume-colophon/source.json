@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-colophon",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Colophon",
+  "nameEn": "JSON Resume Colophon",
+  "category": "engineering",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "colophon",
+    "jsonresume-theme-colophon"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-colophon",
+    "packageVersion": "0.2.0",
+    "url": "https://github.com/dmnelson/jsonresume-theme-colophon",
+    "revision": "db5cb9563eb0552081636816fe4124284e4c6db9"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "e498e69df24b15d8ff64c2094842d56e32692d0255df7b348bd55d4542adf59a",
+    "copyright": "jsonresume-theme-colophon contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "e356dbb9f1b9489f4c5589f489fac14648ee4003a563c06beef375bfb5b47a42",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-colophon@0.2.0. Editorial professional composition. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

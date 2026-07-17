@@ -175,7 +175,7 @@ async function preGenerateQrSvgs(resume: ResumeWithSections): Promise<void> {
 
 async function generateDeclarativeHtml(
   resume: ResumeWithSections,
-  resolvedTemplate: Extract<ResolvedTemplate, { kind: 'declarative-v1' }>,
+  resolvedTemplate: Extract<ResolvedTemplate, { kind: 'declarative-v1' }> | Extract<ResolvedTemplate, { kind: 'declarative-v2' }>,
   forPdf: boolean,
 ): Promise<string> {
   const qrImagesByUrl: Record<string, string> = {};
@@ -253,6 +253,35 @@ async function generateDeclarativeHtml(
     [data-style-qr="muted"] [data-block="qr"], [data-style-qr="muted"] [data-image-role="qr"] { color: var(--template-muted); opacity: .72; }
     [data-style-qr="bordered"] [data-block="qr"], [data-style-qr="bordered"] [data-image-role="qr"] { border: 2px solid var(--template-accent); padding: 1mm; }
     [data-page-number] { color: var(--template-muted); font-size: 8pt; margin-top: 2mm; text-align: center; }
+    [data-renderer-kind="declarative-v2"] { position: relative; border-radius: var(--template-radius); }
+    [data-renderer-kind="declarative-v2"][data-decoration="top-rule"] { border-top: var(--template-border-width) solid var(--template-accent); padding-top: 3mm; }
+    [data-renderer-kind="declarative-v2"][data-decoration="side-rule"] { border-left: var(--template-border-width) solid var(--template-accent); padding-left: 4mm; }
+    [data-renderer-kind="declarative-v2"][data-decoration="corner-accent"] { background: linear-gradient(135deg, var(--template-surface) 0 14mm, transparent 14mm); }
+    [data-renderer-kind="declarative-v2"][data-decoration="grid-lines"] { background-image: linear-gradient(var(--template-border) 1px, transparent 1px), linear-gradient(90deg, var(--template-border) 1px, transparent 1px); background-size: 6mm 6mm; }
+    [data-header-variant="centered"] [data-placement="header"] { text-align: center; }
+    [data-header-variant="band"] [data-placement="header"] { background: var(--template-secondary); color: var(--template-background); padding: 5mm; border-radius: var(--template-radius); }
+    [data-header-variant="band"] [data-placement="header"] h2, [data-header-variant="band"] [data-placement="header"] a { color: var(--template-background); }
+    [data-header-variant="split"] [data-placement="header"] { display: grid; grid-template-columns: minmax(24mm, auto) minmax(0, 1fr); gap: 2mm 4mm; align-items: start; }
+    [data-header-variant="split"] [data-placement="header"] > h2 { grid-column: 1; }
+    [data-header-variant="split"] [data-placement="header"] > [data-block] { grid-column: 2; }
+    [data-header-variant="editorial"] [data-placement="header"] { border-bottom: calc(var(--template-border-width) * 2) solid var(--template-accent); padding-bottom: 3mm; }
+    [data-contact-layout="inline"] [data-block="contact"], [data-contact-layout="separated"] [data-block="contact"] { display: flex; flex-wrap: wrap; gap: 1mm 4mm; }
+    [data-contact-layout="separated"] [data-block="contact"] > * + * { border-left: var(--template-border-width) solid var(--template-border); padding-left: 4mm; }
+    [data-entry-variant="compact"] [data-block] { margin-bottom: .7mm; line-height: 1.25; }
+    [data-entry-variant="date-rail"] [data-tone="muted"] { display: inline-block; min-width: 24mm; color: var(--template-secondary); }
+    [data-entry-variant="timeline"] [data-section]:not([data-placement="header"]) { border-left: var(--template-border-width) solid var(--template-border); padding-left: 4mm; }
+    [data-entry-variant="two-column-grid"] [data-section]:not([data-placement="header"]) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2mm 5mm; }
+    [data-entry-variant="two-column-grid"] [data-section] h2 { grid-column: 1 / -1; }
+    [data-section-heading="underline"] h2 { border-bottom: var(--template-border-width) solid var(--template-border); padding-bottom: 1mm; }
+    [data-section-heading="bordered"] h2 { border: var(--template-border-width) solid var(--template-border); border-radius: var(--template-radius); padding: 1mm 2mm; }
+    [data-section-heading="accent-block"] h2 { background: var(--template-accent); color: var(--template-background); padding: 1mm 2mm; border-radius: var(--template-radius); }
+    [data-section-heading="small-caps"] h2 { font-size: var(--template-font-size); text-transform: uppercase; letter-spacing: 0; }
+    [data-section-heading="side-rule"] h2 { border-left: calc(var(--template-border-width) * 2) solid var(--template-accent); padding-left: 2mm; }
+    [data-skills-variant="tags"] [data-section="skills"] [data-tone] { display: inline-block; background: var(--template-surface); border: var(--template-border-width) solid var(--template-border); border-radius: var(--template-radius); padding: .5mm 2mm; margin: .5mm; }
+    [data-skills-variant="compact-grid"] [data-section="skills"] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1mm 4mm; }
+    [data-skills-variant="compact-grid"] [data-section="skills"] h2 { grid-column: 1 / -1; }
+    [data-density="comfortable"] [data-section] { margin-bottom: calc(var(--template-section-gap) * 1.25); }
+    [data-density="compact"] [data-section] { margin-bottom: calc(var(--template-section-gap) * .7); }
     ${forPdf ? '@media print { [data-page-number] { display: none; } }' : ''}
     p { margin: 0 0 1.5mm; white-space: pre-wrap; }
     a { color: var(--template-accent); overflow-wrap: anywhere; }
@@ -267,7 +296,7 @@ export async function generateHtml(
   forPdf = false,
   resolvedTemplate?: ResolvedTemplate,
 ): Promise<string> {
-  if (resolvedTemplate?.kind === 'declarative-v1') {
+  if (resolvedTemplate?.kind === 'declarative-v1' || resolvedTemplate?.kind === 'declarative-v2') {
     return generateDeclarativeHtml(resume, resolvedTemplate, forPdf);
   }
   // Pre-generate QR SVGs so sync template builders can use them

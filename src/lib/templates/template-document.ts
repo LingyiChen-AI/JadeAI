@@ -1,5 +1,5 @@
 import { SECTION_TYPES } from '@/lib/constants';
-import type { TemplateManifestV1 } from '@/types/template';
+import type { DeclarativeTemplateManifest, TemplateManifestV1, TemplateManifestV2 } from '@/types/template';
 
 const MAX_VIEW_NODES = 4_000;
 const MAX_VIEW_DEPTH = 8;
@@ -96,7 +96,7 @@ export type TemplateDocumentSection = {
 };
 
 export type TemplateDocument = {
-  kind: 'template-document-v1';
+  kind: 'template-document-v1' | 'template-document-v2';
   title: string;
   language: string;
   page: { sizes: Array<'a4' | 'letter'>; marginMm: number; maxPages: number; showPageNumbers: boolean };
@@ -104,6 +104,16 @@ export type TemplateDocument = {
   typography: TemplateManifestV1['typography'];
   colors: TemplateManifestV1['colors'];
   spacing: TemplateManifestV1['spacing'];
+  presentation?: {
+    header: TemplateManifestV2['header'];
+    entry: TemplateManifestV2['entry'];
+    section: TemplateManifestV2['section'];
+    skills: TemplateManifestV2['skills'];
+    decoration: TemplateManifestV2['decoration'];
+    density: TemplateManifestV2['density'];
+    palette: TemplateManifestV2['palette'];
+    border: TemplateManifestV2['border'];
+  };
   sections: TemplateDocumentSection[];
 };
 
@@ -266,7 +276,7 @@ function sectionBlocks(
 
 export function buildTemplateDocument(
   view: TemplateResumeViewModel,
-  manifest: TemplateManifestV1,
+  manifest: DeclarativeTemplateManifest,
   options: TemplateDocumentBuildOptions = {},
 ): TemplateDocument {
   const slots = new Map<string, TemplateManifestV1['sectionSlots'][number]>(
@@ -287,7 +297,7 @@ export function buildTemplateDocument(
   ];
 
   return {
-    kind: 'template-document-v1',
+    kind: manifest.rendererKind === 'declarative-v2' ? 'template-document-v2' : 'template-document-v1',
     title: view.title,
     language: view.language,
     page: {
@@ -300,6 +310,18 @@ export function buildTemplateDocument(
     typography: manifest.typography,
     colors: manifest.colors,
     spacing: manifest.spacing,
+    ...(manifest.rendererKind === 'declarative-v2' ? {
+      presentation: {
+        header: manifest.header,
+        entry: manifest.entry,
+        section: manifest.section,
+        skills: manifest.skills,
+        decoration: manifest.decoration,
+        density: manifest.density,
+        palette: manifest.palette,
+        border: manifest.border,
+      },
+    } : {}),
     sections: ordered.map((section, index) => ({
       type: section.type,
       title: section.title,
@@ -333,6 +355,7 @@ function escapeHtml(value: string): string {
 }
 
 export function serializeTemplateDocumentHtml(document: TemplateDocument): string {
+  const presentation = document.presentation;
   const style = [
     `--template-text:${document.colors.text}`,
     `--template-muted:${document.colors.muted}`,
@@ -344,6 +367,13 @@ export function serializeTemplateDocumentHtml(document: TemplateDocument): strin
     `--template-section-gap:${document.spacing.sectionGapMm}mm`,
     `--template-column-gap:${document.layout.columnGapMm}mm`,
     `--template-sidebar-width:${document.layout.sidebarWidthPercent}%`,
+    ...(presentation ? [
+      `--template-secondary:${presentation.palette.secondary}`,
+      `--template-surface:${presentation.palette.surface}`,
+      `--template-border:${presentation.palette.border}`,
+      `--template-border-width:${presentation.border.widthPt}pt`,
+      `--template-radius:${presentation.border.radiusMm}mm`,
+    ] : []),
     'grid-auto-flow:row dense',
   ].join(';');
   const sections = document.sections.map((section) => {
@@ -364,5 +394,8 @@ export function serializeTemplateDocumentHtml(document: TemplateDocument): strin
     return `<section data-section="${escapeHtml(section.type)}" data-placement="${section.placement}" data-heading-variant="${section.headingVariant}"${styleAttributes}><h2>${escapeHtml(section.title)}</h2>${blocks}</section>`;
   }).join('');
   const pageNumber = document.page.showPageNumbers ? '<footer data-page-number="1">1</footer>' : '';
-  return `<article class="declarative-resume" data-layout="${document.layout.type}" data-sidebar-position="${document.layout.sidebarPosition}" data-page-numbers="${document.page.showPageNumbers}" data-max-pages="${document.page.maxPages}" style="${style}">${sections}${pageNumber}</article>`;
+  const presentationAttributes = presentation
+    ? ` data-renderer-kind="declarative-v2" data-header-variant="${presentation.header.variant}" data-contact-layout="${presentation.header.contactLayout}" data-entry-variant="${presentation.entry.variant}" data-section-heading="${presentation.section.headingVariant}" data-skills-variant="${presentation.skills.variant}" data-decoration="${presentation.decoration.variant}" data-density="${presentation.density}"`
+    : '';
+  return `<article class="declarative-resume"${presentationAttributes} data-layout="${document.layout.type}" data-sidebar-position="${document.layout.sidebarPosition}" data-page-numbers="${document.page.showPageNumbers}" data-max-pages="${document.page.maxPages}" style="${style}">${sections}${pageNumber}</article>`;
 }

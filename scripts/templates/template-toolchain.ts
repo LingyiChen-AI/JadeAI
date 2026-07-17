@@ -15,14 +15,14 @@ import { z } from 'zod/v4';
 import { SECTION_TYPES } from '../../src/lib/constants';
 import { hashManifest, normalizeManifest } from '../../src/lib/templates/normalize-manifest';
 import { TemplateCapabilitySchema } from '../../src/lib/templates/schema';
-import type { TemplateCapability, TemplateManifestV1 } from '../../src/types/template';
+import type { DeclarativeTemplateManifest, TemplateCapability } from '../../src/types/template';
 
 const MAX_SOURCE_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_SOURCE_FILES = 512;
 const SHA256 = /^[0-9a-f]{64}$/;
 const REVISION = /^[0-9a-f]{40}$/;
 const SAFE_RELATIVE_PATH = /^(?!\/)(?!.*\\)(?!.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9._/-]+$/;
-const ALLOWED_LICENSES = new Set(['MIT', 'BSD-2-Clause', 'BSD-3-Clause', 'Apache-2.0']);
+const ALLOWED_LICENSES = new Set(['MIT', 'ISC', 'BSD-2-Clause', 'BSD-3-Clause', 'Apache-2.0']);
 const EXECUTABLE_EXTENSIONS = new Set(['.css', '.htm', '.html', '.js', '.cjs', '.mjs', '.jsx', '.ts', '.tsx']);
 
 const AssetSchema = z.strictObject({
@@ -76,7 +76,7 @@ export type TemplateSourceMetadata = z.output<typeof SourceMetadataSchema>;
 export type ValidatedSourcePackage = {
   directory: string;
   metadata: TemplateSourceMetadata;
-  manifest: TemplateManifestV1;
+  manifest: DeclarativeTemplateManifest;
   manifestHash: string;
 };
 
@@ -100,7 +100,7 @@ export type ExternalCatalog = {
     category: string;
     tags: string[];
     aliases: string[];
-    rendererKind: 'declarative-v1';
+    rendererKind: 'declarative-v1' | 'declarative-v2';
     source: TemplateSourceMetadata['source'];
     license: TemplateSourceMetadata['license'];
     provenance: {
@@ -113,7 +113,7 @@ export type ExternalCatalog = {
       assetInventory: TemplateSourceMetadata['assets'];
     };
     capabilities: TemplateCapability;
-    manifest: TemplateManifestV1;
+    manifest: DeclarativeTemplateManifest;
     manifestHash: string;
     thumbnail: BuiltAsset;
     preview: BuiltAsset;
@@ -259,7 +259,7 @@ export async function validateSourcePackage(directory: string): Promise<Validate
     metadata.manifestSha256,
     'template_manifest_source_hash_mismatch',
   );
-  let manifest: TemplateManifestV1;
+  let manifest: DeclarativeTemplateManifest;
   try {
     manifest = normalizeManifest(JSON.parse(manifestBytes.toString('utf8')));
   } catch {
@@ -268,7 +268,7 @@ export async function validateSourcePackage(directory: string): Promise<Validate
   return { directory: absoluteDirectory, metadata, manifest, manifestHash: hashManifest(manifest) };
 }
 
-function defaultCapabilities(manifest: TemplateManifestV1): TemplateCapability {
+function defaultCapabilities(manifest: DeclarativeTemplateManifest): TemplateCapability {
   return TemplateCapabilitySchema.parse({
     supportedSections: [...SECTION_TYPES],
     paperSizes: ['a4', 'letter'],
@@ -313,7 +313,7 @@ export async function buildExternalCatalog(
         category: metadata.category,
         tags: [...metadata.tags],
         aliases: [...metadata.aliases],
-        rendererKind: 'declarative-v1',
+        rendererKind: manifest.rendererKind,
         source: metadata.source,
         license: metadata.license,
         provenance: {

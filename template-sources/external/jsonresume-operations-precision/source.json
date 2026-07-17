@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-operations-precision",
+  "version": "1.0.0",
+  "nameZh": "JSON Resume Operations Precision",
+  "nameEn": "JSON Resume Operations Precision",
+  "category": "ats",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "operations precision",
+    "jsonresume-theme-operations-precision"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-operations-precision",
+    "packageVersion": "0.3.3",
+    "url": "https://github.com/jsonresume/jsonresume.org",
+    "revision": "2aa37b4ee09fdfb1b3261c01596184bc7e837b3d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "577561bc6c6eacdc4cf5b60a67bceaaa9f2266c26e4aa0aca37701da2ed97097",
+    "copyright": "jsonresume-theme-operations-precision contributors"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "e876cb78edb0240f309b8cf3fd98fcbe3e5e65159ea8c725cc7f8563de3b9df4",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-17T18:00:00.000Z",
+    "notes": "Safe declarative V2 port inspired by jsonresume-theme-operations-precision@0.3.3. Dense operational information design. Upstream code, CSS, fonts, icons, images and dependencies are not copied or executed."
+  }
+}

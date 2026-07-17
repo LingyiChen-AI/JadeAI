@@ -8,13 +8,13 @@ import { Button } from '@/components/ui/button';
 import { useLocalTemplates } from '@/hooks/use-local-templates';
 import { createLocalTemplateThumbnail } from '@/lib/templates/local-template-thumbnail';
 import { LocalTemplateQuotaError } from '@/lib/templates/local-template.repository';
-import type { LocalTemplateRecord, TemplateManifestV1 } from '@/types/template';
+import type { DeclarativeTemplateManifest, LocalTemplateRecord, TemplateManifestV1 } from '@/types/template';
 
 import { LocalTemplateEditor } from './local-template-editor';
 
 type LocalTemplateManagerProps = {
   userId: string | null | undefined;
-  onApply(manifest: TemplateManifestV1): void | Promise<void>;
+  onApply(manifest: DeclarativeTemplateManifest): void | Promise<void>;
 };
 
 export function createDefaultLocalTemplateManifest(): TemplateManifestV1 {

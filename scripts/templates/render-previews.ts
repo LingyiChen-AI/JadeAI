@@ -86,24 +86,25 @@ function shortResume(resume: ResumeWithSections): ResumeWithSections {
   };
 }
 
-function resolved(source: ValidatedSourcePackage): Extract<ResolvedTemplate, { kind: 'declarative-v1' }> {
-  return {
-    kind: 'declarative-v1',
+function resolved(source: ValidatedSourcePackage): ResolvedTemplate {
+  const shared = {
     source: 'local-snapshot',
-    manifest: source.manifest,
     degraded: false,
     capabilities: {
       supportedSections: source.manifest.sectionSlots.map((slot) => slot.sectionType),
-      paperSizes: ['a4', 'letter'],
+      paperSizes: ['a4', 'letter'] as Array<'a4' | 'letter'>,
       supportsAvatar: source.manifest.features.showAvatar,
       atsCompatible: source.manifest.layout.type === 'single-column',
       supportsZh: true,
       supportsEn: true,
       supportsHtml: true,
       supportsPdf: true,
-      docxFidelity: 'generic',
+      docxFidelity: 'generic' as const,
     },
   };
+  return source.manifest.rendererKind === 'declarative-v2'
+    ? { ...shared, source: 'local-snapshot', kind: 'declarative-v2', manifest: source.manifest }
+    : { ...shared, source: 'local-snapshot', kind: 'declarative-v1', manifest: source.manifest };
 }
 
 async function startFontServer(rootDirectory: string): Promise<{ origin: string; close: () => Promise<void> }> {

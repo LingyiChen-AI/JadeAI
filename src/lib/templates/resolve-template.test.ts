@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { hashManifest } from './normalize-manifest';
 import { resolvePublicTemplateDetail, resolveTemplate } from './resolve-template';
 import type { Resume } from '@/types/resume';
-import type { TemplateCapability, TemplateManifestV1 } from '@/types/template';
+import type { TemplateCapability, TemplateManifestV1, TemplateManifestV2 } from '@/types/template';
 
 function manifest(accent = '#2563eb'): TemplateManifestV1 {
   return {
@@ -16,6 +16,17 @@ function manifest(accent = '#2563eb'): TemplateManifestV1 {
     sectionSlots: [{ sectionType: 'summary', placement: 'main', order: 0 }],
     sectionStyles: [],
     features: { showAvatar: true, showQrCodes: true, showPageNumbers: false, maxPages: 4 },
+  };
+}
+
+function manifestV2(): TemplateManifestV2 {
+  return {
+    ...manifest('#0e7490'), schemaVersion: 2, rendererKind: 'declarative-v2',
+    header: { variant: 'editorial', contactLayout: 'wrapped' },
+    entry: { variant: 'date-rail' }, section: { headingVariant: 'underline' },
+    skills: { variant: 'tags' }, decoration: { variant: 'top-rule' }, density: 'standard',
+    palette: { secondary: '#155e75', surface: '#ecfeff', border: '#a5f3fc' },
+    border: { widthPt: 1, radiusMm: 1 },
   };
 }
 
@@ -57,6 +68,26 @@ function resume(overrides: Partial<Resume> = {}): Resume {
 }
 
 describe('resolveTemplate', () => {
+  test('preserves declarative-v2 for public versions and saved local snapshots', async () => {
+    const v2 = manifestV2();
+    const publicResolved = await resolveTemplate(resume({ templateSnapshot: null }), {
+      loadPublicVersion: async () => ({
+        slug: 'jsonresume-editorial', version: '1.0.0', rendererKind: 'declarative-v2', status: 'published',
+        manifest: v2, manifestHash: hashManifest(v2), capabilities: capabilities(),
+      }),
+    });
+    const localResolved = await resolveTemplate(resume({
+      templateVersionId: null,
+      templateSnapshot: {
+        rendererKind: 'declarative-v2', schemaVersion: 2, manifest: v2,
+        manifestHash: hashManifest(v2), capabilities: capabilities(),
+      },
+    }));
+
+    expect(publicResolved).toMatchObject({ kind: 'declarative-v2', source: 'public', manifest: { header: { variant: 'editorial' } } });
+    expect(localResolved).toMatchObject({ kind: 'declarative-v2', source: 'local-snapshot', manifest: { entry: { variant: 'date-rail' } } });
+  });
+
   test('converts a strictly parsed public version detail into the exact preview resolution', () => {
     const publicManifest = manifest('#0891b2');
     const resolved = resolvePublicTemplateDetail({
