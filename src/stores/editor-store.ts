@@ -3,7 +3,7 @@ import type { ResumeSection } from '@/types/resume';
 import type { AIChangeFocusRequest, AIFieldChange, AIHistoryEntry, ResumeSnapshot } from '@/types/editor';
 import { MAX_UNDO_STACK } from '@/lib/constants';
 import { getResumeSectionsFingerprint, mergeAIChanges } from '@/lib/resume/diff-ai-changes';
-import { applyAIChanges, type ApplyAIChangesOptions, type RestoreResult } from '@/lib/resume/apply-ai-change';
+import { applyAIChanges, restoreAIResumeStyle, type ApplyAIChangesOptions, type RestoreResult } from '@/lib/resume/apply-ai-change';
 import { AI_HISTORY_LIMIT, aiHistoryRepository, type AIHistoryScope } from '@/lib/editor/ai-history';
 import { useResumeStore } from '@/stores/resume-store';
 
@@ -267,6 +267,27 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       : applyAIChanges(current, entry.changes, {
         scope: 'snapshot', beforeSections: entry.afterSections, afterSections: entry.beforeSections,
       });
+    const currentStyle = resumeState.currentResume ? {
+      themeConfig: structuredClone(resumeState.currentResume.themeConfig),
+      template: resumeState.currentResume.template,
+      templateSource: resumeState.currentResume.templateSource,
+      templateVersionId: resumeState.currentResume.templateVersionId,
+      templateSnapshot: structuredClone(resumeState.currentResume.templateSnapshot),
+    } : null;
+    const styleTarget = entry.beforeStyle && entry.afterStyle && currentStyle
+      ? restoreAIResumeStyle(
+        currentStyle,
+        direction === 'undo' ? entry.beforeStyle : entry.afterStyle,
+        direction === 'undo' ? entry.afterStyle : entry.beforeStyle,
+      )
+      : null;
+    if (entry.beforeStyle && entry.afterStyle && !styleTarget) {
+      return {
+        ...result,
+        restored: 0,
+        conflicts: [...result.conflicts, ...entry.changes.filter((change) => change.sectionId === '__resume_style__')],
+      };
+    }
     if (result.restored === 0 || result.conflicts.length > 0) return result;
     const nextCursor = direction === 'undo' ? state.aiHistoryEntries[index - 1]?.id ?? null : entry.id;
     try {
@@ -298,7 +319,24 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         return emptyRestore(latestResume.sections);
       }
       get().pushSnapshot(current);
-      latestResume.replaceSections(result.sections);
+      useResumeStore.setState((resumeStore) => ({
+        sections: result.sections,
+        currentResume: resumeStore.currentResume ? {
+          ...resumeStore.currentResume,
+          sections: result.sections,
+          ...(styleTarget ? {
+            themeConfig: structuredClone(styleTarget.themeConfig) as typeof resumeStore.currentResume.themeConfig,
+            ...(styleTarget.template ? { template: styleTarget.template } : {}),
+            ...(styleTarget.templateSource ? { templateSource: styleTarget.templateSource as typeof resumeStore.currentResume.templateSource } : {}),
+            ...(styleTarget.templateVersionId !== undefined ? { templateVersionId: styleTarget.templateVersionId } : {}),
+            ...(styleTarget.templateSnapshot !== undefined ? { templateSnapshot: structuredClone(styleTarget.templateSnapshot) as typeof resumeStore.currentResume.templateSnapshot } : {}),
+          } : {}),
+        } : null,
+        isDirty: true,
+        saveError: null,
+        editVersion: resumeStore.editVersion + 1,
+      }));
+      useResumeStore.getState()._scheduleSave();
       set({ aiHistoryCursor: nextCursor, aiHistoryError: null });
       return result;
     } catch (error) {

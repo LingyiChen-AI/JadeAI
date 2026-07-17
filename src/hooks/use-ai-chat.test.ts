@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as diffModule from '@/lib/resume/diff-ai-changes';
+import { shouldReloadAIWriteback } from './use-ai-chat';
 import type { AIChangeSource } from '@/types/editor';
 
 const originalSection = {
@@ -36,6 +37,13 @@ function historyWriter() {
 }
 
 describe('AI writeback history', () => {
+  it('groups completed tools until the whole assistant response settles', () => {
+    expect(shouldReloadAIWriteback(0, 1, 'streaming')).toBe(false);
+    expect(shouldReloadAIWriteback(0, 2, 'submitted')).toBe(false);
+    expect(shouldReloadAIWriteback(0, 2, 'ready')).toBe(true);
+    expect(shouldReloadAIWriteback(2, 2, 'ready')).toBe(false);
+  });
+
   it.each(['chat-tool', 'overwrite-translation'] as const)(
     'appends one %s entry before merging the visible changes',
     async (source) => {
@@ -88,5 +96,32 @@ describe('AI writeback history', () => {
     );
     expect(writer.onPersistenceError).toHaveBeenCalledOnce();
     expect(writer.mergeChanges).toHaveBeenCalledOnce();
+  });
+
+  it('records an authorized style-only writeback even when sections are unchanged', async () => {
+    const writer = historyWriter();
+    const input = writeback('chat-tool');
+    const entry = await diffModule.recordAIWriteback({
+      ...input,
+      after: input.before,
+      beforeStyle: { themeConfig: { primaryColor: '#111111' } },
+      afterStyle: { themeConfig: { primaryColor: '#222222' } },
+      beautify: true,
+    }, writer);
+
+    expect(entry).toMatchObject({
+      beautify: true,
+      beforeStyle: { themeConfig: { primaryColor: '#111111' } },
+      afterStyle: { themeConfig: { primaryColor: '#222222' } },
+    });
+    expect(entry?.changes).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        sectionId: '__resume_style__',
+        fieldPath: 'themeConfig.primaryColor',
+        kind: 'style-updated',
+      }),
+    ]));
+    expect(writer.appendHistory).toHaveBeenCalledOnce();
+    expect(writer.mergeChanges).not.toHaveBeenCalled();
   });
 });

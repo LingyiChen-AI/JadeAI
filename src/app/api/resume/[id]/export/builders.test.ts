@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { generateHtml } from './builders';
 import type { ResolvedTemplate } from '@/lib/templates/resolve-template';
 import type { TemplateManifestV1 } from '@/types/template';
+import { TEMPLATES } from '@/lib/constants';
 
 function resolution(showPageNumbers: boolean): ResolvedTemplate {
   const manifest: TemplateManifestV1 = {
@@ -58,5 +59,36 @@ describe('declarative export HTML', () => {
     expect(html).toContain('src="data:image/svg+xml;base64,');
     expect(html).not.toContain('src="https://example.com/work"');
     expect(html).toContain('[data-image-role="avatar"] { max-width: 32mm;');
+  });
+});
+
+describe('legacy rich-text export contract', () => {
+  test('renders supported formatting in custom descriptions for every template', async () => {
+    for (const template of TEMPLATES) {
+      const html = await generateHtml({
+        ...resume,
+        template,
+        sections: [{
+          type: 'custom', title: 'Custom', sortOrder: 0, visible: true,
+          content: { items: [{ id: 'custom-1', title: 'Item', description: '**Impact**' }] },
+        }],
+      } as never, false);
+
+      expect(html, template).toContain('<strong>Impact</strong>');
+      expect(html, template).not.toContain('**Impact**');
+    }
+  });
+
+  test('forces the stable export font on text descendants for every template', async () => {
+    for (const template of TEMPLATES) {
+      const html = await generateHtml({ ...resume, template } as never, true);
+
+      expect(html, template).toContain(
+        '.resume-export, .resume-export * {\n      font-family: "Noto Sans SC", sans-serif !important;',
+      );
+      expect(html, template).toContain(
+        '.resume-export *::before, .resume-export *::after {\n      font-family: "Noto Sans SC", sans-serif !important;',
+      );
+    }
   });
 });

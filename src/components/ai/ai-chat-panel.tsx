@@ -57,6 +57,7 @@ export function AIChatContent({ resumeId, hideTitle }: AIChatContentProps) {
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>();
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [beautify, setBeautify] = useState(false);
 
   const { historicalMessages, hasMore, isLoadingMore, loadInitial, loadMore, reset: resetPagination } = useMessagePagination();
 
@@ -101,6 +102,7 @@ export function AIChatContent({ resumeId, hideTitle }: AIChatContentProps) {
     setActiveSessionId(undefined);
     setSessions([]);
     setInitialMessages(undefined);
+    setBeautify(false);
     resetPagination();
 
     let cancelled = false;
@@ -132,6 +134,7 @@ export function AIChatContent({ resumeId, hideTitle }: AIChatContentProps) {
   }, [resumeId]);
 
   const createNewSession = useCallback(async (isInitial = false) => {
+    setBeautify(false);
     const headers = getHeaders();
     try {
       const res = await fetch('/api/ai/chat/sessions', {
@@ -159,6 +162,7 @@ export function AIChatContent({ resumeId, hideTitle }: AIChatContentProps) {
     if (sessionId === activeSessionId) return;
     setActiveSessionId(sessionId);
     setHistoryOpen(false);
+    setBeautify(false);
     const msgs = await loadInitial(sessionId);
     setInitialMessages(msgs);
   }, [activeSessionId, loadInitial]);
@@ -193,6 +197,7 @@ export function AIChatContent({ resumeId, hideTitle }: AIChatContentProps) {
     sessionId: activeSessionId,
     initialMessages,
     selectedModel,
+    beautify,
   });
 
   // Show toast when AI API call fails
@@ -395,6 +400,8 @@ export function AIChatContent({ resumeId, hideTitle }: AIChatContentProps) {
         models={models}
         selectedModel={selectedModel}
         onModelChange={setSelectedModel}
+        beautify={beautify}
+        onBeautifyChange={setBeautify}
       />
     </>
   );

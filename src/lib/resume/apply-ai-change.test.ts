@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AIFieldChange } from '@/types/editor';
 import type { ResumeSection } from '@/types/resume';
-import { applyAIChanges } from './apply-ai-change';
+import { applyAIChanges, restoreAIResumeStyle } from './apply-ai-change';
 
 function section(content: Record<string, unknown>, overrides: Partial<ResumeSection> = {}): ResumeSection {
   return {
@@ -19,6 +19,14 @@ function change(overrides: Partial<AIFieldChange>): AIFieldChange {
 }
 
 describe('applyAIChanges', () => {
+  it('restores AI style only when the current style still matches the AI result', () => {
+    const before = { themeConfig: { primaryColor: '#111111' } };
+    const after = { themeConfig: { primaryColor: '#222222' } };
+
+    expect(restoreAIResumeStyle(after, before, after)).toEqual(before);
+    expect(restoreAIResumeStyle({ themeConfig: { primaryColor: '#333333' } }, before, after)).toBeNull();
+  });
+
   it('restores a scalar field and section title', () => {
     const current = [section({ text: 'new' }, { title: 'New title' })];
     const result = applyAIChanges(current, [

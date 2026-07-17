@@ -1,4 +1,4 @@
-import { tool, generateText } from 'ai';
+import { tool, generateText, type ToolSet } from 'ai';
 import { z } from 'zod/v4';
 import { resumeRepository } from '@/lib/db/repositories/resume.repository';
 import { getModel, getJsonProviderOptions, type AIConfig } from '@/lib/ai/provider';
@@ -11,7 +11,52 @@ import {
   serializeResumeForModel,
 } from '@/lib/ai/model-context';
 
-export function createExecutableTools(resumeId: string, aiConfig: AIConfig) {
+export function createExecutableTools(
+  resumeId: string,
+  aiConfig: AIConfig,
+  options: { userId: string; beautify?: boolean },
+): ToolSet {
+  const findOwnedResume = async () => {
+    const resume = await resumeRepository.findById(resumeId);
+    return resume?.userId === options.userId ? resume : null;
+  };
+
+  const updateResumeStyle = tool({
+    description: 'Update the resume theme. Only use this tool when the user explicitly enabled Beautify.',
+    inputSchema: z.object({
+      primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+      accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+      fontFamily: z.literal('Noto Sans SC').optional(),
+      fontSize: z.enum(['small', 'medium', 'large']).optional(),
+      lineSpacing: z.number().min(1).max(2.5).optional(),
+      sectionSpacing: z.number().int().min(4).max(32).optional(),
+      margin: z.object({
+        top: z.number().int().min(0).max(60).optional(),
+        right: z.number().int().min(0).max(60).optional(),
+        bottom: z.number().int().min(0).max(60).optional(),
+        left: z.number().int().min(0).max(60).optional(),
+      }).strict().optional(),
+      avatarStyle: z.enum(['circle', 'oneInch']).optional(),
+    }).strict(),
+    execute: async (input) => {
+      const resume = await findOwnedResume();
+      if (!resume) return { success: false, error: 'Resume not found' };
+      const current = (resume.themeConfig || {}) as Record<string, unknown>;
+      const patch = Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
+      if (Object.keys(patch).length === 0) return { success: false, error: 'No style changes requested' };
+      const nextTheme = {
+        ...current,
+        ...patch,
+        ...(input.margin ? {
+          margin: { ...((current.margin as Record<string, number> | undefined) || {}), ...input.margin },
+        } : {}),
+      };
+      const updated = await resumeRepository.replaceContent(resumeId, resume.revision, { themeConfig: nextTheme });
+      if (!updated) return { success: false, error: 'Resume changed during beautification; please retry' };
+      return { success: true, changed: Object.keys(patch) };
+    },
+  });
+
   return {
     updateSection: tool({
       description: `Update the content of a specific resume section. Section content structures:
@@ -32,7 +77,7 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
         value: z.string().describe('The new value for the field. For complex values (arrays, objects), pass a JSON string.'),
       }),
       execute: async ({ sectionId, field, value }) => {
-        const resume = await resumeRepository.findById(resumeId);
+        const resume = await findOwnedResume();
         if (!resume) return { success: false, error: 'Resume not found' };
 
         const section = resume.sections.find((s: any) => s.id === sectionId);
@@ -156,7 +201,7 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
         content: z.string().optional().describe('Initial content as a JSON string. Defaults to empty structure.'),
       }),
       execute: async ({ type, title, content }) => {
-        const resume = await resumeRepository.findById(resumeId);
+        const resume = await findOwnedResume();
         if (!resume) return { success: false, error: 'Resume not found' };
 
         const maxOrder = resume.sections.reduce((max: number, s: any) => Math.max(max, s.sortOrder), -1);
@@ -173,7 +218,7 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
         }
 
         const sectionId = crypto.randomUUID();
-        const section = await resumeRepository.createSectionWithRevision(resumeId, resume.revision, {
+        await resumeRepository.createSectionWithRevision(resumeId, resume.revision, {
           id: sectionId,
           type,
           title,
@@ -193,7 +238,7 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
         improvedText: z.string().describe('The improved text to replace the original'),
       }),
       execute: async ({ sectionId, field, improvedText }) => {
-        const resume = await resumeRepository.findById(resumeId);
+        const resume = await findOwnedResume();
         if (!resume) return { success: false, error: 'Resume not found' };
 
         const section = resume.sections.find((s: any) => s.id === sectionId);
@@ -217,7 +262,7 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
         category: z.string().describe('The skill category name'),
       }),
       execute: async ({ skills, category }) => {
-        const resume = await resumeRepository.findById(resumeId);
+        const resume = await findOwnedResume();
         if (!resume) return { success: false, error: 'Resume not found' };
 
         const skillsSection = resume.sections.find((s: any) => s.type === 'skills');
@@ -247,7 +292,7 @@ Use field="items" or field="categories" to update list sections. Each item MUST 
         jobDescription: z.string().describe('The job description text to analyze against the resume'),
       }),
       execute: async ({ jobDescription }) => {
-        const resume = await resumeRepository.findById(resumeId);
+        const resume = await findOwnedResume();
         if (!resume) return { success: false, error: 'Resume not found' };
 
         const model = getModel(aiConfig);
@@ -273,7 +318,7 @@ CRITICAL: You are a JSON API. Your entire response must be a single valid JSON o
         targetLanguage: z.enum(['zh', 'en']).describe('Target language: "zh" for Chinese, "en" for English'),
       }),
       execute: async ({ targetLanguage }) => {
-        const resume = await resumeRepository.findById(resumeId);
+        const resume = await findOwnedResume();
         if (!resume) return { success: false, error: 'Resume not found' };
 
         const model = getModel(aiConfig);
@@ -373,5 +418,6 @@ Rules:
         };
       },
     }),
+    ...(options.beautify === true ? { updateResumeStyle } : {}),
   };
 }

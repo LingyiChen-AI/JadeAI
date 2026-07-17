@@ -153,6 +153,14 @@
       "sourceTranslation": "覆盖翻译",
       "changeCount": "{count} 项修改"
     },
+    "richText": {
+      "bold": "加粗",
+      "bulletList": "项目符号",
+      "orderedList": "编号列表",
+      "indent": "增加缩进",
+      "outdent": "减少缩进",
+      "clearFormatting": "清除格式"
+    },
     "aiPolish": "AI 润色",
     "aiChanged": "AI 已修改",
     "aiChangesTitle": "AI 修改内容",
@@ -255,6 +263,7 @@
     "panelTitle": "AI 助手",
     "placeholder": "描述你想优化的内容...",
     "send": "发送",
+    "beautify": "美化",
     "thinking": "AI 思考中...",
     "suggestion": "AI 建议",
     "applySuggestion": "应用建议",

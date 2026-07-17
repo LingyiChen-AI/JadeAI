@@ -1,5 +1,5 @@
 import type { ResumeSection } from '@/types/resume';
-import type { AIChangeSource, AIChangeValue, AIFieldChange, AIHistoryEntry } from '@/types/editor';
+import type { AIChangeSource, AIChangeValue, AIFieldChange, AIHistoryEntry, AIResumeStyleSnapshot } from '@/types/editor';
 
 const MAX_VALUE_LENGTH = 2_000;
 
@@ -101,7 +101,7 @@ function diffObject(
     const next = after[key];
     if (valuesEqual(previous, next)) continue;
 
-    const fieldPath = `${prefix}.${key}`;
+    const fieldPath = prefix ? `${prefix}.${key}` : key;
     if (
       (key === 'items' || key === 'categories')
       && Array.isArray(previous)
@@ -218,6 +218,36 @@ export function diffAIResumeSections({
   return changes;
 }
 
+export function diffAIResumeStyle({
+  resumeId,
+  before,
+  after,
+  source,
+  createdAt = Date.now(),
+}: {
+  resumeId: string;
+  before?: AIResumeStyleSnapshot;
+  after?: AIResumeStyleSnapshot;
+  source: AIChangeSource;
+  createdAt?: number;
+}): AIFieldChange[] {
+  if (!before || !after || valuesEqual(before, after)) return [];
+  const changes: AIFieldChange[] = [];
+  const context: DiffContext = {
+    resumeId,
+    sectionId: '__resume_style__',
+    sectionTitle: 'Resume style',
+    source,
+    createdAt,
+    changes,
+  };
+  diffObject(before as unknown as Record<string, unknown>, after as unknown as Record<string, unknown>, '', context);
+  return changes.map((change) => ({
+    ...change,
+    kind: change.fieldPath === 'template' ? 'template-updated' : 'style-updated',
+  }));
+}
+
 export function mergeAIChanges(
   existing: AIFieldChange[],
   incoming: AIFieldChange[],
@@ -278,6 +308,9 @@ export interface AIWritebackInput {
   source: AIChangeSource;
   serverRevision: number;
   createdAt?: number;
+  beforeStyle?: AIResumeStyleSnapshot;
+  afterStyle?: AIResumeStyleSnapshot;
+  beautify?: boolean;
 }
 
 export interface AIWritebackWriter {
@@ -296,13 +329,21 @@ export async function recordAIWriteback(
   const beforeSections = snapshotResumeSections(input.before);
   const afterSections = snapshotResumeSections(input.after);
   const createdAt = input.createdAt ?? Date.now();
-  const changes = diffAIResumeSections({
+  const sectionChanges = diffAIResumeSections({
     resumeId: input.resumeId,
     before: beforeSections,
     after: afterSections,
     source: input.source,
     createdAt,
   });
+  const styleChanges = diffAIResumeStyle({
+    resumeId: input.resumeId,
+    before: input.beforeStyle,
+    after: input.afterStyle,
+    source: input.source,
+    createdAt,
+  });
+  const changes = [...sectionChanges, ...styleChanges];
   if (changes.length === 0) return null;
 
   const entry: AIHistoryEntry = {
@@ -318,6 +359,11 @@ export async function recordAIWriteback(
     createdAt,
     serverRevision: input.serverRevision,
     contentFingerprint: getResumeSectionsFingerprint(afterSections),
+    ...(input.beforeStyle && input.afterStyle ? {
+      beforeStyle: structuredClone(input.beforeStyle),
+      afterStyle: structuredClone(input.afterStyle),
+      beautify: input.beautify === true,
+    } : {}),
   };
 
   try {
@@ -325,6 +371,6 @@ export async function recordAIWriteback(
   } catch (error) {
     writer.onPersistenceError?.(error);
   }
-  writer.mergeChanges(input.resumeId, changes);
+  if (sectionChanges.length > 0) writer.mergeChanges(input.resumeId, sectionChanges);
   return entry;
 }

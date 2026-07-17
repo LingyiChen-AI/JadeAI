@@ -1,7 +1,7 @@
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   WidthType, BorderStyle, AlignmentType, ShadingType, ImageRun,
-  TableBorders, VerticalAlignTable,
+  TableBorders, VerticalAlignTable, NumberFormat,
   type IFontAttributesProperties, type ITableCellBorders, type IBorderOptions,
 } from 'docx';
 import type {
@@ -11,6 +11,9 @@ import type {
   GitHubContent, QrCodesContent,
 } from '@/types/resume';
 import QRCode from 'qrcode';
+import { resolveExportFont } from '@/lib/export/font-registry';
+import { embedDocxFonts } from '@/lib/export/docx-fonts';
+import { parseRichText } from '@/lib/resume/rich-text';
 import { type ResumeWithSections, getPersonalInfo, visibleSections, DEFAULT_THEME, safe } from './utils';
 
 // ─── Template style configuration ───────────────────────────
@@ -129,6 +132,7 @@ interface DocxTheme {
   sidebarLabelColor: string;
   sidebarSections: string[];
   headerInSidebar: boolean;
+  numberingInstanceCounter: number;
 }
 
 const FONT_SIZES: Record<string, { body: number; h1: number; h2: number; h3: number }> = {
@@ -187,8 +191,8 @@ function resolveTheme(cfg: unknown, template?: string): DocxTheme {
   return {
     primary, accent, secondary, headerBg, headerText, headerLight,
     headingStyle, headerAlign: tc?.headerAlign ?? 'center', itemBorder,
-    fontWest: t.fontFamily || 'Calibri',
-    fontEast: 'Microsoft YaHei',
+    fontWest: resolveExportFont(t.fontFamily).family,
+    fontEast: resolveExportFont(t.fontFamily).family,
     bodySize: fs.body,
     h1Size: fs.h1,
     h2Size: fs.h2,
@@ -203,13 +207,14 @@ function resolveTheme(cfg: unknown, template?: string): DocxTheme {
     sidebarLabelColor: tc?.sidebarLabelColor ?? 'A0AEC0',
     sidebarSections: tc?.sidebarSections ?? [],
     headerInSidebar: tc?.headerInSidebar ?? false,
+    numberingInstanceCounter: 0,
   };
 }
 
 // ─── Reusable primitives ─────────────────────────────────────
 
 function fontObj(theme: DocxTheme): IFontAttributesProperties {
-  return { ascii: theme.fontWest, hAnsi: theme.fontWest, eastAsia: theme.fontEast, cs: theme.fontEast };
+  return resolveExportFont(theme.fontWest).word;
 }
 
 function run(
@@ -227,11 +232,53 @@ function run(
   });
 }
 
-function bodyPara(text: string, theme: DocxTheme, extra?: { before?: number; after?: number }): Paragraph {
-  return new Paragraph({
-    children: [run(text, theme)],
-    spacing: { line: theme.lineSpacing, ...extra },
+function richRuns(text: string, theme: DocxTheme): TextRun[] {
+  const runs: TextRun[] = [];
+  const pattern = /(\*\*([^*\n]+)\*\*|`([^`\n]+)`)/g;
+  let cursor = 0;
+  for (const match of text.matchAll(pattern)) {
+    const index = match.index ?? 0;
+    if (index > cursor) runs.push(run(text.slice(cursor, index), theme));
+    runs.push(run(match[2] ?? match[3] ?? '', theme, { bold: Boolean(match[2]) }));
+    cursor = index + match[0].length;
+  }
+  if (cursor < text.length) runs.push(run(text.slice(cursor), theme));
+  return runs.length ? runs : [run('', theme)];
+}
+
+function bodyParagraphs(text: string, theme: DocxTheme, extra?: { before?: number; after?: number }): Paragraph[] {
+  const blocks = parseRichText(text);
+  const visibleIndexes = blocks.flatMap((block, index) => block.text ? [index] : []);
+  const firstIndex = visibleIndexes[0];
+  const lastIndex = visibleIndexes.at(-1);
+  const paragraphs: Paragraph[] = [];
+  let orderedInstance: number | null = null;
+  blocks.forEach((block, index) => {
+    if (!block.text) {
+      orderedInstance = null;
+      return;
+    }
+    if (block.kind === 'ordered' && orderedInstance === null) {
+      theme.numberingInstanceCounter += 1;
+      orderedInstance = theme.numberingInstanceCounter;
+    } else if (block.kind !== 'ordered') {
+      orderedInstance = null;
+    }
+    paragraphs.push(new Paragraph({
+      children: richRuns(block.text, theme),
+      spacing: {
+        line: theme.lineSpacing,
+        ...(index === firstIndex && extra?.before !== undefined ? { before: extra.before } : {}),
+        ...(index === lastIndex && extra?.after !== undefined ? { after: extra.after } : {}),
+      },
+      ...(block.kind === 'bullet'
+        ? { bullet: { level: block.indent } }
+        : block.kind === 'ordered'
+          ? { numbering: { reference: 'jade-rich-numbered', level: block.indent, instance: orderedInstance ?? undefined } }
+          : block.indent > 0 ? { indent: { left: block.indent * 360 } } : {}),
+    }));
   });
+  return paragraphs;
 }
 
 function bullet(text: string, theme: DocxTheme): Paragraph {
@@ -505,7 +552,7 @@ function buildHeader(info: PersonalInfoContent, theme: DocxTheme): DocxChild[] {
 
 function buildSummary(c: SummaryContent, title: string, theme: DocxTheme): DocxChild[] {
   const res: DocxChild[] = [...sectionHeading(title, theme)];
-  if (c.text) res.push(bodyPara(c.text, theme));
+  if (c.text) res.push(...bodyParagraphs(c.text, theme));
   return res;
 }
 
@@ -532,7 +579,7 @@ function buildWorkExperience(c: WorkExperienceContent, title: string, theme: Doc
       }));
     }
 
-    if (item.description) itemChildren.push(bodyPara(item.description, theme, { before: 40, after: 40 }));
+    if (item.description) itemChildren.push(...bodyParagraphs(item.description, theme, { before: 40, after: 40 }));
 
     if (item.technologies?.length) {
       itemChildren.push(new Paragraph({
@@ -617,7 +664,7 @@ function buildProjects(c: ProjectsContent, title: string, theme: DocxTheme): Doc
       [run(dateStr, theme, { color: '71717a', size: theme.bodySize - 2 })],
     ));
 
-    if (item.description) itemChildren.push(bodyPara(item.description, theme, { before: 40, after: 40 }));
+    if (item.description) itemChildren.push(...bodyParagraphs(item.description, theme, { before: 40, after: 40 }));
 
     if (item.technologies?.length) {
       itemChildren.push(new Paragraph({
@@ -677,7 +724,7 @@ function buildGitHub(c: GitHubContent, title: string, theme: DocxTheme): DocxChi
       ? [run(`★ ${item.stars}`, theme, { color: '71717a' })]
       : [run('', theme)];
     itemChildren.push(twoColRow(nameRuns, rightRuns));
-    if (item.description) itemChildren.push(bodyPara(item.description, theme, { before: 40, after: 40 }));
+    if (item.description) itemChildren.push(...bodyParagraphs(item.description, theme, { before: 40, after: 40 }));
     if (item.repoUrl) {
       itemChildren.push(new Paragraph({
         children: [run(item.repoUrl, theme, { color: theme.accent, size: theme.bodySize - 2 })],
@@ -739,7 +786,7 @@ function buildCustom(c: CustomContent, title: string, theme: DocxTheme): DocxChi
       nameRuns,
       [run(safe(item.date), theme, { color: '71717a' })],
     ));
-    if (item.description) itemChildren.push(bodyPara(item.description, theme, { before: 40, after: 40 }));
+    if (item.description) itemChildren.push(...bodyParagraphs(item.description, theme, { before: 40, after: 40 }));
     res.push(...wrapItem(itemChildren, theme.accent, theme.itemBorder));
   }
   return res;
@@ -1074,6 +1121,18 @@ export async function generateDocxBuffer(resume: ResumeWithSections): Promise<Bu
   const margin = theme.layout === 'sidebar-left' ? 360 : 720;
 
   const doc = new Document({
+    numbering: {
+      config: [{
+        reference: 'jade-rich-numbered',
+        levels: Array.from({ length: 4 }, (_, level) => ({
+          level,
+          format: NumberFormat.DECIMAL,
+          text: `%${level + 1}.`,
+          alignment: AlignmentType.LEFT,
+          style: { paragraph: { indent: { left: 720 + level * 360, hanging: 360 } } },
+        })),
+      }],
+    },
     sections: [{
       properties: {
         page: { margin: { top: margin, right: margin, bottom: margin, left: margin } },
@@ -1089,5 +1148,6 @@ export async function generateDocxBuffer(resume: ResumeWithSections): Promise<Bu
     },
   });
 
-  return Buffer.from(await Packer.toBuffer(doc));
+  const packed = Buffer.from(await Packer.toBuffer(doc));
+  return embedDocxFonts(packed, resolveExportFont(theme.fontWest), JSON.stringify(resume));
 }

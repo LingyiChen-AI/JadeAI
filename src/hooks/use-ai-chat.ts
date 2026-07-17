@@ -17,6 +17,8 @@ const MUTATING_TOOL_TYPES = new Set([
   'tool-suggestSkills',
   'tool-addSection',
   'tool-translateResume',
+  'tool-updateResumeStyle',
+  'tool-switchResumeTemplate',
 ]);
 
 function isCompletedToolPart(part: unknown): part is { type: string; state: 'output-available' } {
@@ -25,14 +27,25 @@ function isCompletedToolPart(part: unknown): part is { type: string; state: 'out
   return typeof candidate.type === 'string' && candidate.state === 'output-available';
 }
 
+export function shouldReloadAIWriteback(
+  previousCompletedTools: number,
+  completedTools: number,
+  status: string,
+): boolean {
+  return completedTools > previousCompletedTools
+    && status !== 'streaming'
+    && status !== 'submitted';
+}
+
 interface UseAIChatOptions {
   resumeId: string;
   sessionId?: string;
   initialMessages?: UIMessage[];
   selectedModel?: string;
+  beautify?: boolean;
 }
 
-export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel }: UseAIChatOptions) {
+export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel, beautify = false }: UseAIChatOptions) {
   const t = useTranslations('ai');
   const [input, setInput] = useState('');
 
@@ -41,12 +54,14 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
 
   const sessionIdRef = useRef(sessionId);
   sessionIdRef.current = sessionId;
+  const beautifyRef = useRef(beautify);
+  beautifyRef.current = beautify;
 
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/ai/chat',
-        body: () => ({ resumeId, model: modelRef.current, sessionId: sessionIdRef.current }),
+        body: () => ({ resumeId, model: modelRef.current, sessionId: sessionIdRef.current, beautify: beautifyRef.current }),
         // headers must be a function — useChat never updates the transport ref,
         // so a static object would freeze stale values from before store hydration.
         headers: () => {
@@ -79,6 +94,13 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
     try {
       const store = useResumeStore.getState();
       const before = trackChanges ? snapshotResumeSections(store.sections) : null;
+      const beforeStyle = trackChanges && store.currentResume ? {
+        themeConfig: structuredClone(store.currentResume.themeConfig),
+        template: store.currentResume.template,
+        templateSource: store.currentResume.templateSource,
+        templateVersionId: store.currentResume.templateVersionId,
+        templateSnapshot: structuredClone(store.currentResume.templateSnapshot),
+      } : undefined;
       // Cancel any pending autosave to prevent overwriting server data
       if (store._saveTimeout) clearTimeout(store._saveTimeout);
 
@@ -97,6 +119,15 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
             after: resume.sections || [],
             source: 'chat-tool',
             serverRevision: resume.revision,
+            beforeStyle,
+            afterStyle: {
+              themeConfig: structuredClone(resume.themeConfig),
+              template: resume.template,
+              templateSource: resume.templateSource,
+              templateVersionId: resume.templateVersionId,
+              templateSnapshot: structuredClone(resume.templateSnapshot),
+            },
+            beautify,
           }, {
             appendHistory: async (entry) => {
               await useEditorStore.getState().appendAIHistory(entry);
@@ -111,13 +142,13 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
     } catch (err) {
       console.error('Failed to reload resume after tool call:', err);
     }
-  }, [resumeId]);
+  }, [beautify, resumeId]);
 
   // Reload resume data when new tool results appear during streaming
   useEffect(() => {
     const completedToolCountValue = completedToolCount(messages);
 
-    if (completedToolCountValue > completedToolCountRef.current) {
+    if (shouldReloadAIWriteback(completedToolCountRef.current, completedToolCountValue, status)) {
       completedToolCountRef.current = completedToolCountValue;
       const hasMutatingTool = messages.some((message) =>
         message.role === 'assistant'
@@ -127,7 +158,7 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
       );
       reloadResume(hasMutatingTool);
     }
-  }, [completedToolCount, messages, reloadResume]);
+  }, [completedToolCount, messages, reloadResume, status]);
 
   // Load initial messages when session changes; sync tool count ref to avoid false reload
   useEffect(() => {

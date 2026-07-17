@@ -153,6 +153,14 @@
       "sourceTranslation": "Overwrite translation",
       "changeCount": "{count} changes"
     },
+    "richText": {
+      "bold": "Bold",
+      "bulletList": "Bulleted list",
+      "orderedList": "Numbered list",
+      "indent": "Increase indent",
+      "outdent": "Decrease indent",
+      "clearFormatting": "Clear formatting"
+    },
     "aiPolish": "AI Polish",
     "aiChanged": "AI changed",
     "aiChangesTitle": "AI changes",
@@ -255,6 +263,7 @@
     "panelTitle": "AI Assistant",
     "placeholder": "Describe what you want to improve...",
     "send": "Send",
+    "beautify": "Beautify",
     "thinking": "AI is thinking...",
     "suggestion": "AI Suggestion",
     "applySuggestion": "Apply",

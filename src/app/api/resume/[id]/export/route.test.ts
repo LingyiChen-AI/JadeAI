@@ -20,6 +20,7 @@ vi.mock('./plain-text', () => ({ generatePlainText: mocks.generatePlainText }));
 vi.mock('./docx', () => ({ generateDocxBuffer: mocks.generateDocxBuffer }));
 
 import { GET } from './route';
+import { DocxFontEmbeddingError } from '@/lib/export/docx-fonts';
 
 const resume = { id: 'resume-1', userId: 'user-1', title: 'Resume', template: 'modern', sections: [] };
 const resolved = {
@@ -111,6 +112,20 @@ describe('GET /api/resume/[id]/export', () => {
     expect(response.headers.get('x-jadeai-docx-fidelity')).toBe('high-fidelity');
     expect(response.headers.get('x-jadeai-export-warning')).toBeNull();
     expect(mocks.generateDocxBuffer).toHaveBeenCalledWith(resume);
+  });
+
+  test('returns a stable safe error when DOCX font embedding fails', async () => {
+    mocks.generateDocxBuffer.mockRejectedValueOnce(
+      new DocxFontEmbeddingError(new Error('secret font parser diagnostics')),
+    );
+
+    const response = await GET(request('docx'), { params: Promise.resolve({ id: 'resume-1' }) });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: 'DOCX font embedding failed',
+      code: 'docx_font_embedding_failed',
+    });
   });
 
   test('labels generic DOCX fallback and rejects unsupported capability honestly', async () => {

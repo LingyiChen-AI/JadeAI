@@ -245,6 +245,74 @@ describe('editor store AI history', () => {
     expect(useEditorStore.getState().undoStack).toHaveLength(2);
   });
 
+  it('restores an AI beautify theme together with its history snapshot', async () => {
+    const styledResume = structuredClone(resume);
+    styledResume.themeConfig.primaryColor = '#222222';
+    const entry = historyEntry('entry-1', 'After', 'After', {
+      beautify: true,
+      beforeStyle: { themeConfig: { ...resume.themeConfig, primaryColor: '#000000' } },
+      afterStyle: { themeConfig: { ...resume.themeConfig, primaryColor: '#222222' } },
+      changes: [change({
+        sectionId: '__resume_style__', sectionTitle: 'Resume style',
+        fieldPath: 'themeConfig.primaryColor', kind: 'style-updated',
+        beforeRawValue: '#000000', afterRawValue: '#222222',
+      })],
+    });
+    historyMocks.list.mockResolvedValue([entry]);
+    historyMocks.getCursor.mockResolvedValue('entry-1');
+    useResumeStore.getState().setResume(styledResume);
+    await useEditorStore.getState().loadAIHistory('resume-1', 'user-1', {
+      revision: 3, contentFingerprint: 'head-fingerprint',
+    });
+
+    await expect(useEditorStore.getState().undoAIHistory()).resolves.toMatchObject({ restored: 1 });
+    expect(useResumeStore.getState().currentResume?.themeConfig.primaryColor).toBe('#000000');
+    expect(useResumeStore.getState().isDirty).toBe(true);
+
+    await expect(useEditorStore.getState().redoAIHistory()).resolves.toMatchObject({ restored: 1 });
+    expect(useResumeStore.getState().currentResume?.themeConfig.primaryColor).toBe('#222222');
+  });
+
+  it('publishes a combined section and theme restore atomically', async () => {
+    const styledResume = structuredClone(resume);
+    styledResume.themeConfig.primaryColor = '#222222';
+    const entry = historyEntry('entry-1', 'Before', 'After', {
+      beautify: true,
+      beforeStyle: { themeConfig: { ...resume.themeConfig, primaryColor: '#000000' } },
+      afterStyle: { themeConfig: { ...resume.themeConfig, primaryColor: '#222222' } },
+      changes: [
+        change(),
+        change({
+          id: 'resume-1:__resume_style__:themeConfig.primaryColor',
+          sectionId: '__resume_style__', sectionTitle: 'Resume style',
+          fieldPath: 'themeConfig.primaryColor', kind: 'style-updated',
+          beforeRawValue: '#000000', afterRawValue: '#222222',
+        }),
+      ],
+    });
+    historyMocks.list.mockResolvedValue([entry]);
+    historyMocks.getCursor.mockResolvedValue('entry-1');
+    useResumeStore.getState().setResume(styledResume);
+    await useEditorStore.getState().loadAIHistory('resume-1', 'user-1', {
+      revision: 3, contentFingerprint: 'head-fingerprint',
+    });
+    const observed: Array<{ text: unknown; color: string | undefined }> = [];
+    const unsubscribe = useResumeStore.subscribe((state) => {
+      observed.push({
+        text: state.sections[0]?.content && 'text' in state.sections[0].content
+          ? state.sections[0].content.text
+          : undefined,
+        color: state.currentResume?.themeConfig.primaryColor,
+      });
+    });
+
+    await useEditorStore.getState().undoAIHistory();
+    unsubscribe();
+
+    expect(observed).not.toContainEqual({ text: 'Before', color: '#222222' });
+    expect(observed).toContainEqual({ text: 'Before', color: '#000000' });
+  });
+
   it('does not change the document or memory cursor when cursor persistence fails', async () => {
     const entries = [historyEntry('entry-1', 'Before', 'After')];
     historyMocks.list.mockResolvedValue(entries);

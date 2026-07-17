@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { SendHorizonal } from 'lucide-react';
+import { SendHorizonal, Sparkles } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { FormEvent, ChangeEvent } from 'react';
 
@@ -13,9 +13,11 @@ interface AIInputProps {
   models: string[];
   selectedModel?: string;
   onModelChange: (model: string) => void;
+  beautify: boolean;
+  onBeautifyChange: (enabled: boolean) => void;
 }
 
-export function AIInput({ input, onChange, onSubmit, isLoading, models, selectedModel, onModelChange }: AIInputProps) {
+export function AIInput({ input, onChange, onSubmit, isLoading, models, selectedModel, onModelChange, beautify, onBeautifyChange }: AIInputProps) {
   const t = useTranslations('ai');
 
   return (
@@ -40,7 +42,7 @@ export function AIInput({ input, onChange, onSubmit, isLoading, models, selected
         {/* Bottom toolbar */}
         <div className="flex items-center justify-between px-3 pb-2.5">
           {/* Model selector */}
-          <div>
+          <div className="flex min-w-0 items-center gap-2">
             <Select value={selectedModel} onValueChange={onModelChange}>
               <SelectTrigger className="h-7 max-w-[180px] gap-1 rounded-full border-zinc-200 bg-white px-2.5 text-[11px] font-medium text-zinc-600 shadow-none">
                 <span className="mr-0.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -59,6 +61,17 @@ export function AIInput({ input, onChange, onSubmit, isLoading, models, selected
                 )}
               </SelectContent>
             </Select>
+            <label className={`flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-2.5 text-[11px] font-medium text-zinc-600 ${isLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+              <input
+                type="checkbox"
+                checked={beautify}
+                disabled={isLoading}
+                onChange={(event) => onBeautifyChange(event.target.checked)}
+                className="h-3.5 w-3.5 accent-brand"
+              />
+              <Sparkles className="h-3 w-3" />
+              <span>{t('beautify')}</span>
+            </label>
           </div>
 
           {/* Send button */}

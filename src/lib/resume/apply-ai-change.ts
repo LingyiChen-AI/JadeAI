@@ -1,4 +1,4 @@
-import type { AIFieldChange } from '@/types/editor';
+import type { AIFieldChange, AIResumeStyleSnapshot } from '@/types/editor';
 import type { ResumeSection } from '@/types/resume';
 
 export interface RestoreResult {
@@ -33,6 +33,17 @@ function equal(left: unknown, right: unknown): boolean {
       && leftKeys.every((key) => Object.hasOwn(rightRecord, key) && equal(leftRecord[key], rightRecord[key]));
   }
   return false;
+}
+
+export function restoreAIResumeStyle(
+  current: AIResumeStyleSnapshot,
+  before: AIResumeStyleSnapshot,
+  after: AIResumeStyleSnapshot,
+): AIResumeStyleSnapshot | null {
+  const comparableCurrent = Object.fromEntries(
+    Object.keys(after).map((key) => [key, (current as unknown as Record<string, unknown>)[key]]),
+  );
+  return equal(comparableCurrent, after) ? clone(before) : null;
 }
 
 function snapshotContent(sections: ResumeSection[]) {

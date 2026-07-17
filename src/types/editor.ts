@@ -19,7 +19,9 @@ export type AIChangeKind =
   | 'item-removed'
   | 'section-added'
   | 'section-removed'
-  | 'title-updated';
+  | 'title-updated'
+  | 'style-updated'
+  | 'template-updated';
 
 export type AIChangeSource = 'chat-tool' | 'overwrite-translation';
 
@@ -61,6 +63,17 @@ export interface AIHistoryEntry {
   createdAt: number;
   serverRevision: number;
   contentFingerprint: string;
+  beforeStyle?: AIResumeStyleSnapshot;
+  afterStyle?: AIResumeStyleSnapshot;
+  beautify?: boolean;
+}
+
+export interface AIResumeStyleSnapshot {
+  themeConfig: unknown;
+  template?: string;
+  templateSource?: string;
+  templateVersionId?: string | null;
+  templateSnapshot?: unknown;
 }
 
 export interface AIChangeFocusRequest {

@@ -22,6 +22,10 @@ vi.mock('@/lib/db/repositories/resume.repository', () => ({
     }),
     createSectionWithRevision: vi.fn(),
     updateSectionsWithRevision: vi.fn(),
+    replaceContent: vi.fn(async (_resumeId: string, _revision: number, data: any) => {
+      if (data.themeConfig) store.themeConfig = data.themeConfig;
+      return { ...store, revision: store.revision + 1 };
+    }),
   },
 }));
 
@@ -30,6 +34,7 @@ import { createExecutableTools } from './tools';
 function makeStore() {
   store = {
     id: 'r1',
+    userId: 'user-1',
     revision: 0,
     sections: [
       { id: 'sec-proj', type: 'projects', title: 'Projects', content: { items: [projectItem] } },
@@ -39,8 +44,8 @@ function makeStore() {
   lastWrite = null;
 }
 
-function getTools() {
-  return createExecutableTools('r1', {} as any);
+function getTools(beautify = false) {
+  return createExecutableTools('r1', {} as any, { beautify, userId: 'user-1' });
 }
 
 async function runUpdate(input: { sectionId: string; field: string; value: string }) {
@@ -144,5 +149,91 @@ describe('updateSection — list field validation (issue #69)', () => {
 
     expect(lastWrite?.data.content.items[0].url).toBe('https://github.com/acme/private.git');
     expect(lastWrite?.data.content.items[0].name).toBe('已翻译');
+  });
+});
+
+describe('beautify tool authorization', () => {
+  beforeEach(() => {
+    makeStore();
+    store.themeConfig = {
+      primaryColor: '#111111', accentColor: '#2563eb', fontFamily: 'Georgia',
+      fontSize: 'medium', lineSpacing: 1.5, sectionSpacing: 16,
+      margin: { top: 20, right: 20, bottom: 20, left: 20 },
+    };
+  });
+
+  it('does not register style tools without explicit beautify authorization', () => {
+    expect(getTools()).not.toHaveProperty('updateResumeStyle');
+    expect(createExecutableTools('r1', {} as any, { beautify: 'true' as unknown as boolean, userId: 'user-1' }))
+      .not.toHaveProperty('updateResumeStyle');
+    expect(getTools(true)).toHaveProperty('updateResumeStyle');
+  });
+
+  it('adds style updates to the content tools without exposing template switching', () => {
+    const tools = getTools(true);
+
+    expect(tools).toHaveProperty('updateSection');
+    expect(tools).toHaveProperty('addSection');
+    expect(tools).toHaveProperty('updateResumeStyle');
+    expect(tools).not.toHaveProperty('switchResumeTemplate');
+  });
+
+  it('merges a validated style patch through the revision transaction', async () => {
+    const tool = (getTools(true) as any).updateResumeStyle;
+    const result = await tool.execute({
+      primaryColor: '#222222',
+      fontFamily: 'Noto Sans SC',
+      lineSpacing: 1.3,
+    }, { toolCallId: 'style', messages: [] });
+
+    expect(result).toMatchObject({ success: true, changed: ['primaryColor', 'fontFamily', 'lineSpacing'] });
+    expect(store.themeConfig).toMatchObject({
+      primaryColor: '#222222', fontFamily: 'Noto Sans SC', lineSpacing: 1.3,
+      accentColor: '#2563eb',
+    });
+  });
+
+  it('validates style patches before execution', () => {
+    const schema = (getTools(true) as any).updateResumeStyle.inputSchema;
+
+    expect(schema.safeParse({
+      primaryColor: '#123abc',
+      lineSpacing: 1.25,
+      margin: { top: 12 },
+    }).success).toBe(true);
+    expect(schema.safeParse({ primaryColor: 'red' }).success).toBe(false);
+    expect(schema.safeParse({ lineSpacing: 0 }).success).toBe(false);
+    expect(schema.safeParse({ margin: { diagonal: 12 } }).success).toBe(false);
+    expect(schema.safeParse({ unknownStyle: true }).success).toBe(false);
+  });
+});
+
+describe('resume tool ownership defense', () => {
+  beforeEach(() => {
+    makeStore();
+    store.userId = 'user-2';
+  });
+
+  it.each([
+    ['updateSection', { sectionId: 'sec-proj', field: 'items', value: '[]' }],
+    ['addSection', { type: 'summary', title: 'Summary' }],
+    ['rewriteText', { sectionId: 'sec-proj', field: 'description', improvedText: 'private' }],
+    ['suggestSkills', { skills: ['TypeScript'], category: 'Engineering' }],
+    ['analyzeJdMatch', { jobDescription: 'private role' }],
+    ['translateResume', { targetLanguage: 'en' }],
+  ])('rejects %s before reading or writing another user resume', async (toolName, input) => {
+    const selectedTool = (getTools() as any)[toolName];
+
+    await expect(selectedTool.execute(input, { toolCallId: toolName, messages: [] }))
+      .resolves.toEqual({ success: false, error: 'Resume not found' });
+    expect(lastWrite).toBeNull();
+  });
+
+  it('rejects style updates for another user', async () => {
+    const styleTool = (getTools(true) as any).updateResumeStyle;
+
+    await expect(styleTool.execute({ primaryColor: '#222222' }, { toolCallId: 'style', messages: [] }))
+      .resolves.toEqual({ success: false, error: 'Resume not found' });
+    expect(store.themeConfig).toBeUndefined();
   });
 });

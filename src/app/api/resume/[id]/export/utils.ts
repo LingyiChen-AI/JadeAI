@@ -5,6 +5,8 @@ import type {
   SkillsContent,
   SummaryContent,
 } from '@/types/resume';
+import { renderRichTextHostHtml } from '@/lib/resume/rich-text';
+import { resolveExportFont } from '@/lib/export/font-registry';
 
 export type ResumeWithSections = NonNullable<Awaited<ReturnType<typeof resumeRepository.findById>>>;
 export type Section = ResumeWithSections['sections'][number];
@@ -30,40 +32,9 @@ export function degreeField(degree: string, field: string | undefined): string {
   return `${degree} - ${field}`;
 }
 
-/** Lightweight markdown → HTML for resume text fields (summary, descriptions, highlights).
- *  Supports: **bold**, `code`, line breaks, and "- item" lists. */
+/** Safe shared rich-text renderer for resume summaries, descriptions, and highlights. */
 export function md(text: unknown): string {
-  if (text == null) return '';
-  let s = String(text);
-  // 1. Escape HTML
-  s = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  // 2. Bold: **text**
-  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  // 3. Inline code: `text`
-  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
-  // 4. No newlines → return inline
-  if (!s.includes('\n')) return s;
-  // 5. Process lines for lists and line breaks
-  const lines = s.split('\n');
-  let html = '';
-  let inList = false;
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) {
-      if (inList) { html += '</ul>'; inList = false; }
-      continue;
-    }
-    const lm = line.match(/^[-–•]\s+(.*)/);
-    if (lm) {
-      if (!inList) { html += '<ul style="margin:2px 0;padding-left:1.5em;list-style-type:disc">'; inList = true; }
-      html += `<li>${lm[1]}</li>`;
-    } else {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += (html && !html.endsWith('>') ? '<br>' : '') + line;
-    }
-  }
-  if (inList) html += '</ul>';
-  return html;
+  return renderRichTextHostHtml(text);
 }
 
 // ─── Section empty check ──────────────────────────────────────
@@ -141,13 +112,19 @@ function isDark(hex: string): boolean {
 
 export function buildExportThemeCSS(theme: typeof DEFAULT_THEME, template: string): string {
   const fs = FONT_SIZE_SCALE[theme.fontSize] || FONT_SIZE_SCALE.medium;
+  const font = resolveExportFont(theme.fontFamily);
   const m = theme.margin;
   const sel = '.resume-export';
   const needsPadding = !BACKGROUND_TEMPLATES.has(template);
   const primaryIsDark = isDark(theme.primaryColor);
   return `
+    ${sel}, ${sel} * {
+      font-family: "${font.family}", sans-serif !important;
+    }
+    ${sel} *::before, ${sel} *::after {
+      font-family: "${font.family}", sans-serif !important;
+    }
     ${sel} > div {
-      font-family: ${theme.fontFamily}, 'Noto Sans SC', sans-serif !important;
       line-height: ${theme.lineSpacing} !important;
       ${needsPadding ? `padding-top: ${m.top}px !important; padding-right: ${m.right}px !important; padding-bottom: ${m.bottom}px !important; padding-left: ${m.left}px !important;` : ''}
       --base-body-size: ${fs.body};

@@ -7,6 +7,7 @@ import { generatePlainText } from './plain-text';
 import { generateDocxBuffer } from './docx';
 import { resolveTemplateForResume } from '@/lib/templates/resolve-template.server';
 import { getDocxExportDecision } from '@/lib/templates/export-contract';
+import { DocxFontEmbeddingError } from '@/lib/export/docx-fonts';
 import type { ResolvedTemplate } from '@/lib/templates/resolve-template';
 
 // Chromium download + PDF render needs more time on Vercel serverless
@@ -126,6 +127,13 @@ export async function GET(
       }
     }
   } catch (error) {
+    if (error instanceof DocxFontEmbeddingError) {
+      console.error('GET /api/resume/[id]/export DOCX font embedding error:', error);
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: 500 },
+      );
+    }
     const renderLimit = error as Partial<{ code: string; pageCount: number; maxPages: number }>;
     if (renderLimit.code === 'TEMPLATE_RENDER_LIMIT') {
       return NextResponse.json({
