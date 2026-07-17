@@ -5,6 +5,7 @@ import { useResumeStore } from '@/stores/resume-store';
 
 const resume = {
   id: 'resume-1', revision: 0, userId: 'user-1', title: 'Resume', template: 'classic',
+  templateVersionId: null, templateSource: 'legacy', templateSnapshot: null,
   themeConfig: {
     primaryColor: '#000000', accentColor: '#ffffff', fontFamily: 'sans', fontSize: 'medium',
     lineSpacing: 1, margin: { top: 1, right: 1, bottom: 1, left: 1 }, sectionSpacing: 1,

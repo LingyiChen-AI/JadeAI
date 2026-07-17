@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "rendererKind": "declarative-v1",
+  "layout": {
+    "type": "single-column",
+    "sidebarPosition": "left",
+    "sidebarWidthPercent": 18,
+    "columnGapMm": 5
+  },
+  "typography": {
+    "fontFamily": "noto-sans-sc",
+    "baseFontSizePt": 9.75,
+    "lineHeight": 1.4,
+    "headingScale": 1.18
+  },
+  "colors": {
+    "text": "#202020",
+    "muted": "#777777",
+    "accent": "#555555",
+    "background": "#ffffff"
+  },
+  "spacing": {
+    "pageMarginMm": 11,
+    "sectionGapMm": 4
+  },
+  "sectionSlots": [
+    { "sectionType": "personal_info", "placement": "header", "order": 0 },
+    { "sectionType": "summary", "placement": "main", "order": 1 },
+    { "sectionType": "work_experience", "placement": "main", "order": 2 },
+    { "sectionType": "education", "placement": "main", "order": 3 },
+    { "sectionType": "projects", "placement": "main", "order": 4 },
+    { "sectionType": "skills", "placement": "main", "order": 5 },
+    { "sectionType": "certifications", "placement": "main", "order": 6 },
+    { "sectionType": "languages", "placement": "main", "order": 7 },
+    { "sectionType": "github", "placement": "main", "order": 8 },
+    { "sectionType": "custom", "placement": "main", "order": 9 },
+    { "sectionType": "qr_codes", "placement": "footer", "order": 10 }
+  ],
+  "sectionStyles": [
+    { "sectionType": "work_experience", "element": "heading", "variant": "bordered" },
+    { "sectionType": "education", "element": "heading", "variant": "bordered" },
+    { "sectionType": "projects", "element": "heading", "variant": "bordered" },
+    { "sectionType": "skills", "element": "heading", "variant": "bordered" },
+    { "sectionType": "certifications", "element": "heading", "variant": "bordered" }
+  ],
+  "features": {
+    "showAvatar": false,
+    "showQrCodes": false,
+    "showPageNumbers": false,
+    "maxPages": 2
+  }
+}

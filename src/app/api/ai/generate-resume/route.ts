@@ -4,6 +4,7 @@ import { getModel, extractAIConfig, getJsonProviderOptions, AIConfigError } from
 import { resolveUser, getUserIdFromRequest } from '@/lib/auth/helpers';
 import { resumeRepository } from '@/lib/db/repositories/resume.repository';
 import { generateResumeInputSchema, type GenerateResumeOutput } from '@/lib/ai/generate-resume-schema';
+import { toResumeTemplateBindingInput } from '@/lib/templates/apply-template-binding.server';
 
 const SECTION_TITLES: Record<string, Record<string, string>> = {
   zh: {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { jobTitle, yearsOfExperience, skills, industry, experience, template, language } = parsed.data;
+    const { jobTitle, yearsOfExperience, skills, industry, experience, template, binding, language } = parsed.data;
     const lang = language || 'zh';
 
     const aiConfig = extractAIConfig(request);
@@ -136,43 +137,35 @@ Respond with JSON only.`;
     const resumeTitle = lang === 'zh'
       ? `${jobTitle} - AI生成简历`
       : `${jobTitle} - AI Generated Resume`;
+    const titles = SECTION_TITLES[lang] || SECTION_TITLES.zh;
+    const sectionTypes = ['personal_info', 'summary', 'work_experience', 'education', 'skills', 'projects'] as const;
+    const generatedSections = sectionTypes.map((type, index) => ({
+      id: crypto.randomUUID(),
+      type,
+      title: titles[type],
+      sortOrder: index,
+      visible: true,
+      // Guard against the model returning list fields as strings (issue #87).
+      content: normalizeSectionContent(type, generatedData[type]),
+    }));
 
     const newResume = await resumeRepository.create({
       userId: user.id,
       title: resumeTitle,
       template: template || 'classic',
+      ...(binding ? { binding: toResumeTemplateBindingInput(binding) } : {}),
       language: lang,
+      sections: generatedSections,
     });
 
     if (!newResume) {
       return NextResponse.json({ error: 'Failed to create resume' }, { status: 500 });
     }
 
-    // Create sections in the database
-    const titles = SECTION_TITLES[lang] || SECTION_TITLES.zh;
-    const sectionTypes = ['personal_info', 'summary', 'work_experience', 'education', 'skills', 'projects'] as const;
-
-    for (let i = 0; i < sectionTypes.length; i++) {
-      const type = sectionTypes[i];
-      const content = generatedData[type];
-
-      await resumeRepository.createSection({
-        resumeId: newResume.id,
-        type,
-        title: titles[type],
-        sortOrder: i,
-        // Guard against the model returning list fields as strings (issue #87).
-        content: normalizeSectionContent(type, content),
-      });
-    }
-
-    // Fetch the complete resume with sections
-    const completeResume = await resumeRepository.findById(newResume.id);
-
     return NextResponse.json({
       resumeId: newResume.id,
       title: resumeTitle,
-      sections: completeResume?.sections || [],
+      sections: newResume.sections || [],
     });
   } catch (error) {
     if (error instanceof AIConfigError) {

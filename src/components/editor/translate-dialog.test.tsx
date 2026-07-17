@@ -33,6 +33,9 @@ describe('overwrite translation history', () => {
       userId: 'user-1',
       title: 'Resume',
       template: 'classic',
+      templateVersionId: null,
+      templateSource: 'legacy' as const,
+      templateSnapshot: null,
       language: 'zh',
       themeConfig: {
         primaryColor: '#000000',

@@ -1,4 +1,5 @@
 import { z } from 'zod/v4';
+import { ClientTemplateBindingChoiceSchema } from '@/lib/templates/apply-template-binding.server';
 
 // Input schema for generate-resume API
 export const generateResumeInputSchema = z.object({
@@ -8,6 +9,7 @@ export const generateResumeInputSchema = z.object({
   industry: z.string().optional().describe('Optional industry context, e.g. "fintech", "healthcare"'),
   experience: z.string().optional().describe('Optional free-text work experience description for AI to parse and incorporate'),
   template: z.string().optional().describe('Template to use for the generated resume'),
+  binding: ClientTemplateBindingChoiceSchema.optional(),
   language: z.enum(['zh', 'en']).optional().default('zh').describe('Language for the generated resume'),
 });
 

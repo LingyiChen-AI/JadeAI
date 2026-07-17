@@ -1,0 +1,113 @@
+{
+  "zh": {
+    "id": "fixture-resume-zh",
+    "userId": "fixture-user",
+    "title": "双语全量简历基线（中文）",
+    "template": "classic",
+    "themeConfig": {
+      "primaryColor": "#1f2937",
+      "accentColor": "#2563eb",
+      "fontFamily": "Inter",
+      "fontSize": "medium",
+      "lineSpacing": 1.5,
+      "margin": { "top": 20, "right": 20, "bottom": 20, "left": 20 },
+      "sectionSpacing": 16,
+      "avatarStyle": "circle"
+    },
+    "isDefault": false,
+    "language": "zh",
+    "revision": 1,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z",
+    "sections": [
+      {
+        "id": "zh-personal", "resumeId": "fixture-resume-zh", "type": "personal_info", "title": "个人信息", "sortOrder": 0, "visible": true,
+        "content": {
+          "fullName": "林晓岚", "jobTitle": "高级全栈工程师", "age": "", "gender": "", "politicalStatus": "", "ethnicity": "", "hometown": "杭州", "maritalStatus": "", "yearsOfExperience": "8 年", "educationLevel": "硕士", "email": "xiaolan.lin@example.test", "phone": "+86 138 0000 0000", "wechat": "", "location": "中国上海", "website": "https://portfolio.example.test/xiaolan", "linkedin": "https://www.linkedin.com/in/example-fixture", "github": "https://github.com/example-fixture", "customLinks": [{ "label": "技术文章", "url": "https://blog.example.test/articles" }, { "label": "空链接标签", "url": "" }], "avatar": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23dbeafe'/%3E%3C/svg%3E"
+        },
+        "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "zh-summary", "resumeId": "fixture-resume-zh", "type": "summary", "title": "个人简介", "sortOrder": 1, "visible": true,
+        "content": { "text": "拥有八年复杂 Web 平台研发经验，长期负责跨团队架构协作、性能治理与可观测性建设。能够在需求不确定、数据规模持续增长的环境中拆解问题，并通过可验证的小步交付降低变更风险。\n- 熟悉 TypeScript、React 与 Node.js\n- 注重无障碍、国际化和稳定性" },
+        "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "zh-work", "resumeId": "fixture-resume-zh", "type": "work_experience", "title": "工作经历", "sortOrder": 2, "visible": true,
+        "content": { "items": [
+          { "id": "zh-work-1", "company": "示例云科技有限公司", "position": "高级全栈工程师", "location": "上海", "startDate": "2021-03", "endDate": null, "current": true, "description": "负责面向全球团队的文档与协作平台，覆盖编辑、搜索、权限和审计链路。", "technologies": ["TypeScript", "React", "PostgreSQL"], "highlights": ["将关键页面的交互延迟降低 45%", "建立覆盖发布、回滚与告警的工程规范"] },
+          { "id": "zh-work-2", "company": "虚构数据实验室", "position": "软件工程师", "location": "杭州", "startDate": "2018-07", "endDate": "2021-02", "current": false, "description": "开发数据分析产品及配套任务平台。", "technologies": ["Node.js", "Redis"], "highlights": ["支撑多租户批处理任务", "完善端到端测试"] }
+        ] },
+        "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "zh-education", "resumeId": "fixture-resume-zh", "type": "education", "title": "教育背景", "sortOrder": 3, "visible": true,
+        "content": { "items": [
+          { "id": "zh-edu-1", "institution": "示例大学", "degree": "工学硕士", "field": "计算机科学", "location": "南京", "startDate": "2015-09", "endDate": "2018-06", "gpa": "3.8/4.0", "highlights": ["分布式系统方向", "优秀毕业论文"] },
+          { "id": "zh-edu-2", "institution": "虚构学院", "degree": "工学学士", "field": "软件工程", "location": "苏州", "startDate": "2011-09", "endDate": "2015-06", "gpa": "", "highlights": [] }
+        ] },
+        "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "zh-skills", "resumeId": "fixture-resume-zh", "type": "skills", "title": "技能特长", "sortOrder": 4, "visible": true,
+        "content": { "categories": [{ "id": "zh-skill-1", "name": "前端", "skills": ["React", "Next.js", "Web 性能"] }, { "id": "zh-skill-2", "name": "后端", "skills": ["Node.js", "PostgreSQL", "Redis"] }] },
+        "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "zh-projects", "resumeId": "fixture-resume-zh", "type": "projects", "title": "项目经历", "sortOrder": 5, "visible": true,
+        "content": { "items": [{ "id": "zh-project-1", "name": "开放知识工作台", "url": "https://projects.example.test/knowledge", "startDate": "2023-01", "endDate": "2024-06", "description": "为分布式团队提供结构化知识维护和全文检索。", "technologies": ["Next.js", "OpenSearch"], "highlights": ["支持中英文内容", "实现增量索引"] }, { "id": "zh-project-2", "name": "无链接内部工具", "url": "", "startDate": "", "endDate": "", "description": "验证空可选字段。", "technologies": ["TypeScript"], "highlights": [] }] },
+        "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "zh-certifications", "resumeId": "fixture-resume-zh", "type": "certifications", "title": "专业认证", "sortOrder": 6, "visible": true,
+        "content": { "items": [{ "id": "zh-cert-1", "name": "示例云架构认证", "issuer": "示例认证机构", "date": "2024-05", "url": "https://certs.example.test/verify/fixture" }, { "id": "zh-cert-2", "name": "工程实践认证", "issuer": "虚构协会", "date": "2022-11", "url": "" }] },
+        "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "zh-languages", "resumeId": "fixture-resume-zh", "type": "languages", "title": "语言能力", "sortOrder": 7, "visible": true,
+        "content": { "items": [{ "id": "zh-lang-1", "language": "中文", "proficiency": "母语", "description": "专业写作" }, { "id": "zh-lang-2", "language": "英语", "proficiency": "流利", "description": "可作为工作语言" }] },
+        "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "zh-github", "resumeId": "fixture-resume-zh", "type": "github", "title": "开源项目", "sortOrder": 8, "visible": true,
+        "content": { "items": [{ "id": "zh-gh-1", "repoUrl": "https://github.com/example-fixture/platform", "name": "example-fixture/platform", "stars": 128, "language": "TypeScript", "description": "用于基线测试的虚构仓库。" }, { "id": "zh-gh-2", "repoUrl": "https://github.com/example-fixture/toolkit", "name": "example-fixture/toolkit", "stars": 42, "language": "Rust", "description": "另一个虚构仓库。" }] },
+        "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "zh-qr", "resumeId": "fixture-resume-zh", "type": "qr_codes", "title": "二维码", "sortOrder": 9, "visible": true,
+        "content": { "items": [{ "id": "zh-qr-1", "label": "作品集", "url": "https://portfolio.example.test/xiaolan" }, { "id": "zh-qr-2", "label": "技术文章", "url": "https://blog.example.test/articles" }] },
+        "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "zh-custom", "resumeId": "fixture-resume-zh", "type": "custom", "title": "社区贡献", "sortOrder": 10, "visible": true,
+        "content": { "items": [{ "id": "zh-custom-1", "title": "技术分享", "subtitle": "虚构开发者社区", "date": "2025-03", "description": "分享大型前端应用的可观测性实践。" }, { "id": "zh-custom-2", "title": "志愿导师", "subtitle": "", "date": "", "description": "辅导初级开发者完成开源项目。" }] },
+        "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z"
+      }
+    ]
+  },
+  "en": {
+    "id": "fixture-resume-en",
+    "userId": "fixture-user",
+    "title": "Bilingual Complete Resume Baseline (English)",
+    "template": "classic",
+    "themeConfig": { "primaryColor": "#1f2937", "accentColor": "#2563eb", "fontFamily": "Inter", "fontSize": "medium", "lineSpacing": 1.5, "margin": { "top": 20, "right": 20, "bottom": 20, "left": 20 }, "sectionSpacing": 16, "avatarStyle": "oneInch" },
+    "isDefault": false,
+    "language": "en",
+    "revision": 1,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z",
+    "sections": [
+      { "id": "en-personal", "resumeId": "fixture-resume-en", "type": "personal_info", "title": "Personal Information", "sortOrder": 0, "visible": true, "content": { "fullName": "Alex Morgan", "jobTitle": "Staff Software Engineer", "age": "", "gender": "", "politicalStatus": "", "ethnicity": "", "hometown": "", "maritalStatus": "", "yearsOfExperience": "9 years", "educationLevel": "MSc", "email": "alex.morgan@example.test", "phone": "+1 555 010 2026", "wechat": "", "location": "Berlin, Germany", "website": "https://alex.example.test", "linkedin": "https://www.linkedin.com/in/example-fixture-en", "github": "https://github.com/example-fixture-en", "customLinks": [{ "label": "Writing", "url": "https://notes.example.test/alex" }, { "label": "Empty optional link", "url": "" }], "avatar": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23dcfce7'/%3E%3C/svg%3E" }, "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z" },
+      { "id": "en-summary", "resumeId": "fixture-resume-en", "type": "summary", "title": "Professional Summary", "sortOrder": 1, "visible": true, "content": { "text": "Staff engineer with nine years of experience building dependable web platforms for international teams. I translate ambiguous product constraints into observable, testable delivery slices while keeping accessibility, localization, and operational recovery central to the design.\n- TypeScript, React, and Node.js\n- Performance and reliability engineering" }, "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z" },
+      { "id": "en-work", "resumeId": "fixture-resume-en", "type": "work_experience", "title": "Work Experience", "sortOrder": 2, "visible": true, "content": { "items": [{ "id": "en-work-1", "company": "Example Cloud Labs", "position": "Staff Software Engineer", "location": "Berlin", "startDate": "2021-04", "endDate": null, "current": true, "description": "Leads architecture and delivery for a global collaboration platform spanning editing, search, authorization, and audit workflows.", "technologies": ["TypeScript", "React", "PostgreSQL"], "highlights": ["Reduced interaction latency by 41%", "Introduced release and rollback evidence gates"] }, { "id": "en-work-2", "company": "Fictional Systems Ltd", "position": "Software Engineer", "location": "London", "startDate": "2017-07", "endDate": "2021-03", "current": false, "description": "Built data workflow and reporting products.", "technologies": ["Node.js", "Redis"], "highlights": ["Supported multi-tenant batch execution", "Expanded end-to-end coverage"] }] }, "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z" },
+      { "id": "en-education", "resumeId": "fixture-resume-en", "type": "education", "title": "Education", "sortOrder": 3, "visible": true, "content": { "items": [{ "id": "en-edu-1", "institution": "Example University", "degree": "MSc", "field": "Computer Science", "location": "Edinburgh", "startDate": "2015-09", "endDate": "2017-06", "gpa": "Distinction", "highlights": ["Distributed systems", "Outstanding thesis"] }, { "id": "en-edu-2", "institution": "Fictional College", "degree": "BSc", "field": "Software Engineering", "location": "Bristol", "startDate": "2011-09", "endDate": "2015-06", "gpa": "", "highlights": [] }] }, "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z" },
+      { "id": "en-skills", "resumeId": "fixture-resume-en", "type": "skills", "title": "Skills", "sortOrder": 4, "visible": true, "content": { "categories": [{ "id": "en-skill-1", "name": "Frontend", "skills": ["React", "Next.js", "Web performance"] }, { "id": "en-skill-2", "name": "Backend", "skills": ["Node.js", "PostgreSQL", "Redis"] }] }, "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z" },
+      { "id": "en-projects", "resumeId": "fixture-resume-en", "type": "projects", "title": "Projects", "sortOrder": 5, "visible": true, "content": { "items": [{ "id": "en-project-1", "name": "Open Knowledge Workbench", "url": "https://projects.example.test/workbench", "startDate": "2023-01", "endDate": "2024-06", "description": "Structured knowledge maintenance and full-text search for distributed teams.", "technologies": ["Next.js", "OpenSearch"], "highlights": ["Bilingual content support", "Incremental indexing"] }, { "id": "en-project-2", "name": "Internal Tool Without Link", "url": "", "startDate": "", "endDate": "", "description": "Exercises empty optional fields.", "technologies": ["TypeScript"], "highlights": [] }] }, "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z" },
+      { "id": "en-certifications", "resumeId": "fixture-resume-en", "type": "certifications", "title": "Certifications", "sortOrder": 6, "visible": true, "content": { "items": [{ "id": "en-cert-1", "name": "Example Cloud Architecture", "issuer": "Example Certification Board", "date": "2024-05", "url": "https://certs.example.test/verify/en-fixture" }, { "id": "en-cert-2", "name": "Engineering Practice", "issuer": "Fictional Association", "date": "2022-11", "url": "" }] }, "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z" },
+      { "id": "en-languages", "resumeId": "fixture-resume-en", "type": "languages", "title": "Languages", "sortOrder": 7, "visible": true, "content": { "items": [{ "id": "en-lang-1", "language": "English", "proficiency": "Native", "description": "Technical writing" }, { "id": "en-lang-2", "language": "German", "proficiency": "Professional", "description": "Daily collaboration" }] }, "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z" },
+      { "id": "en-github", "resumeId": "fixture-resume-en", "type": "github", "title": "Open Source", "sortOrder": 8, "visible": true, "content": { "items": [{ "id": "en-gh-1", "repoUrl": "https://github.com/example-fixture-en/platform", "name": "example-fixture-en/platform", "stars": 256, "language": "TypeScript", "description": "A fictional repository used only for baseline tests." }, { "id": "en-gh-2", "repoUrl": "https://github.com/example-fixture-en/toolkit", "name": "example-fixture-en/toolkit", "stars": 64, "language": "Rust", "description": "A second fictional repository." }] }, "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z" },
+      { "id": "en-qr", "resumeId": "fixture-resume-en", "type": "qr_codes", "title": "QR Codes", "sortOrder": 9, "visible": true, "content": { "items": [{ "id": "en-qr-1", "label": "Portfolio", "url": "https://alex.example.test" }, { "id": "en-qr-2", "label": "Writing", "url": "https://notes.example.test/alex" }] }, "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z" },
+      { "id": "en-custom", "resumeId": "fixture-resume-en", "type": "custom", "title": "Community", "sortOrder": 10, "visible": true, "content": { "items": [{ "id": "en-custom-1", "title": "Technical Speaker", "subtitle": "Fictional Developer Community", "date": "2025-03", "description": "Presented observability practices for large frontend applications." }, { "id": "en-custom-2", "title": "Volunteer Mentor", "subtitle": "", "date": "", "description": "Mentored early-career developers through open-source projects." }] }, "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z" }
+    ]
+  }
+}

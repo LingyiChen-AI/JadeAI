@@ -2,6 +2,12 @@ import { esc, buildExportThemeCSS, DEFAULT_THEME, type ResumeWithSections } from
 import { EXPORT_TAILWIND_CSS } from '@/lib/pdf/export-tailwind-css';
 import { BACKGROUND_TEMPLATES } from '@/lib/constants';
 import { generateQrSvg } from '@/lib/qrcode';
+import type { ResolvedTemplate } from '@/lib/templates/resolve-template';
+import {
+  buildTemplateDocument,
+  normalizeResumeForTemplate,
+  serializeTemplateDocumentHtml,
+} from '@/lib/templates/template-document';
 import { buildClassicHtml } from './templates/classic';
 import { buildModernHtml } from './templates/modern';
 import { buildMinimalHtml } from './templates/minimal';
@@ -134,17 +140,23 @@ const TEMPLATE_BUILDERS: Record<string, (r: ResumeWithSections) => string> = {
   mosaic: buildMosaicHtml,
 };
 
-function isValidQrUrl(str: string): boolean {
-  if (!str?.trim()) return false;
+function normalizeQrUrl(str: string): string | null {
+  if (!str?.trim()) return null;
   try {
-    const raw = str.startsWith('http') ? str : `https://${str}`;
+    const raw = /^https?:\/\//i.test(str) ? str : `https://${str}`;
     const url = new URL(raw);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
     const host = url.hostname;
-    return host === 'localhost' || /\.\w{2,}$/.test(host) || /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+    return host === 'localhost' || /\.\w{2,}$/.test(host) || /^\d{1,3}(\.\d{1,3}){3}$/.test(host)
+      ? url.toString()
+      : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+function isValidQrUrl(str: string): boolean {
+  return normalizeQrUrl(str) !== null;
 }
 
 /** Pre-generate QR code SVGs and attach to qr_codes section content
@@ -161,7 +173,103 @@ async function preGenerateQrSvgs(resume: ResumeWithSections): Promise<void> {
   (qrSection.content as any)._qrSvgs = svgs;
 }
 
-export async function generateHtml(resume: ResumeWithSections, forPdf = false): Promise<string> {
+async function generateDeclarativeHtml(
+  resume: ResumeWithSections,
+  resolvedTemplate: Extract<ResolvedTemplate, { kind: 'declarative-v1' }>,
+  forPdf: boolean,
+): Promise<string> {
+  const qrImagesByUrl: Record<string, string> = {};
+  if (resolvedTemplate.manifest.features.showQrCodes) {
+    const qrSection = resume.sections.find((section) => section.type === 'qr_codes' && section.visible !== false);
+    const items = qrSection && typeof qrSection.content === 'object' && qrSection.content
+      ? (qrSection.content as { items?: unknown }).items
+      : null;
+    if (Array.isArray(items)) {
+      for (const item of items) {
+        if (!item || typeof item !== 'object') continue;
+        const url = normalizeQrUrl(String((item as { url?: unknown }).url ?? ''));
+        if (!url || qrImagesByUrl[url]) continue;
+        try {
+          const svg = await generateQrSvg(url, 80);
+          qrImagesByUrl[url] = `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
+        } catch { /* invalid QR input is omitted */ }
+      }
+    }
+  }
+  const document = buildTemplateDocument(normalizeResumeForTemplate(resume), resolvedTemplate.manifest, { qrImagesByUrl });
+  const content = serializeTemplateDocumentHtml(document);
+  return `<!DOCTYPE html>
+<html lang="${esc(resume.language || 'en')}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${esc(resume.title)}</title>
+  <style>
+    @font-face { font-family: "Noto Sans SC"; src: url("/fonts/NotoSansSC-Regular.otf") format("opentype"); font-weight: 400; font-display: swap; }
+    @font-face { font-family: "Noto Sans SC"; src: url("/fonts/NotoSansSC-Bold.otf") format("opentype"); font-weight: 700; font-display: swap; }
+    @page {
+      size: A4;
+      margin: ${document.page.marginMm}mm;
+      ${document.page.showPageNumbers ? `@bottom-center {
+        content: counter(page);
+        color: ${document.colors.muted};
+        font: 8pt "Noto Sans SC", sans-serif;
+      }` : ''}
+    }
+    html, body { margin: 0; padding: 0; background: ${document.colors.background}; color: ${document.colors.text}; }
+    body { ${forPdf ? '' : `padding: ${document.page.marginMm}mm;`} font-family: "Noto Sans SC", sans-serif; }
+    .declarative-resume { box-sizing: border-box; max-width: 210mm; margin: 0 auto; font-size: var(--template-font-size); line-height: var(--template-line-height); }
+    .declarative-resume[data-layout="two-column"], .declarative-resume[data-layout="sidebar"] { display: grid; grid-auto-flow: row dense; grid-template-columns: minmax(0, 1fr) var(--template-sidebar-width); gap: var(--template-column-gap); }
+    .declarative-resume[data-sidebar-position="left"] { grid-template-columns: var(--template-sidebar-width) minmax(0, 1fr); }
+    [data-placement="header"], [data-placement="footer"] { grid-column: 1 / -1; }
+    [data-placement="main"] { grid-column: ${document.layout.sidebarPosition === 'left' ? '2' : '1'}; }
+    [data-placement="sidebar"] { grid-column: ${document.layout.sidebarPosition === 'left' ? '1' : '2'}; }
+    [data-section] { margin-bottom: var(--template-section-gap); break-inside: auto; }
+    h2 { margin: 0 0 2mm; font-size: calc(var(--template-font-size) * ${document.typography.headingScale}); color: var(--template-text); }
+    [data-heading-variant="accent"] h2 { color: var(--template-accent); }
+    [data-heading-variant="muted"] h2, [data-tone="muted"] { color: var(--template-muted); }
+    [data-heading-variant="compact"] h2 { font-size: var(--template-font-size); margin-bottom: 1mm; }
+    [data-heading-variant="bordered"] h2 { border-bottom: 1px solid var(--template-accent); padding-bottom: 1mm; }
+    [data-style-divider="compact"] { margin-bottom: 1mm; padding-bottom: 1mm; }
+    [data-style-divider="accent"] { border-bottom: 1px solid var(--template-accent); }
+    [data-style-divider="muted"] { border-bottom: 1px solid var(--template-muted); }
+    [data-style-divider="bordered"] { border-bottom: 1px solid var(--template-muted); padding-bottom: 2mm; }
+    [data-style-body="compact"] [data-block="paragraph"], [data-style-contact="compact"] [data-block="contact"], [data-style-bullet="compact"] [data-block="list"] { font-size: .9em; line-height: 1.25; }
+    [data-style-body="accent"] [data-block="paragraph"], [data-style-contact="accent"] [data-block="contact"], [data-style-bullet="accent"] [data-block="list"] { color: var(--template-accent); }
+    [data-style-body="muted"] [data-block="paragraph"], [data-style-contact="muted"] [data-block="contact"], [data-style-bullet="muted"] [data-block="list"] { color: var(--template-muted); }
+    [data-style-body="bordered"] [data-block="paragraph"], [data-style-contact="bordered"] [data-block="contact"], [data-style-bullet="bordered"] [data-block="list"] { border-left: 2px solid var(--template-accent); padding-left: 2mm; }
+    [data-image-role="avatar"] { max-width: 32mm; height: auto; object-fit: cover; }
+    [data-image-role="qr"] { max-width: 24mm; height: auto; }
+    [data-style-avatar="compact"] [data-image-role="avatar"] { max-width: 24mm; }
+    [data-style-avatar="accent"] [data-image-role="avatar"] { border: 2px solid var(--template-accent); }
+    [data-style-avatar="muted"] [data-image-role="avatar"] { opacity: .72; }
+    [data-style-avatar="bordered"] [data-image-role="avatar"] { border: 2px solid var(--template-accent); padding: 1mm; }
+    [data-style-date="compact"] [data-tone="muted"] { font-size: .9em; line-height: 1.25; }
+    [data-style-date="accent"] [data-tone="muted"] { color: var(--template-accent); }
+    [data-style-date="muted"] [data-tone="muted"] { color: var(--template-muted); }
+    [data-style-date="bordered"] [data-tone="muted"] { border-left: 2px solid var(--template-accent); padding-left: 2mm; }
+    [data-style-qr="compact"] [data-block="qr"], [data-style-qr="compact"] [data-image-role="qr"] { max-width: 20mm; }
+    [data-style-qr="accent"] [data-block="qr"], [data-style-qr="accent"] [data-image-role="qr"] { color: var(--template-accent); border-color: var(--template-accent); }
+    [data-style-qr="muted"] [data-block="qr"], [data-style-qr="muted"] [data-image-role="qr"] { color: var(--template-muted); opacity: .72; }
+    [data-style-qr="bordered"] [data-block="qr"], [data-style-qr="bordered"] [data-image-role="qr"] { border: 2px solid var(--template-accent); padding: 1mm; }
+    [data-page-number] { color: var(--template-muted); font-size: 8pt; margin-top: 2mm; text-align: center; }
+    ${forPdf ? '@media print { [data-page-number] { display: none; } }' : ''}
+    p { margin: 0 0 1.5mm; white-space: pre-wrap; }
+    a { color: var(--template-accent); overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>${content}</body>
+</html>`;
+}
+
+export async function generateHtml(
+  resume: ResumeWithSections,
+  forPdf = false,
+  resolvedTemplate?: ResolvedTemplate,
+): Promise<string> {
+  if (resolvedTemplate?.kind === 'declarative-v1') {
+    return generateDeclarativeHtml(resume, resolvedTemplate, forPdf);
+  }
   // Pre-generate QR SVGs so sync template builders can use them
   await preGenerateQrSvgs(resume);
   const builder = TEMPLATE_BUILDERS[resume.template] || buildClassicHtml;
@@ -243,10 +351,9 @@ export async function generateHtml(resume: ResumeWithSections, forPdf = false): 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${esc(resume.title)}</title>
   <style>${EXPORT_TAILWIND_CSS}</style>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    @font-face { font-family: "Noto Sans SC"; src: url("/fonts/NotoSansSC-Regular.otf") format("opentype"); font-weight: 400; font-display: swap; }
+    @font-face { font-family: "Noto Sans SC"; src: url("/fonts/NotoSansSC-Bold.otf") format("opentype"); font-weight: 700; font-display: swap; }
     body { margin: 0; display: flex; justify-content: center; padding: 40px 20px; background: #f4f4f5; min-height: 100vh; }
     @media print { body { padding: 0 !important; background: white !important; } .resume-export > div { box-shadow: none !important; } }
     ${themeCSS}

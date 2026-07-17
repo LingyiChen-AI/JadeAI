@@ -1,127 +1,34 @@
 'use client';
 
-import { useId } from 'react';
+import { createElement, lazy, Suspense, useId } from 'react';
 import type { Resume, ThemeConfig } from '@/types/resume';
-import { BACKGROUND_TEMPLATES } from '@/lib/constants';
-import { ClassicTemplate } from './templates/classic';
-import { ModernTemplate } from './templates/modern';
-import { MinimalTemplate } from './templates/minimal';
-import { ProfessionalTemplate } from './templates/professional';
-import { TwoColumnTemplate } from './templates/two-column';
-import { CreativeTemplate } from './templates/creative';
-import { AtsTemplate } from './templates/ats';
-import { AcademicTemplate } from './templates/academic';
-import { ElegantTemplate } from './templates/elegant';
-import { ExecutiveTemplate } from './templates/executive';
-import { DeveloperTemplate } from './templates/developer';
-import { DesignerTemplate } from './templates/designer';
-import { StartupTemplate } from './templates/startup';
-import { FormalTemplate } from './templates/formal';
-import { InfographicTemplate } from './templates/infographic';
-import { CompactTemplate } from './templates/compact';
-import { EuroTemplate } from './templates/euro';
-import { CleanTemplate } from './templates/clean';
-import { BoldTemplate } from './templates/bold';
-import { TimelineTemplate } from './templates/timeline';
-// Batch 1: Industry/Professional
-import { NordicTemplate } from './templates/nordic';
-import { CorporateTemplate } from './templates/corporate';
-import { ConsultantTemplate } from './templates/consultant';
-import { FinanceTemplate } from './templates/finance';
-import { MedicalTemplate } from './templates/medical';
-// Batch 2: Modern/Tech
-import { GradientTemplate } from './templates/gradient';
-import { MetroTemplate } from './templates/metro';
-import { MaterialTemplate } from './templates/material';
-import { CoderTemplate } from './templates/coder';
-import { BlocksTemplate } from './templates/blocks';
-// Batch 3: Creative/Artistic
-import { MagazineTemplate } from './templates/magazine';
-import { ArtisticTemplate } from './templates/artistic';
-import { RetroTemplate } from './templates/retro';
-import { NeonTemplate } from './templates/neon';
-import { WatercolorTemplate } from './templates/watercolor';
-// Batch 4: Style/Culture
-import { SwissTemplate } from './templates/swiss';
-import { JapaneseTemplate } from './templates/japanese';
-import { BerlinTemplate } from './templates/berlin';
-import { LuxeTemplate } from './templates/luxe';
-import { RoseTemplate } from './templates/rose';
-// Batch 5: Specialized
-import { ArchitectTemplate } from './templates/architect';
-import { LegalTemplate } from './templates/legal';
-import { TeacherTemplate } from './templates/teacher';
-import { ScientistTemplate } from './templates/scientist';
-import { EngineerTemplate } from './templates/engineer';
-// Batch 6: Layout Variants
-import { SidebarTemplate } from './templates/sidebar';
-import { CardTemplate } from './templates/card';
-import { ZigzagTemplate } from './templates/zigzag';
-import { RibbonTemplate } from './templates/ribbon';
-import { MosaicTemplate } from './templates/mosaic';
+import { BACKGROUND_TEMPLATES, TEMPLATES } from '@/lib/constants';
+import { loadLegacyTemplateAdapter } from '@/components/templates/legacy-template-registry';
+import { buildTemplateDocument, normalizeResumeForTemplate } from '@/lib/templates/template-document';
+import { resolveSavedTemplateSnapshot } from '@/lib/templates/resolve-template';
+import { DeclarativeTemplateDocument } from './declarative-template-document';
 
 interface ResumePreviewProps {
   resume: Resume;
 }
 
-const templateMap: Record<string, React.ComponentType<{ resume: Resume }>> = {
-  classic: ClassicTemplate,
-  modern: ModernTemplate,
-  minimal: MinimalTemplate,
-  professional: ProfessionalTemplate,
-  'two-column': TwoColumnTemplate,
-  creative: CreativeTemplate,
-  ats: AtsTemplate,
-  academic: AcademicTemplate,
-  elegant: ElegantTemplate,
-  executive: ExecutiveTemplate,
-  developer: DeveloperTemplate,
-  designer: DesignerTemplate,
-  startup: StartupTemplate,
-  formal: FormalTemplate,
-  infographic: InfographicTemplate,
-  compact: CompactTemplate,
-  euro: EuroTemplate,
-  clean: CleanTemplate,
-  bold: BoldTemplate,
-  timeline: TimelineTemplate,
-  // Batch 1
-  nordic: NordicTemplate,
-  corporate: CorporateTemplate,
-  consultant: ConsultantTemplate,
-  finance: FinanceTemplate,
-  medical: MedicalTemplate,
-  // Batch 2
-  gradient: GradientTemplate,
-  metro: MetroTemplate,
-  material: MaterialTemplate,
-  coder: CoderTemplate,
-  blocks: BlocksTemplate,
-  // Batch 3
-  magazine: MagazineTemplate,
-  artistic: ArtisticTemplate,
-  retro: RetroTemplate,
-  neon: NeonTemplate,
-  watercolor: WatercolorTemplate,
-  // Batch 4
-  swiss: SwissTemplate,
-  japanese: JapaneseTemplate,
-  berlin: BerlinTemplate,
-  luxe: LuxeTemplate,
-  rose: RoseTemplate,
-  // Batch 5
-  architect: ArchitectTemplate,
-  legal: LegalTemplate,
-  teacher: TeacherTemplate,
-  scientist: ScientistTemplate,
-  engineer: EngineerTemplate,
-  // Batch 6
-  sidebar: SidebarTemplate,
-  card: CardTemplate,
-  zigzag: ZigzagTemplate,
-  ribbon: RibbonTemplate,
-  mosaic: MosaicTemplate,
-};
+const lazyLegacyTemplates = new Map<string, React.LazyExoticComponent<React.ComponentType<{ resume: Resume }>>>(
+  [...TEMPLATES].map((slug) => [
+    slug,
+    lazy(async () => {
+      try {
+        return { default: await loadLegacyTemplateAdapter(slug) };
+      } catch {
+        return { default: await loadLegacyTemplateAdapter('classic') };
+      }
+    }),
+  ]),
+);
+
+function LegacyTemplateRenderer({ slug, resume }: { slug: string; resume: Resume }) {
+  const component = lazyLegacyTemplates.get(slug) ?? lazyLegacyTemplates.get('classic')!;
+  return createElement(component, { resume });
+}
 
 const FONT_SIZE_SCALE: Record<string, { body: string; h1: string; h2: string; h3: string }> = {
   small:  { body: '12px', h1: '22px', h2: '15px', h3: '13px' },
@@ -237,23 +144,27 @@ function buildThemeCSS(scopeId: string, theme: ThemeConfig, template: string): s
 }
 
 export function ResumePreview({ resume }: ResumePreviewProps) {
-  const Template = templateMap[resume.template] || ClassicTemplate;
   const scopeId = useId();
   const theme: ThemeConfig = { ...DEFAULT_THEME, ...(resume.themeConfig || {}) };
 
   // Defensive: ensure resume.sections is always an array (AI may return invalid/empty data)
   const safeResume = resume.sections ? resume : { ...resume, sections: [] };
+  const resolvedTemplate = resume.resolvedTemplate ?? resolveSavedTemplateSnapshot(resume.templateSnapshot);
+  const legacySlug = resolvedTemplate?.kind === 'legacy-react' ? resolvedTemplate.slug : safeResume.template;
+
+  if (resolvedTemplate?.kind === 'declarative-v1') {
+    const document = buildTemplateDocument(normalizeResumeForTemplate(safeResume), resolvedTemplate.manifest);
+    return <DeclarativeTemplateDocument document={document} />;
+  }
 
   return (
     <>
-      {/* Load the same Google Fonts used in PDF/HTML export so preview renders
-          with identical font metrics (Inter for Latin, Noto Sans SC for CJK). */}
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+      <style>{`@font-face{font-family:"Noto Sans SC";src:url("/fonts/NotoSansSC-Regular.otf") format("opentype");font-weight:400;font-display:swap}@font-face{font-family:"Noto Sans SC";src:url("/fonts/NotoSansSC-Bold.otf") format("opentype");font-weight:700;font-display:swap}`}</style>
       <div data-theme-scope={scopeId}>
         <style dangerouslySetInnerHTML={{ __html: buildThemeCSS(scopeId, theme, safeResume.template) }} />
-        <Template resume={safeResume} />
+        <Suspense fallback={<div className="min-h-[297mm] bg-white" aria-busy="true" />}>
+          <LegacyTemplateRenderer slug={legacySlug} resume={safeResume} />
+        </Suspense>
       </div>
     </>
   );

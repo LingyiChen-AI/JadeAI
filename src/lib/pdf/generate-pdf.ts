@@ -1,13 +1,53 @@
 import puppeteer, { type Page } from 'puppeteer-core';
 import { accessSync } from 'fs';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
 // A4 dimensions in CSS pixels at 96 DPI
 const A4_WIDTH_PX = 794;   // 210mm
 const A4_HEIGHT_PX = 1123;  // 297mm
 const MAX_ITERATIONS = 20;
+const PDF_ASSET_ORIGIN = 'http://jadeai.local';
+const PDF_FONT_FILES = new Map([
+  [`${PDF_ASSET_ORIGIN}/fonts/NotoSansSC-Regular.otf`, 'NotoSansSC-Regular.otf'],
+  [`${PDF_ASSET_ORIGIN}/fonts/NotoSansSC-Bold.otf`, 'NotoSansSC-Bold.otf'],
+]);
+const pdfFontCache = new Map<string, Promise<Buffer>>();
+
+export function preparePdfHtml(html: string): string {
+  return html.replaceAll('/fonts/NotoSansSC-Regular.otf', `${PDF_ASSET_ORIGIN}/fonts/NotoSansSC-Regular.otf`)
+    .replaceAll('/fonts/NotoSansSC-Bold.otf', `${PDF_ASSET_ORIGIN}/fonts/NotoSansSC-Bold.otf`);
+}
+
+function loadPdfFont(filename: string): Promise<Buffer> {
+  const cached = pdfFontCache.get(filename);
+  if (cached) return cached;
+  const loading = readFile(resolve(process.cwd(), 'public/fonts', filename));
+  pdfFontCache.set(filename, loading);
+  return loading;
+}
 
 interface PdfOptions {
   fitOnePage?: boolean;
+  maxPages?: number;
+}
+
+export class TemplatePdfPageLimitError extends Error {
+  readonly code = 'TEMPLATE_RENDER_LIMIT';
+
+  constructor(readonly pageCount: number, readonly maxPages: number) {
+    super('template_pdf_page_limit_exceeded');
+    this.name = 'TemplatePdfPageLimitError';
+  }
+}
+
+export function assertPdfPageLimit(contentHeight: number, maxPages: number, printablePageHeight = A4_HEIGHT_PX): void {
+  if (!Number.isFinite(contentHeight) || contentHeight < 0) throw new Error('template_pdf_height_invalid');
+  if (!Number.isInteger(maxPages) || maxPages < 1 || !Number.isFinite(printablePageHeight) || printablePageHeight <= 0) {
+    throw new Error('template_pdf_page_limit_invalid');
+  }
+  const pageCount = Math.max(1, Math.ceil(contentHeight / printablePageHeight));
+  if (pageCount > maxPages) throw new TemplatePdfPageLimitError(pageCount, maxPages);
 }
 
 // Container/host-friendly Chromium flags. --disable-dev-shm-usage avoids the
@@ -169,10 +209,16 @@ function buildShrinkCSS(state: ShrinkState, childPaddingBase = 0, skipBreakRules
 
 async function measureHeight(page: Page): Promise<number> {
   return page.evaluate(() => {
-    const el = document.querySelector('.resume-export');
+    const el = document.querySelector('.resume-export, .declarative-resume');
     if (!el) return 0;
     return el.scrollHeight;
   });
+}
+
+export function countGeneratedPdfPages(pdf: Buffer): number {
+  const count = pdf.toString('latin1').match(/\/Type\s*\/Page(?!s)\b/g)?.length ?? 0;
+  if (count < 1) throw new Error('template_pdf_page_count_invalid');
+  return count;
 }
 
 async function fitContentToOnePage(page: Page): Promise<void> {
@@ -384,13 +430,40 @@ export async function generatePdf(html: string, options: PdfOptions = {}): Promi
   try {
     const page = await browser.newPage();
 
+    await page.setRequestInterception(true);
+    page.on('request', (request) => {
+      const filename = PDF_FONT_FILES.get(request.url());
+      if (filename) {
+        void loadPdfFont(filename).then(
+          (body) => request.respond({
+            status: 200,
+            contentType: 'font/otf',
+            headers: { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'private, max-age=3600' },
+            body,
+          }),
+          () => request.abort('failed'),
+        );
+        return;
+      }
+      if (/^https?:/i.test(request.url())) {
+        void request.abort('blockedbyclient');
+        return;
+      }
+      void request.continue();
+    });
+
     // Set viewport to A4 width before loading content for accurate layout
     await page.setViewport({ width: A4_WIDTH_PX, height: A4_HEIGHT_PX });
 
-    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    const preparedHtml = preparePdfHtml(html);
+    await page.setContent(preparedHtml, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
     // Wait for web fonts (e.g. Noto Sans SC) to finish loading
     await page.evaluate(() => document.fonts.ready);
+    if (preparedHtml.includes(`${PDF_ASSET_ORIGIN}/fonts/`)) {
+      const fontLoaded = await page.evaluate(() => document.fonts.check('12px "Noto Sans SC"'));
+      if (!fontLoaded) throw new Error('pdf_bundled_font_unavailable');
+    }
 
     // Double rAF to ensure layout is fully settled after font swap
     await page.evaluate(() => new Promise<void>((resolve) =>
@@ -411,7 +484,12 @@ export async function generatePdf(html: string, options: PdfOptions = {}): Promi
       printBackground: true,
       margin: { top: '0', right: '0', bottom: '0', left: '0' },
     });
-    return Buffer.from(pdf);
+    const buffer = Buffer.from(pdf);
+    if (options.maxPages !== undefined) {
+      const pageCount = countGeneratedPdfPages(buffer);
+      if (pageCount > options.maxPages) throw new TemplatePdfPageLimitError(pageCount, options.maxPages);
+    }
+    return buffer;
   } finally {
     await browser.close();
   }

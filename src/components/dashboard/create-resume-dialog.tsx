@@ -18,11 +18,14 @@ import { getAIHeaders } from '@/stores/settings-store';
 import { Upload, FileText, Image, X, Loader2, Check } from 'lucide-react';
 import { TemplateThumbnail } from './template-thumbnail';
 import { templateLabelsMap } from '@/lib/template-labels';
+import { TemplateSelector } from '@/components/templates/template-selector';
+import type { ClientTemplateBindingChoice } from '@/lib/templates/apply-template-binding.server';
+import type { Resume } from '@/types/resume';
 
 interface CreateResumeDialogProps {
   open: boolean;
   onClose: () => void;
-  onCreate: (data: { title?: string; template?: string; language?: string }) => Promise<any>;
+  onCreate: (data: { title?: string; template?: string; language?: string; binding?: ClientTemplateBindingChoice }) => Promise<Resume | null>;
 }
 
 type Tab = 'template' | 'upload';
@@ -35,6 +38,7 @@ export function CreateResumeDialog({ open, onClose, onCreate }: CreateResumeDial
   const [tab, setTab] = useState<Tab>('template');
   const [title, setTitle] = useState('');
   const [template, setTemplate] = useState<string>('classic');
+  const [binding, setBinding] = useState<ClientTemplateBindingChoice>({ kind: 'legacy', templateSlug: 'classic' });
   const [isCreating, setIsCreating] = useState(false);
 
   // Upload state
@@ -47,7 +51,7 @@ export function CreateResumeDialog({ open, onClose, onCreate }: CreateResumeDial
   const handleCreate = async () => {
     setIsCreating(true);
     try {
-      const resume = await onCreate({ title: title || undefined, template });
+      const resume = await onCreate({ title: title || undefined, binding });
       if (resume) {
         resetAndClose();
         router.push(`/editor/${resume.id}`);
@@ -96,8 +100,8 @@ export function CreateResumeDialog({ open, onClose, onCreate }: CreateResumeDial
       const resume = await res.json();
       resetAndClose();
       router.push(`/editor/${resume.id}`);
-    } catch (err: any) {
-      setParseError(err.message || t('dashboard.upload.parseFailed'));
+    } catch (err: unknown) {
+      setParseError(err instanceof Error && err.message ? err.message : t('dashboard.upload.parseFailed'));
     } finally {
       setIsParsing(false);
     }
@@ -107,6 +111,7 @@ export function CreateResumeDialog({ open, onClose, onCreate }: CreateResumeDial
     onClose();
     setTitle('');
     setTemplate('classic');
+    setBinding({ kind: 'legacy', templateSlug: 'classic' });
     setTab('template');
     setFile(null);
     setParseError('');
@@ -181,49 +186,7 @@ export function CreateResumeDialog({ open, onClose, onCreate }: CreateResumeDial
                 <p className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
                   {t('editor.toolbar.template')}
                 </p>
-                <div className="max-h-[400px] overflow-y-auto pr-1">
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                    {TEMPLATES.map((tpl) => {
-                      const isSelected = template === tpl;
-                      return (
-                        <button
-                          key={tpl}
-                          type="button"
-                          className={cn(
-                            'group/tpl relative cursor-pointer overflow-hidden rounded-xl border-2 transition-all duration-200',
-                            isSelected
-                              ? 'border-brand shadow-md shadow-brand/10'
-                              : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600'
-                          )}
-                          onClick={() => setTemplate(tpl)}
-                        >
-                          {/* Thumbnail */}
-                          <div className="relative bg-zinc-50 p-2 dark:bg-zinc-800/50">
-                            <TemplateThumbnail
-                              template={tpl}
-                              className="mx-auto h-[100px] w-[71px] shadow-sm ring-1 ring-zinc-200/50"
-                            />
-                            {/* Selected check */}
-                            {isSelected && (
-                              <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white shadow-sm">
-                                <Check className="h-3 w-3" />
-                              </div>
-                            )}
-                          </div>
-                          {/* Label */}
-                          <div className={cn(
-                            'px-2 py-1.5 text-center text-xs font-medium transition-colors',
-                            isSelected
-                              ? 'bg-brand-muted text-brand dark:bg-brand-muted dark:text-brand'
-                              : 'text-zinc-600 dark:text-zinc-400'
-                          )}>
-                            {t(templateLabelsMap[tpl])}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <TemplateSelector value={binding} onChange={setBinding} disabled={isCreating} />
               </div>
             </div>
           ) : (

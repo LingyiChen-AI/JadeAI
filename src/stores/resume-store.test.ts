@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useResumeStore } from './resume-store';
 import type { Resume } from '@/types/resume';
+import type { ResolvedTemplate } from '@/lib/templates/resolve-template';
 
 const resume: Resume = {
   id: 'resume-1',
@@ -8,6 +9,9 @@ const resume: Resume = {
   userId: 'user-1',
   title: 'Test resume',
   template: 'classic',
+  templateVersionId: null,
+  templateSource: 'legacy',
+  templateSnapshot: null,
   themeConfig: {
     primaryColor: '#000000',
     accentColor: '#ffffff',
@@ -56,6 +60,29 @@ afterEach(() => {
 });
 
 describe('resume save state', () => {
+  it('replaces stale preview resolution for each pending binding choice', () => {
+    const staleResolution: ResolvedTemplate = {
+      kind: 'legacy-react', source: 'public', slug: 'modern', version: '1.0.0', degraded: false,
+      capabilities: { supportedSections: ['summary'], paperSizes: ['a4'], supportsAvatar: true, atsCompatible: false, supportsZh: true, supportsEn: true, supportsHtml: true, supportsPdf: true, docxFidelity: 'high-fidelity' },
+    };
+    useResumeStore.getState().setResume({ ...resume, resolvedTemplate: staleResolution });
+    useResumeStore.getState().setTemplateBinding({ kind: 'legacy', templateSlug: 'minimal' });
+    expect(useResumeStore.getState().currentResume?.resolvedTemplate).toBeUndefined();
+
+    const localManifest = {
+      schemaVersion: 1 as const, rendererKind: 'declarative-v1' as const,
+      layout: { type: 'single-column' as const, sidebarPosition: 'left' as const, sidebarWidthPercent: 32, columnGapMm: 8 },
+      typography: { fontFamily: 'noto-sans-sc' as const, baseFontSizePt: 10.5, lineHeight: 1.5, headingScale: 1.25 },
+      colors: { text: '#111111', muted: '#666666', accent: '#2563eb', background: '#ffffff' },
+      spacing: { pageMarginMm: 12, sectionGapMm: 6 }, sectionSlots: [], sectionStyles: [],
+      features: { showAvatar: false, showQrCodes: false, showPageNumbers: false, maxPages: 4 },
+    };
+    useResumeStore.getState().setTemplateBinding({ kind: 'local-snapshot', manifest: localManifest });
+    expect(useResumeStore.getState().currentResume?.resolvedTemplate).toMatchObject({
+      kind: 'declarative-v1', source: 'local-snapshot', manifest: localManifest,
+    });
+  });
+
   it('clears dirty state only after a successful response', async () => {
     useResumeStore.getState().setResume(resume);
     useResumeStore.getState().updateSection('section-1', { text: 'saved' });
@@ -127,6 +154,72 @@ describe('resume save state', () => {
     expect(useResumeStore.getState().currentResume?.id).toBe('resume-2');
     expect(useResumeStore.getState().sections[0].content).toEqual({ text: 'B edit' });
     expect(useResumeStore.getState().isDirty).toBe(true);
+  });
+
+  it('does not let an older binding response overwrite a newer choice or concurrent section edit', async () => {
+    const responses: Array<(response: Response) => void> = [];
+    const fetchMock = vi.fn().mockImplementation(() => new Promise<Response>((resolve) => responses.push(resolve)));
+    vi.stubGlobal('fetch', fetchMock);
+    useResumeStore.getState().setResume(resume);
+
+    useResumeStore.getState().setTemplateBinding({
+      kind: 'public',
+      templateSlug: 'modern',
+      version: '1.0.0',
+    });
+    const firstSave = useResumeStore.getState().save();
+    useResumeStore.getState().setTemplateBinding({ kind: 'legacy', templateSlug: 'minimal' });
+    useResumeStore.getState().updateSection('section-1', { text: 'newer edit' });
+    responses.shift()?.(Response.json({
+      ...resume,
+      revision: 1,
+      template: 'modern',
+      templateSource: 'public',
+      templateVersionId: 'internal-modern-version',
+      sections: resume.sections,
+    }));
+
+    await firstSave;
+    expect(useResumeStore.getState().currentResume).toMatchObject({
+      revision: 1,
+      template: 'minimal',
+      templateSource: 'legacy',
+    });
+    expect(useResumeStore.getState().sections[0].content).toEqual({ text: 'newer edit' });
+
+    const secondSave = useResumeStore.getState().save();
+    expect(JSON.parse(fetchMock.mock.calls[1]![1].body)).toMatchObject({
+      expectedRevision: 1,
+      binding: { kind: 'legacy', templateSlug: 'minimal' },
+      sections: [expect.objectContaining({ content: { text: 'newer edit' } })],
+    });
+    responses.shift()?.(Response.json({
+      ...resume,
+      revision: 2,
+      template: 'minimal',
+      sections: [{ ...resume.sections[0], content: { text: 'newer edit' } }],
+    }));
+    await expect(secondSave).resolves.toBe(true);
+    expect(useResumeStore.getState().pendingTemplateBinding).toBeNull();
+  });
+
+  it('does not let a late binding response from Resume A pollute Resume B', async () => {
+    let resolveSave: ((response: Response) => void) | undefined;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => new Promise<Response>((resolve) => { resolveSave = resolve; })));
+    useResumeStore.getState().setResume(resume);
+    useResumeStore.getState().setTemplateBinding({ kind: 'legacy', templateSlug: 'modern' });
+    const savingA = useResumeStore.getState().save();
+    useResumeStore.getState().setResume(otherResume);
+    useResumeStore.getState().setTemplateBinding({ kind: 'legacy', templateSlug: 'minimal' });
+    resolveSave?.(Response.json({ ...resume, revision: 1, template: 'modern' }));
+
+    await savingA;
+    expect(useResumeStore.getState().currentResume).toMatchObject({
+      id: 'resume-2',
+      template: 'minimal',
+    });
+    expect(useResumeStore.getState().pendingTemplateBinding).toEqual({ kind: 'legacy', templateSlug: 'minimal' });
+    expect(useResumeStore.getState().saveError).toBeNull();
   });
 
   it.each([

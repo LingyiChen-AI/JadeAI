@@ -43,6 +43,13 @@
       "when": 1783960013928,
       "tag": "0005_omniscient_princess_powerful",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784170798448,
+      "tag": "0006_template_platform",
+      "breakpoints": true
     }
   ]
 }

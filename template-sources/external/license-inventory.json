@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "approved source packages",
+  "themes": [
+    {
+      "slug": "jsonresume-even",
+      "version": "1.0.1",
+      "sourceUrl": "https://github.com/rbardini/jsonresume-theme-even",
+      "sourceRevision": "8231a31977aa7bfc7c1724713b523a85f32a760d",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-even/LICENSE",
+        "sha256": "a1436e5316bd543cf13606ac2a6b8e2c979e6b2284f9db4e4ec6ebace473e8b8",
+        "copyright": "Copyright (c) 2018 Rafael Bardini"
+      },
+      "redistributedAssets": []
+    },
+    {
+      "slug": "jsonresume-onepage",
+      "version": "1.0.1",
+      "sourceUrl": "https://github.com/ainsleyc/jsonresume-theme-onepage",
+      "sourceRevision": "09f639745d868bcd58cfd26be1a0011bb206f092",
+      "themeLicense": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-onepage/LICENSE",
+        "sha256": "2b229caee7e7faec057638bb7cd195cfa22ecb0755b7f8660cd4d66afad097eb",
+        "copyright": "Copyright (c) 2015 Ainsley Chong"
+      },
+      "redistributedAssets": []
+    }
+  ]
+}

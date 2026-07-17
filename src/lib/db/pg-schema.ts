@@ -1,5 +1,18 @@
 /** PostgreSQL schema used by both drizzle-kit and the application runtime. */
-import { customType, pgTable, text, integer } from 'drizzle-orm/pg-core';
+import {
+  type AnyPgColumn,
+  type PgTableExtraConfigValue,
+  check,
+  customType,
+  foreignKey,
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  unique,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 const epochNow = sql`extract(epoch from now())::integer`;
@@ -83,9 +96,155 @@ export const resumes = pgTable('resumes', {
   sharePassword: text('share_password'),
   viewCount: integer('view_count').notNull().default(0),
   revision: integer('revision').notNull().default(0),
+  templateVersionId: text('template_version_id').references((): AnyPgColumn => resumeTemplateVersions.id),
+  templateSource: text('template_source').notNull().default('legacy'),
+  templateSnapshot: jsonText('template_snapshot'),
   createdAt: epochTimestamp('created_at').notNull().default(epochNow),
   updatedAt: epochTimestamp('updated_at').notNull().default(epochNow),
-});
+}, (table): PgTableExtraConfigValue[] => [
+  check('resumes_template_source_check', sql`${table.templateSource} in ('legacy', 'public', 'local-snapshot')`),
+  index('resumes_template_version_id_idx').on(table.templateVersionId),
+  index('resumes_template_source_idx').on(table.templateSource),
+]);
+
+export const templateCategories = pgTable('template_categories', {
+  id: text('id').primaryKey(),
+  slug: text('slug').notNull(),
+  nameZh: text('name_zh').notNull(),
+  nameEn: text('name_en').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: booleanInteger('is_active').notNull().default(1 as unknown as boolean),
+  createdAt: epochTimestamp('created_at').notNull().default(epochNow),
+  updatedAt: epochTimestamp('updated_at').notNull().default(epochNow),
+}, (table) => [
+  uniqueIndex('template_categories_slug_uidx').on(table.slug),
+  index('template_categories_active_sort_idx').on(table.isActive, table.sortOrder),
+  check('template_categories_is_active_check', sql`${table.isActive} in (0, 1)`),
+  check('template_categories_slug_check', sql`${table.slug} = lower(${table.slug}) and ${table.slug} ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'`),
+]);
+
+export const templateTags = pgTable('template_tags', {
+  id: text('id').primaryKey(),
+  slug: text('slug').notNull(),
+  dimension: text('dimension').notNull(),
+  nameZh: text('name_zh').notNull(),
+  nameEn: text('name_en').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: booleanInteger('is_active').notNull().default(1 as unknown as boolean),
+  createdAt: epochTimestamp('created_at').notNull().default(epochNow),
+  updatedAt: epochTimestamp('updated_at').notNull().default(epochNow),
+}, (table) => [
+  uniqueIndex('template_tags_slug_uidx').on(table.slug),
+  index('template_tags_dimension_active_sort_idx').on(table.dimension, table.isActive, table.sortOrder),
+  check('template_tags_is_active_check', sql`${table.isActive} in (0, 1)`),
+  check('template_tags_dimension_check', sql`${table.dimension} in ('layout', 'style', 'scenario', 'capability', 'paper', 'source', 'export')`),
+]);
+
+export const templateTagAliases = pgTable('template_tag_aliases', {
+  id: text('id').primaryKey(),
+  tagId: text('tag_id').notNull().references(() => templateTags.id, { onDelete: 'cascade' }),
+  locale: text('locale').notNull(),
+  alias: text('alias').notNull(),
+  normalizedAlias: text('normalized_alias').notNull(),
+  createdAt: epochTimestamp('created_at').notNull().default(epochNow),
+}, (table) => [
+  uniqueIndex('template_tag_aliases_locale_normalized_uidx').on(table.locale, table.normalizedAlias),
+  index('template_tag_aliases_tag_idx').on(table.tagId),
+]);
+
+export const resumeTemplates = pgTable('resume_templates', {
+  id: text('id').primaryKey(),
+  slug: text('slug').notNull(),
+  nameZh: text('name_zh').notNull(),
+  nameEn: text('name_en').notNull(),
+  descriptionZh: text('description_zh').notNull().default(''),
+  descriptionEn: text('description_en').notNull().default(''),
+  categoryId: text('category_id').notNull().references(() => templateCategories.id),
+  sourceKind: text('source_kind').notNull(),
+  sourceUrl: text('source_url'),
+  sourceRevision: text('source_revision'),
+  licenseSpdx: text('license_spdx').notNull(),
+  licenseUrl: text('license_url').notNull(),
+  licenseHash: text('license_hash').notNull(),
+  status: text('status').notNull(),
+  stableVersionId: text('stable_version_id'),
+  searchText: text('search_text').notNull(),
+  usageCount: integer('usage_count').notNull().default(0),
+  publishedAt: epochTimestamp('published_at'),
+  createdAt: epochTimestamp('created_at').notNull().default(epochNow),
+  updatedAt: epochTimestamp('updated_at').notNull().default(epochNow),
+}, (table): PgTableExtraConfigValue[] => [
+  uniqueIndex('resume_templates_slug_uidx').on(table.slug),
+  uniqueIndex('resume_templates_id_stable_uidx').on(table.id, table.stableVersionId),
+  index('resume_templates_status_category_published_idx').on(table.status, table.categoryId, table.publishedAt, table.id),
+  index('resume_templates_status_usage_idx').on(table.status, table.usageCount, table.id),
+  check('resume_templates_source_kind_check', sql`${table.sourceKind} in ('native', 'jsonresume', 'reactive-resume', 'other')`),
+  check('resume_templates_status_check', sql`${table.status} in ('draft', 'validating', 'published', 'unlisted', 'blocked')`),
+  check('resume_templates_usage_count_check', sql`${table.usageCount} >= 0`),
+  check('resume_templates_slug_check', sql`${table.slug} = lower(${table.slug}) and ${table.slug} ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'`),
+  foreignKey({
+    columns: [table.id, table.stableVersionId],
+    foreignColumns: [resumeTemplateVersions.templateId, resumeTemplateVersions.id],
+    name: 'resume_templates_stable_version_fk',
+  }),
+]);
+
+export const resumeTemplateVersions = pgTable('resume_template_versions', {
+  id: text('id').primaryKey(),
+  templateId: text('template_id').notNull().references((): AnyPgColumn => resumeTemplates.id),
+  version: text('version').notNull(),
+  schemaVersion: integer('schema_version').notNull(),
+  rendererKind: text('renderer_kind').notNull(),
+  manifest: jsonText('manifest').notNull(),
+  manifestHash: text('manifest_hash').notNull(),
+  capabilities: jsonText('capabilities').notNull(),
+  thumbnailPath: text('thumbnail_path').notNull(),
+  previewPath: text('preview_path').notNull(),
+  provenance: jsonText('provenance').notNull(),
+  status: text('status').notNull(),
+  fallbackVersionId: text('fallback_version_id').references((): AnyPgColumn => resumeTemplateVersions.id),
+  createdAt: epochTimestamp('created_at').notNull().default(epochNow),
+  publishedAt: epochTimestamp('published_at'),
+}, (table): PgTableExtraConfigValue[] => [
+  uniqueIndex('resume_template_versions_template_version_uidx').on(table.templateId, table.version),
+  unique('resume_template_versions_template_id_id_unique').on(table.templateId, table.id),
+  index('resume_template_versions_template_status_version_idx').on(table.templateId, table.status, table.version),
+  index('resume_template_versions_manifest_hash_idx').on(table.manifestHash),
+  check('resume_template_versions_renderer_kind_check', sql`${table.rendererKind} in ('legacy-react', 'declarative-v1')`),
+  check('resume_template_versions_status_check', sql`${table.status} in ('draft', 'published', 'deprecated', 'blocked')`),
+  check('resume_template_versions_manifest_hash_check', sql`${table.manifestHash} ~ '^[0-9a-f]{64}$'`),
+  check('resume_template_versions_thumbnail_path_check', sql`${table.thumbnailPath} ~ '^templates/[a-z0-9]+(?:-[a-z0-9]+)*/v(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)/thumbnail-[0-9a-f]{16}\\.png$'`),
+  check('resume_template_versions_preview_path_check', sql`${table.previewPath} ~ '^templates/[a-z0-9]+(?:-[a-z0-9]+)*/v(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)/preview-[0-9a-f]{16}\\.png$'`),
+  check('resume_template_versions_fallback_check', sql`${table.fallbackVersionId} is null or ${table.fallbackVersionId} <> ${table.id}`),
+]);
+
+export const resumeTemplateTags = pgTable('resume_template_tags', {
+  templateId: text('template_id').notNull().references(() => resumeTemplates.id, { onDelete: 'cascade' }),
+  tagId: text('tag_id').notNull().references(() => templateTags.id, { onDelete: 'cascade' }),
+}, (table) => [
+  primaryKey({ columns: [table.templateId, table.tagId] }),
+  index('resume_template_tags_tag_template_idx').on(table.tagId, table.templateId),
+]);
+
+export const templateFavorites = pgTable('template_favorites', {
+  userId: text('user_id').notNull(),
+  templateId: text('template_id').notNull().references(() => resumeTemplates.id),
+  createdAt: epochTimestamp('created_at').notNull().default(epochNow),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.templateId] }),
+  index('template_favorites_user_created_idx').on(table.userId, table.createdAt, table.templateId),
+]);
+
+export const templateRecentUsage = pgTable('template_recent_usage', {
+  userId: text('user_id').notNull(),
+  templateId: text('template_id').notNull().references(() => resumeTemplates.id),
+  lastUsedAt: epochTimestamp('last_used_at').notNull().default(epochNow),
+  useCount: integer('use_count').notNull().default(0),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.templateId] }),
+  index('template_recent_usage_user_last_used_idx').on(table.userId, table.lastUsedAt, table.templateId),
+  check('template_recent_usage_use_count_check', sql`${table.useCount} >= 0`),
+]);
 
 export const resumeSections = pgTable('resume_sections', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),

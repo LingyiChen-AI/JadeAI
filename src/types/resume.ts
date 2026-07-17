@@ -185,6 +185,10 @@ export interface Resume {
   isDefault: boolean;
   language: string;
   revision: number;
+  templateVersionId: string | null;
+  templateSource: 'legacy' | 'public' | 'local-snapshot';
+  templateSnapshot: import('./template').TemplateSnapshot | null;
+  resolvedTemplate?: import('../lib/templates/resolve-template').ResolvedTemplate;
   sections: ResumeSection[];
   createdAt: Date;
   updatedAt: Date;

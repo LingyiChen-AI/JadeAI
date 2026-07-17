@@ -1,0 +1,417 @@
+{
+  "schemaVersion": 1,
+  "templates": [
+    {
+      "id": "jsonresume-even",
+      "slug": "jsonresume-even",
+      "version": "1.0.1",
+      "nameZh": "JSON Resume 均衡双栏",
+      "nameEn": "JSON Resume Even",
+      "category": "international",
+      "tags": [
+        "layout-two-column",
+        "capability-bilingual"
+      ],
+      "aliases": [
+        "json resume even",
+        "even"
+      ],
+      "rendererKind": "declarative-v1",
+      "source": {
+        "kind": "jsonresume",
+        "packageName": "jsonresume-theme-even",
+        "packageVersion": "0.26.1",
+        "url": "https://github.com/rbardini/jsonresume-theme-even",
+        "revision": "8231a31977aa7bfc7c1724713b523a85f32a760d"
+      },
+      "license": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-even/LICENSE",
+        "sha256": "a1436e5316bd543cf13606ac2a6b8e2c979e6b2284f9db4e4ec6ebace473e8b8",
+        "copyright": "Copyright (c) 2018 Rafael Bardini"
+      },
+      "provenance": {
+        "reviewer": "JadeAI maintainers",
+        "reviewedAt": "2026-07-16T20:00:00.000Z",
+        "conversionNotes": "Manual declarative port of the light palette and two-column hierarchy. Upstream JavaScript, CSS, Feather icons, dark mode, timelines and dependencies are not copied or executed. No upstream binary asset is redistributed.",
+        "network": "disabled",
+        "codeExecuted": false,
+        "assetsRedistributed": false,
+        "assetInventory": [],
+        "sourcePackage": "template-sources/external/jsonresume-even/source.json",
+        "manifestSource": "template-sources/external/jsonresume-even/manifest.json"
+      },
+      "capabilities": {
+        "supportedSections": [
+          "personal_info",
+          "summary",
+          "work_experience",
+          "education",
+          "skills",
+          "projects",
+          "certifications",
+          "languages",
+          "github",
+          "qr_codes",
+          "custom"
+        ],
+        "paperSizes": [
+          "a4",
+          "letter"
+        ],
+        "supportsAvatar": true,
+        "atsCompatible": false,
+        "supportsZh": true,
+        "supportsEn": true,
+        "supportsHtml": true,
+        "supportsPdf": true,
+        "docxFidelity": "generic"
+      },
+      "manifest": {
+        "schemaVersion": 1,
+        "rendererKind": "declarative-v1",
+        "layout": {
+          "type": "two-column",
+          "sidebarPosition": "left",
+          "sidebarWidthPercent": 28,
+          "columnGapMm": 9
+        },
+        "typography": {
+          "fontFamily": "noto-sans-sc",
+          "baseFontSizePt": 10.5,
+          "lineHeight": 1.5,
+          "headingScale": 1.25
+        },
+        "colors": {
+          "text": "#191e23",
+          "muted": "#6c7781",
+          "accent": "#0073aa",
+          "background": "#ffffff"
+        },
+        "spacing": {
+          "pageMarginMm": 12,
+          "sectionGapMm": 6
+        },
+        "sectionSlots": [
+          {
+            "sectionType": "personal_info",
+            "placement": "header",
+            "order": 0
+          },
+          {
+            "sectionType": "summary",
+            "placement": "sidebar",
+            "order": 1
+          },
+          {
+            "sectionType": "skills",
+            "placement": "sidebar",
+            "order": 2
+          },
+          {
+            "sectionType": "languages",
+            "placement": "sidebar",
+            "order": 3
+          },
+          {
+            "sectionType": "work_experience",
+            "placement": "main",
+            "order": 4
+          },
+          {
+            "sectionType": "projects",
+            "placement": "main",
+            "order": 5
+          },
+          {
+            "sectionType": "education",
+            "placement": "main",
+            "order": 6
+          },
+          {
+            "sectionType": "certifications",
+            "placement": "main",
+            "order": 7
+          },
+          {
+            "sectionType": "github",
+            "placement": "main",
+            "order": 8
+          },
+          {
+            "sectionType": "custom",
+            "placement": "main",
+            "order": 9
+          },
+          {
+            "sectionType": "qr_codes",
+            "placement": "footer",
+            "order": 10
+          }
+        ],
+        "sectionStyles": [
+          {
+            "sectionType": "work_experience",
+            "element": "heading",
+            "variant": "accent"
+          },
+          {
+            "sectionType": "projects",
+            "element": "heading",
+            "variant": "accent"
+          },
+          {
+            "sectionType": "education",
+            "element": "heading",
+            "variant": "accent"
+          },
+          {
+            "sectionType": "skills",
+            "element": "heading",
+            "variant": "muted"
+          },
+          {
+            "sectionType": "languages",
+            "element": "heading",
+            "variant": "muted"
+          }
+        ],
+        "features": {
+          "showAvatar": true,
+          "showQrCodes": false,
+          "showPageNumbers": false,
+          "maxPages": 4
+        }
+      },
+      "manifestHash": "124ed4ced8cf7928d38358265c39a76d633feaafc209bada66bbb8a9f16a14db",
+      "thumbnail": {
+        "path": "templates/jsonresume-even/v1.0.1/thumbnail-4fca569410fa98fd.png",
+        "sha256": "4fca569410fa98fd9aab53f1120d38db7869f08c653c737317601768737701c8",
+        "bytes": 21512,
+        "width": 400,
+        "height": 300,
+        "mediaType": "image/png"
+      },
+      "preview": {
+        "path": "templates/jsonresume-even/v1.0.1/preview-0e64c49dd729cb47.png",
+        "sha256": "0e64c49dd729cb471bc7d340d9bd8494e5625f0c8ddbac74b205c8c2b9e25a66",
+        "bytes": 132171,
+        "width": 1200,
+        "height": 900,
+        "mediaType": "image/png"
+      },
+      "publication": {
+        "status": "published",
+        "stable": true,
+        "publishedAt": "2026-07-16T20:00:00.000Z",
+        "promotedAt": "2026-07-16T20:00:00.000Z"
+      }
+    },
+    {
+      "id": "jsonresume-onepage",
+      "slug": "jsonresume-onepage",
+      "version": "1.0.1",
+      "nameZh": "JSON Resume 紧凑单页",
+      "nameEn": "JSON Resume Onepage",
+      "category": "ats",
+      "tags": [
+        "layout-single-column",
+        "capability-bilingual"
+      ],
+      "aliases": [
+        "json resume onepage",
+        "onepage"
+      ],
+      "rendererKind": "declarative-v1",
+      "source": {
+        "kind": "jsonresume",
+        "packageName": "jsonresume-theme-onepage",
+        "packageVersion": "0.0.3",
+        "url": "https://github.com/ainsleyc/jsonresume-theme-onepage",
+        "revision": "09f639745d868bcd58cfd26be1a0011bb206f092"
+      },
+      "license": {
+        "spdx": "MIT",
+        "path": "template-sources/external/jsonresume-onepage/LICENSE",
+        "sha256": "2b229caee7e7faec057638bb7cd195cfa22ecb0755b7f8660cd4d66afad097eb",
+        "copyright": "Copyright (c) 2015 Ainsley Chong"
+      },
+      "provenance": {
+        "reviewer": "JadeAI maintainers",
+        "reviewedAt": "2026-07-16T20:00:00.000Z",
+        "conversionNotes": "Manual declarative port of the compact print hierarchy. Upstream JavaScript, Handlebars, CSS, Times New Roman and course-column preprocessing are not copied or executed. No upstream binary asset is redistributed.",
+        "network": "disabled",
+        "codeExecuted": false,
+        "assetsRedistributed": false,
+        "assetInventory": [],
+        "sourcePackage": "template-sources/external/jsonresume-onepage/source.json",
+        "manifestSource": "template-sources/external/jsonresume-onepage/manifest.json"
+      },
+      "capabilities": {
+        "supportedSections": [
+          "personal_info",
+          "summary",
+          "work_experience",
+          "education",
+          "skills",
+          "projects",
+          "certifications",
+          "languages",
+          "github",
+          "qr_codes",
+          "custom"
+        ],
+        "paperSizes": [
+          "a4",
+          "letter"
+        ],
+        "supportsAvatar": false,
+        "atsCompatible": true,
+        "supportsZh": true,
+        "supportsEn": true,
+        "supportsHtml": true,
+        "supportsPdf": true,
+        "docxFidelity": "generic"
+      },
+      "manifest": {
+        "schemaVersion": 1,
+        "rendererKind": "declarative-v1",
+        "layout": {
+          "type": "single-column",
+          "sidebarPosition": "left",
+          "sidebarWidthPercent": 18,
+          "columnGapMm": 5
+        },
+        "typography": {
+          "fontFamily": "noto-sans-sc",
+          "baseFontSizePt": 9.75,
+          "lineHeight": 1.4,
+          "headingScale": 1.18
+        },
+        "colors": {
+          "text": "#202020",
+          "muted": "#777777",
+          "accent": "#555555",
+          "background": "#ffffff"
+        },
+        "spacing": {
+          "pageMarginMm": 11,
+          "sectionGapMm": 4
+        },
+        "sectionSlots": [
+          {
+            "sectionType": "personal_info",
+            "placement": "header",
+            "order": 0
+          },
+          {
+            "sectionType": "summary",
+            "placement": "main",
+            "order": 1
+          },
+          {
+            "sectionType": "work_experience",
+            "placement": "main",
+            "order": 2
+          },
+          {
+            "sectionType": "education",
+            "placement": "main",
+            "order": 3
+          },
+          {
+            "sectionType": "projects",
+            "placement": "main",
+            "order": 4
+          },
+          {
+            "sectionType": "skills",
+            "placement": "main",
+            "order": 5
+          },
+          {
+            "sectionType": "certifications",
+            "placement": "main",
+            "order": 6
+          },
+          {
+            "sectionType": "languages",
+            "placement": "main",
+            "order": 7
+          },
+          {
+            "sectionType": "github",
+            "placement": "main",
+            "order": 8
+          },
+          {
+            "sectionType": "custom",
+            "placement": "main",
+            "order": 9
+          },
+          {
+            "sectionType": "qr_codes",
+            "placement": "footer",
+            "order": 10
+          }
+        ],
+        "sectionStyles": [
+          {
+            "sectionType": "work_experience",
+            "element": "heading",
+            "variant": "bordered"
+          },
+          {
+            "sectionType": "education",
+            "element": "heading",
+            "variant": "bordered"
+          },
+          {
+            "sectionType": "projects",
+            "element": "heading",
+            "variant": "bordered"
+          },
+          {
+            "sectionType": "skills",
+            "element": "heading",
+            "variant": "bordered"
+          },
+          {
+            "sectionType": "certifications",
+            "element": "heading",
+            "variant": "bordered"
+          }
+        ],
+        "features": {
+          "showAvatar": false,
+          "showQrCodes": false,
+          "showPageNumbers": false,
+          "maxPages": 2
+        }
+      },
+      "manifestHash": "b526700bf6d202781381083fe36a34e5480bb3dc639989993d4f10fdcd65c21e",
+      "thumbnail": {
+        "path": "templates/jsonresume-onepage/v1.0.1/thumbnail-4e647e2a530a4e12.png",
+        "sha256": "4e647e2a530a4e127f4584287ccbc651c42cd8ef6ecf538feeafca859f202b24",
+        "bytes": 18287,
+        "width": 400,
+        "height": 300,
+        "mediaType": "image/png"
+      },
+      "preview": {
+        "path": "templates/jsonresume-onepage/v1.0.1/preview-b1a82eb410fd2aae.png",
+        "sha256": "b1a82eb410fd2aae447bc2a99d5652a9a3e93300a2102a1babb38c9da740b675",
+        "bytes": 98835,
+        "width": 1200,
+        "height": 900,
+        "mediaType": "image/png"
+      },
+      "publication": {
+        "status": "published",
+        "stable": true,
+        "publishedAt": "2026-07-16T20:00:00.000Z",
+        "promotedAt": "2026-07-16T20:00:00.000Z"
+      }
+    }
+  ]
+}

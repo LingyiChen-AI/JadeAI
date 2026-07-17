@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import type { Resume } from '@/types/resume';
+import type { ClientTemplateBindingChoice } from '@/lib/templates/apply-template-binding.server';
 
 function getHeaders() {
   const fingerprint = typeof window !== 'undefined' ? localStorage.getItem('jade_fingerprint') : null;
@@ -30,7 +31,7 @@ export function useResume() {
     }
   }, []);
 
-  const createResume = useCallback(async (data: { title?: string; template?: string; language?: string }) => {
+  const createResume = useCallback(async (data: { title?: string; template?: string; language?: string; binding?: ClientTemplateBindingChoice }) => {
     try {
       const res = await fetch('/api/resume', {
         method: 'POST',

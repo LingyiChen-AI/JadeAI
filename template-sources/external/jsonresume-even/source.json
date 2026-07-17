@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-even",
+  "version": "1.0.1",
+  "nameZh": "JSON Resume 均衡双栏",
+  "nameEn": "JSON Resume Even",
+  "category": "international",
+  "tags": [
+    "layout-two-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "json resume even",
+    "even"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-even",
+    "packageVersion": "0.26.1",
+    "url": "https://github.com/rbardini/jsonresume-theme-even",
+    "revision": "8231a31977aa7bfc7c1724713b523a85f32a760d"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "a1436e5316bd543cf13606ac2a6b8e2c979e6b2284f9db4e4ec6ebace473e8b8",
+    "copyright": "Copyright (c) 2018 Rafael Bardini"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "da947c54c8d3b4adb2b85363b87d7117cebb8db7048c987fa4bf6ec3c4a53749",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-16T20:00:00.000Z",
+    "notes": "Manual declarative port of the light palette and two-column hierarchy. Upstream JavaScript, CSS, Feather icons, dark mode, timelines and dependencies are not copied or executed. No upstream binary asset is redistributed."
+  }
+}

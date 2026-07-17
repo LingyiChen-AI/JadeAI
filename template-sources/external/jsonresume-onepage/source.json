@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "approved",
+  "slug": "jsonresume-onepage",
+  "version": "1.0.1",
+  "nameZh": "JSON Resume 紧凑单页",
+  "nameEn": "JSON Resume Onepage",
+  "category": "ats",
+  "tags": [
+    "layout-single-column",
+    "capability-bilingual"
+  ],
+  "aliases": [
+    "json resume onepage",
+    "onepage"
+  ],
+  "source": {
+    "kind": "jsonresume",
+    "packageName": "jsonresume-theme-onepage",
+    "packageVersion": "0.0.3",
+    "url": "https://github.com/ainsleyc/jsonresume-theme-onepage",
+    "revision": "09f639745d868bcd58cfd26be1a0011bb206f092"
+  },
+  "license": {
+    "spdx": "MIT",
+    "path": "LICENSE",
+    "sha256": "2b229caee7e7faec057638bb7cd195cfa22ecb0755b7f8660cd4d66afad097eb",
+    "copyright": "Copyright (c) 2015 Ainsley Chong"
+  },
+  "assets": [],
+  "manifestPath": "manifest.json",
+  "manifestSha256": "8b4c842297ab069c423d7020488c27c341c38d6843b987c6437c6213bfb305d0",
+  "conversion": {
+    "reviewer": "JadeAI maintainers",
+    "reviewedAt": "2026-07-16T20:00:00.000Z",
+    "notes": "Manual declarative port of the compact print hierarchy. Upstream JavaScript, Handlebars, CSS, Times New Roman and course-column preprocessing are not copied or executed. No upstream binary asset is redistributed."
+  }
+}

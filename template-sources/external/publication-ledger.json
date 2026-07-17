@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "events": [
+    {
+      "action": "publish",
+      "reference": "jsonresume-even@1.0.1",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-even@1.0.1",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "publish",
+      "reference": "jsonresume-onepage@1.0.1",
+      "at": "2026-07-16T20:00:00.000Z"
+    },
+    {
+      "action": "promote-stable",
+      "reference": "jsonresume-onepage@1.0.1",
+      "at": "2026-07-16T20:00:00.000Z"
+    }
+  ]
+}

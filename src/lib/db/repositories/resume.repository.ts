@@ -1,6 +1,19 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
+import { TEMPLATES } from '../../constants';
+import {
+  parseStoredTemplateSnapshot,
+  type ResumeTemplateBindingInput,
+} from '../../templates/apply-template-binding.server';
 import { db } from '../index';
-import { resumes, resumeSections } from '../pg-schema';
+import {
+  resumes,
+  resumeSections,
+  resumeTemplates,
+  resumeTemplateVersions,
+  templateCategories,
+  templateRecentUsage,
+} from '../pg-schema';
 
 type ResumeMutationTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type ResumeRow = typeof resumes.$inferSelect;
@@ -45,6 +58,157 @@ async function loadSnapshot(tx: ResumeMutationTransaction, id: string, lock = fa
     .where(eq(resumeSections.resumeId, id))
     .orderBy(resumeSections.sortOrder);
   return { ...resume[0], sections };
+}
+
+type ResolvedBinding = {
+  values: Pick<ResumeRow, 'template' | 'templateSource' | 'templateVersionId' | 'templateSnapshot'>;
+  publicTemplateId: string | null;
+  publicVersionId: string | null;
+};
+
+const stableTemplateVersions = alias(resumeTemplateVersions, 'stable_template_version');
+
+async function resolveBinding(
+  tx: ResumeMutationTransaction,
+  binding: ResumeTemplateBindingInput,
+): Promise<ResolvedBinding> {
+  if (binding.kind === 'legacy') {
+    if (!(TEMPLATES as readonly string[]).includes(binding.templateSlug)) {
+      throw new Error('unknown_legacy_template');
+    }
+    return {
+      values: {
+        template: binding.templateSlug,
+        templateSource: 'legacy',
+        templateVersionId: null,
+        templateSnapshot: null,
+      },
+      publicTemplateId: null,
+      publicVersionId: null,
+    };
+  }
+
+  if (binding.kind === 'local-snapshot') {
+    const snapshot = parseStoredTemplateSnapshot(binding.snapshot);
+    return {
+      values: {
+        template: 'classic',
+        templateSource: 'local-snapshot',
+        templateVersionId: null,
+        templateSnapshot: snapshot,
+      },
+      publicTemplateId: null,
+      publicVersionId: null,
+    };
+  }
+
+  const resolved = await tx
+    .select({
+      templateId: resumeTemplates.id,
+      templateSlug: resumeTemplates.slug,
+      versionId: resumeTemplateVersions.id,
+    })
+    .from(resumeTemplates)
+    .innerJoin(templateCategories, and(
+      eq(templateCategories.id, resumeTemplates.categoryId),
+      eq(templateCategories.isActive, true),
+    ))
+    .innerJoin(stableTemplateVersions, and(
+      eq(stableTemplateVersions.id, resumeTemplates.stableVersionId),
+      eq(stableTemplateVersions.templateId, resumeTemplates.id),
+      eq(stableTemplateVersions.status, 'published'),
+      sql`${stableTemplateVersions.publishedAt} is not null`,
+    ))
+    .innerJoin(resumeTemplateVersions, and(
+      eq(resumeTemplateVersions.templateId, resumeTemplates.id),
+      eq(resumeTemplateVersions.version, binding.version),
+      eq(resumeTemplateVersions.status, 'published'),
+    ))
+    .where(and(
+      eq(resumeTemplates.slug, binding.templateSlug),
+      eq(resumeTemplates.status, 'published'),
+      sql`${resumeTemplates.publishedAt} is not null`,
+      sql`${resumeTemplateVersions.publishedAt} is not null`,
+    ))
+    .limit(1);
+  if (!resolved[0]) throw new Error('template_version_not_found');
+
+  return {
+    values: {
+      template: resolved[0].templateSlug,
+      templateSource: 'public',
+      templateVersionId: resolved[0].versionId,
+      templateSnapshot: null,
+    },
+    publicTemplateId: resolved[0].templateId,
+    publicVersionId: resolved[0].versionId,
+  };
+}
+
+async function recordPublicBindingUsage(
+  tx: ResumeMutationTransaction,
+  userId: string,
+  templateId: string,
+  versionId: string,
+) {
+  try {
+    const updated = await tx
+      .update(resumeTemplates)
+      .set({ usageCount: sql`${resumeTemplates.usageCount} + 1`, updatedAt: new Date() })
+      .where(and(
+        eq(resumeTemplates.id, templateId),
+        eq(resumeTemplates.status, 'published'),
+        sql`${resumeTemplates.publishedAt} is not null`,
+        sql`EXISTS (
+          SELECT 1 FROM template_categories AS category
+          WHERE category.id = ${resumeTemplates.categoryId} AND category.is_active = 1
+        )`,
+        sql`EXISTS (
+          SELECT 1 FROM resume_template_versions AS stable
+          WHERE stable.id = ${resumeTemplates.stableVersionId}
+            AND stable.template_id = ${resumeTemplates.id}
+            AND stable.status = 'published' AND stable.published_at IS NOT NULL
+        )`,
+        sql`EXISTS (
+          SELECT 1 FROM resume_template_versions AS requested
+          WHERE requested.id = ${versionId}
+            AND requested.template_id = ${resumeTemplates.id}
+            AND requested.status = 'published' AND requested.published_at IS NOT NULL
+        )`,
+      ))
+      .returning({ id: resumeTemplates.id });
+    if (updated.length !== 1) throw new Error('template_version_not_found');
+    await tx
+      .insert(templateRecentUsage)
+      .values({ userId, templateId, useCount: 1, lastUsedAt: new Date() })
+      .onConflictDoUpdate({
+        target: [templateRecentUsage.userId, templateRecentUsage.templateId],
+        set: {
+          useCount: sql`${templateRecentUsage.useCount} + 1`,
+          lastUsedAt: new Date(),
+        },
+      });
+    await tx.execute(sql`
+      DELETE FROM template_recent_usage AS recent
+      WHERE recent.user_id = ${userId}
+        AND recent.template_id NOT IN (
+          SELECT kept.template_id FROM template_recent_usage AS kept
+          WHERE kept.user_id = ${userId}
+          ORDER BY kept.last_used_at DESC, kept.template_id ASC
+          LIMIT 20
+        )
+    `);
+  } catch (error) {
+    if (error instanceof Error && error.cause instanceof Error) throw error.cause;
+    throw error;
+  }
+}
+
+function bindingValuesChanged(snapshot: ResumeRow, values: ResolvedBinding['values']) {
+  return snapshot.template !== values.template
+    || snapshot.templateSource !== values.templateSource
+    || snapshot.templateVersionId !== values.templateVersionId
+    || !valuesEqual(snapshot.templateSnapshot, values.templateSnapshot);
 }
 
 export async function mutateResume(
@@ -105,17 +269,50 @@ export const resumeRepository = {
     return { ...resume[0], sections };
   },
 
-  async create(data: { userId: string; title?: string; template?: string; language?: string; themeConfig?: unknown }) {
+  async create(data: {
+    userId: string;
+    title?: string;
+    template?: string;
+    language?: string;
+    themeConfig?: unknown;
+    binding?: ResumeTemplateBindingInput;
+    sections?: Array<{
+      id: string;
+      type: string;
+      title: string;
+      sortOrder: number;
+      visible: boolean;
+      content: unknown;
+    }>;
+  }) {
     const id = crypto.randomUUID();
-    await db.insert(resumes).values({
-      id,
-      userId: data.userId,
-      title: data.title || '未命名简历',
-      template: data.template || 'classic',
-      language: data.language || 'zh',
-      ...(data.themeConfig !== undefined ? { themeConfig: data.themeConfig } : {}),
+    return db.transaction(async (tx) => {
+      const binding = await resolveBinding(tx, data.binding ?? {
+        kind: 'legacy',
+        templateSlug: (TEMPLATES as readonly string[]).includes(data.template ?? '')
+          ? data.template as (typeof TEMPLATES)[number]
+          : 'classic',
+      });
+      await tx.insert(resumes).values({
+        id,
+        userId: data.userId,
+        title: data.title || '未命名简历',
+        language: data.language || 'zh',
+        ...binding.values,
+        ...(data.themeConfig !== undefined ? { themeConfig: data.themeConfig } : {}),
+      });
+      if (data.sections?.length) {
+        await tx.insert(resumeSections).values(data.sections.map((section) => ({
+          ...section,
+          id: crypto.randomUUID(),
+          resumeId: id,
+        })));
+      }
+      if (binding.publicTemplateId) {
+        await recordPublicBindingUsage(tx, data.userId, binding.publicTemplateId, binding.publicVersionId!);
+      }
+      return loadSnapshot(tx, id);
     });
-    return this.findById(id);
   },
 
   async update(id: string, data: Partial<{ title: string; template: string; themeConfig: unknown; language: string }>) {
@@ -135,12 +332,24 @@ export const resumeRepository = {
       visible: boolean;
       content: unknown;
     }>;
+    binding?: ResumeTemplateBindingInput;
   }) {
     assertRevision(expectedRevision);
     return mutateResume(id, expectedRevision, async (tx, snapshot) => {
-      const metadata: Partial<{ title: string; template: string; themeConfig: unknown }> = {};
+      const metadata: Partial<Pick<ResumeRow, 'title' | 'template' | 'themeConfig' | 'templateSource' | 'templateVersionId' | 'templateSnapshot'>> = {};
       if (data.title !== undefined && data.title !== snapshot.title) metadata.title = data.title;
-      if (data.template !== undefined && data.template !== snapshot.template) metadata.template = data.template;
+      if (data.binding !== undefined) {
+        const binding = await resolveBinding(tx, data.binding);
+        if (bindingValuesChanged(snapshot, binding.values)) Object.assign(metadata, binding.values);
+        if (binding.publicTemplateId && bindingValuesChanged(snapshot, binding.values)) {
+          await recordPublicBindingUsage(tx, snapshot.userId, binding.publicTemplateId, binding.publicVersionId!);
+        }
+      } else if (snapshot.templateSource === 'legacy'
+        && data.template !== undefined
+        && data.template !== snapshot.template
+        && (TEMPLATES as readonly string[]).includes(data.template)) {
+        metadata.template = data.template;
+      }
       if (data.themeConfig !== undefined && !valuesEqual(data.themeConfig, snapshot.themeConfig)) metadata.themeConfig = data.themeConfig;
 
       let changed = Object.keys(metadata).length > 0;
@@ -249,6 +458,9 @@ export const resumeRepository = {
       userId,
       title: titleOverride ?? `${original.title} (副本)`,
       template: original.template,
+      templateSource: original.templateSource,
+      templateVersionId: original.templateVersionId,
+      templateSnapshot: original.templateSnapshot,
       themeConfig: original.themeConfig,
       language: original.language,
     });

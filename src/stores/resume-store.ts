@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import type { Resume, ResumeSection, SectionContent } from '@/types/resume';
-import { AUTOSAVE_DELAY } from '@/lib/constants';
+import type { ClientTemplateBindingChoice } from '@/lib/templates/apply-template-binding.server';
+import { toResumeTemplateBindingInput } from '@/lib/templates/apply-template-binding.server';
+import type { ResolvedTemplate } from '@/lib/templates/resolve-template';
+import { AUTOSAVE_DELAY, TEMPLATES } from '@/lib/constants';
 import { useSettingsStore } from '@/stores/settings-store';
 import { normalizeSectionContent } from '@/lib/resume/normalize-content';
 
@@ -12,6 +15,7 @@ interface ResumeStore {
   saveError: string | null;
   editVersion: number;
   aiEditingResumeId: string | null;
+  pendingTemplateBinding: ClientTemplateBindingChoice | null;
   _saveTimeout: ReturnType<typeof setTimeout> | null;
 
   setResume: (resume: Resume) => void;
@@ -23,6 +27,7 @@ interface ResumeStore {
   reorderSections: (sections: ResumeSection[]) => void;
   toggleSectionVisibility: (sectionId: string) => void;
   setTemplate: (template: string) => void;
+  setTemplateBinding: (binding: ClientTemplateBindingChoice, previewResolution?: ResolvedTemplate) => void;
   setTitle: (title: string) => void;
   save: () => Promise<boolean>;
   beginAiEditing: (resumeId: string) => boolean;
@@ -42,6 +47,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   saveError: null,
   editVersion: 0,
   aiEditingResumeId: null,
+  pendingTemplateBinding: null,
   _saveTimeout: null,
 
   setResume: (resume) => {
@@ -65,6 +71,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
       isSaving: false,
       saveError: null,
       editVersion: 0,
+      pendingTemplateBinding: null,
       _saveTimeout: null,
     });
   },
@@ -179,11 +186,39 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   },
 
   setTemplate: (template) => {
+    if (!(TEMPLATES as readonly string[]).includes(template)) return;
+    get().setTemplateBinding({
+      kind: 'legacy',
+      templateSlug: template as (typeof TEMPLATES)[number],
+    });
+  },
+
+  setTemplateBinding: (binding, previewResolution) => {
     if (get().aiEditingResumeId === get().currentResume?.id) return;
+    const localInput = binding.kind === 'local-snapshot' ? toResumeTemplateBindingInput(binding) : null;
+    const resolvedTemplate = previewResolution ?? (localInput?.kind === 'local-snapshot'
+      ? {
+          kind: 'declarative-v1' as const,
+          source: 'local-snapshot' as const,
+          manifest: localInput.snapshot.manifest,
+          capabilities: localInput.snapshot.capabilities,
+          degraded: false,
+        }
+      : undefined);
     set((state) => ({
       currentResume: state.currentResume
-        ? { ...state.currentResume, template }
+        ? {
+            ...state.currentResume,
+            template: binding.kind === 'public'
+              ? binding.templateSlug
+              : binding.kind === 'legacy' ? binding.templateSlug : 'classic',
+            templateSource: binding.kind,
+            templateVersionId: null,
+            templateSnapshot: null,
+            resolvedTemplate,
+          }
         : null,
+      pendingTemplateBinding: binding,
       isDirty: true,
       saveError: null,
       editVersion: state.editVersion + 1,
@@ -205,7 +240,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   },
 
   save: () => {
-    const { currentResume, sections, isDirty, editVersion } = get();
+    const { currentResume, sections, isDirty, editVersion, pendingTemplateBinding } = get();
     if (!currentResume || !isDirty) return Promise.resolve(true);
     if (saveInFlight && saveInFlightResumeId === currentResume.id) return saveInFlight;
     if (saveInFlight) return saveInFlight.then(() => get().save());
@@ -226,6 +261,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
         visible: s.visible,
         content: s.content,
       })),
+      ...(pendingTemplateBinding ? { binding: pendingTemplateBinding } : {}),
     };
 
     set({ isSaving: true, saveError: null });
@@ -334,6 +370,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
       saveError: null,
       editVersion: 0,
       aiEditingResumeId: null,
+      pendingTemplateBinding: null,
       _saveTimeout: null,
     });
   },

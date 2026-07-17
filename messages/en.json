@@ -582,9 +582,163 @@
   "templates": {
     "title": "Templates",
     "subtitle": "Choose a template to start building your resume",
+    "back": "Back",
     "preview": "Preview",
     "useTemplate": "Use This Template",
     "creating": "Creating...",
+    "favorite": "Add to favorites",
+    "unfavorite": "Remove from favorites",
+    "favoriteError": "The favorite could not be updated.",
+    "views": {
+      "public": "Public",
+      "local": "Local",
+      "favorites": "Favorites",
+      "recent": "Recent",
+      "legacy": "Legacy"
+    },
+    "filters": {
+      "title": "Filters",
+      "description": "Narrow the template catalog",
+      "searchPlaceholder": "Search templates",
+      "category": "Category",
+      "allCategories": "All categories",
+      "tags": "Tags",
+      "ats": "ATS compatible",
+      "avatar": "Supports avatar",
+      "paper": "Paper size",
+      "anyPaper": "Any paper size",
+      "docx": "DOCX support"
+    },
+    "capabilities": {
+      "ats": "ATS",
+      "avatar": "Avatar",
+      "paper": "Paper",
+      "docx": "DOCX"
+    },
+    "sort": {
+      "newest": "Newest",
+      "popular": "Popular",
+      "name": "Name"
+    },
+    "states": {
+      "empty": "No public templates match these filters.",
+      "localEmpty": "Your local templates will appear here.",
+      "favoritesEmpty": "You have not favorited any templates yet.",
+      "recentEmpty": "Templates you recently used will appear here.",
+      "error": "The template catalog could not be loaded.",
+      "retry": "Retry"
+    },
+    "pagination": {
+      "label": "Template pages",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "previewDialog": {
+      "loading": "Loading preview...",
+      "error": "This preview could not be loaded.",
+      "description": "Preview for {name}"
+    },
+    "localManager": {
+      "title": "My Templates",
+      "actions": {
+        "create": "New template",
+        "import": "Import",
+        "apply": "Apply",
+        "edit": "Edit",
+        "copy": "Duplicate",
+        "copyPublic": "Copy to My Templates",
+        "export": "Export",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "fields": {
+        "name": "Template name",
+        "category": "Category",
+        "tags": "Local tags",
+        "sourceDescription": "Source description",
+        "templateVersion": "Template version"
+      },
+      "states": {
+        "loading": "Loading local templates...",
+        "empty": "No local templates yet.",
+        "unavailable": "Local template storage is unavailable in this browser.",
+        "error": "Local templates could not be loaded.",
+        "corrupt": "Some damaged local records were isolated. Your valid templates remain available.",
+        "quota": "The local template storage quota has been reached.",
+        "operation": "The local template operation could not be completed."
+      },
+      "copySuccess": "Template copied to My Templates.",
+      "copyError": "The template could not be copied.",
+      "deleteSnapshotWarning": "Delete this local template? Saved resumes keep their validated template snapshot."
+    },
+    "localEditor": {
+      "layout": {
+        "title": "Layout",
+        "single-column": "Single column",
+        "two-column": "Two columns",
+        "sidebar": "Sidebar",
+        "sidebarPosition": "Sidebar position",
+        "sidebarWidth": "Sidebar width",
+        "columnGap": "Column gap",
+        "left": "Left",
+        "right": "Right"
+      },
+      "typography": {
+        "title": "Typography",
+        "fontFamily": "Font family",
+        "baseFontSize": "Base font size",
+        "lineHeight": "Line height",
+        "headingScale": "Heading scale"
+      },
+      "colors": {
+        "title": "Colors",
+        "text": "Text",
+        "muted": "Muted",
+        "accent": "Accent",
+        "background": "Background"
+      },
+      "spacing": {
+        "title": "Spacing",
+        "pageMargin": "Page margin",
+        "sectionGap": "Section gap"
+      },
+      "features": {
+        "title": "Features",
+        "avatar": "Avatar",
+        "qr": "QR codes",
+        "pageNumbers": "Page numbers",
+        "maxPages": "Maximum pages"
+      },
+      "sections": {
+        "title": "Sections and contact placement",
+        "placement": "Placement",
+        "order": "Order",
+        "heading": "Heading style",
+        "body": "Body style",
+        "date": "Date style",
+        "divider": "Divider style",
+        "bullet": "Bullet style",
+        "avatar": "Avatar style",
+        "contact": "Contact style",
+        "qr": "QR style",
+        "header": "Header",
+        "main": "Main",
+        "sidebar": "Sidebar",
+        "footer": "Footer"
+      },
+      "variants": {
+        "default": "Default",
+        "compact": "Compact",
+        "accent": "Accent",
+        "muted": "Muted",
+        "bordered": "Bordered"
+      },
+      "paper": {
+        "a4": "A4 preview",
+        "letter": "Letter preview"
+      }
+    },
     "nav": "Templates"
   },
   "tour": {

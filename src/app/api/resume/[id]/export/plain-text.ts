@@ -11,7 +11,7 @@ import type {
 } from '@/types/resume';
 import { safe, type ResumeWithSections } from './utils';
 
-export function generatePlainText(resume: ResumeWithSections): string {
+export function generatePlainText(resume: Pick<ResumeWithSections, 'sections'>): string {
   const lines: string[] = [];
 
   for (const section of resume.sections) {

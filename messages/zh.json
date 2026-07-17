@@ -582,9 +582,163 @@
   "templates": {
     "title": "模板",
     "subtitle": "选择一个模板开始创建你的简历",
+    "back": "返回",
     "preview": "预览",
     "useTemplate": "使用此模板",
     "creating": "创建中...",
+    "favorite": "添加收藏",
+    "unfavorite": "取消收藏",
+    "favoriteError": "无法更新收藏状态。",
+    "views": {
+      "public": "公共模板",
+      "local": "本地模板",
+      "favorites": "收藏",
+      "recent": "最近使用",
+      "legacy": "旧版"
+    },
+    "filters": {
+      "title": "筛选",
+      "description": "缩小模板目录范围",
+      "searchPlaceholder": "搜索模板",
+      "category": "分类",
+      "allCategories": "全部分类",
+      "tags": "标签",
+      "ats": "ATS 兼容",
+      "avatar": "支持头像",
+      "paper": "纸张尺寸",
+      "anyPaper": "任意纸张尺寸",
+      "docx": "支持 DOCX"
+    },
+    "capabilities": {
+      "ats": "ATS",
+      "avatar": "头像",
+      "paper": "纸张",
+      "docx": "DOCX"
+    },
+    "sort": {
+      "newest": "最新",
+      "popular": "最受欢迎",
+      "name": "名称"
+    },
+    "states": {
+      "empty": "没有符合当前筛选条件的公共模板。",
+      "localEmpty": "你的本地模板会显示在这里。",
+      "favoritesEmpty": "你还没有收藏模板。",
+      "recentEmpty": "最近使用的模板会显示在这里。",
+      "error": "无法加载模板目录。",
+      "retry": "重试"
+    },
+    "pagination": {
+      "label": "模板分页",
+      "previous": "上一页",
+      "next": "下一页"
+    },
+    "previewDialog": {
+      "loading": "正在加载预览...",
+      "error": "无法加载此模板预览。",
+      "description": "{name} 模板预览"
+    },
+    "localManager": {
+      "title": "我的模板",
+      "actions": {
+        "create": "新建模板",
+        "import": "导入",
+        "apply": "应用",
+        "edit": "编辑",
+        "copy": "复制",
+        "copyPublic": "复制到我的模板",
+        "export": "导出",
+        "delete": "删除",
+        "cancel": "取消",
+        "save": "保存"
+      },
+      "fields": {
+        "name": "模板名称",
+        "category": "分类",
+        "tags": "本地标签",
+        "sourceDescription": "来源说明",
+        "templateVersion": "模板版本"
+      },
+      "states": {
+        "loading": "正在加载本地模板...",
+        "empty": "还没有本地模板。",
+        "unavailable": "当前浏览器无法使用本地模板存储。",
+        "error": "无法加载本地模板。",
+        "corrupt": "部分损坏的本地记录已被隔离，其余有效模板仍可使用。",
+        "quota": "本地模板存储配额已用完。",
+        "operation": "无法完成本地模板操作。"
+      },
+      "copySuccess": "模板已复制到我的模板。",
+      "copyError": "无法复制此模板。",
+      "deleteSnapshotWarning": "删除这个本地模板？已保存的简历会继续保留其已验证模板快照。"
+    },
+    "localEditor": {
+      "layout": {
+        "title": "布局",
+        "single-column": "单栏",
+        "two-column": "双栏",
+        "sidebar": "侧栏",
+        "sidebarPosition": "侧栏位置",
+        "sidebarWidth": "侧栏宽度",
+        "columnGap": "分栏间距",
+        "left": "左侧",
+        "right": "右侧"
+      },
+      "typography": {
+        "title": "字体",
+        "fontFamily": "字体族",
+        "baseFontSize": "正文字号",
+        "lineHeight": "行高",
+        "headingScale": "标题比例"
+      },
+      "colors": {
+        "title": "颜色",
+        "text": "正文",
+        "muted": "弱化文字",
+        "accent": "强调色",
+        "background": "背景"
+      },
+      "spacing": {
+        "title": "间距",
+        "pageMargin": "页边距",
+        "sectionGap": "区块间距"
+      },
+      "features": {
+        "title": "功能",
+        "avatar": "头像",
+        "qr": "二维码",
+        "pageNumbers": "页码",
+        "maxPages": "最大页数"
+      },
+      "sections": {
+        "title": "区块与联系方式位置",
+        "placement": "位置",
+        "order": "顺序",
+        "heading": "标题样式",
+        "body": "正文样式",
+        "date": "日期样式",
+        "divider": "分隔线样式",
+        "bullet": "项目符号样式",
+        "avatar": "头像样式",
+        "contact": "联系方式样式",
+        "qr": "二维码样式",
+        "header": "页首",
+        "main": "主栏",
+        "sidebar": "侧栏",
+        "footer": "页尾"
+      },
+      "variants": {
+        "default": "默认",
+        "compact": "紧凑",
+        "accent": "强调",
+        "muted": "弱化",
+        "bordered": "描边"
+      },
+      "paper": {
+        "a4": "A4 预览",
+        "letter": "Letter 预览"
+      }
+    },
     "nav": "模板"
   },
   "tour": {
