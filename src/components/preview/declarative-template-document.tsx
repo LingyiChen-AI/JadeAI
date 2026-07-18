@@ -185,7 +185,8 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
                     ...(textRun.tone === 'muted' && presentation?.entry.variant === 'date-rail' ? { display: 'inline-block', minWidth: '24mm', color: presentation.palette.secondary } : {}),
                     ...(section.type === 'skills' && presentation?.skills.variant === 'tags' ? { display: 'inline-block', background: presentation.palette.surface, border: `${presentation.border.widthPt}pt solid ${presentation.palette.border}`, borderRadius: `${presentation.border.radiusMm}mm`, padding: '.5mm 2mm', margin: '.5mm' } : {}),
                   }}
-                >{textRun.text}{' '}</span>
+                dangerouslySetInnerHTML={{ __html: `${textRun.html} ` }}
+                />
               ))}
               {block.links.map((link, linkIndex) => (
                 <a key={`link:${linkIndex}`} href={link.href} rel="noreferrer noopener" style={{ color: document.colors.accent, overflowWrap: 'anywhere' }}>{link.label}{' '}</a>

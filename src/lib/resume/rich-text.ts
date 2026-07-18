@@ -26,6 +26,11 @@ function renderInline(value: string): string {
     .replace(/`([^`\n]+)`/g, '<code>$1</code>');
 }
 
+/** Render inline Markdown as safe HTML for an existing text host. */
+export function renderRichTextInlineHtml(value: unknown): string {
+  return renderInline(String(value ?? ''));
+}
+
 export function parseRichText(value: unknown): RichTextBlock[] {
   if (value == null) return [];
   return String(value).replace(/\r\n?/g, '\n').split('\n').map((rawLine) => {

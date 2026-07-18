@@ -1,5 +1,6 @@
 import { SECTION_TYPES } from '@/lib/constants';
 import type { DeclarativeTemplateManifest, TemplateManifestV1, TemplateManifestV2 } from '@/types/template';
+import { renderRichTextInlineHtml } from '@/lib/resume/rich-text';
 
 const MAX_VIEW_NODES = 4_000;
 const MAX_VIEW_DEPTH = 8;
@@ -60,6 +61,7 @@ type TemplateResumeSource = {
 
 export type TemplateDocumentTextRun = {
   text: string;
+  html: string;
   tone: 'default' | 'muted' | 'accent';
 };
 
@@ -183,7 +185,7 @@ function safeAvatar(value: unknown): string | null {
 function run(text: unknown, tone: TemplateDocumentTextRun['tone'] = 'default'): TemplateDocumentTextRun | null {
   if (typeof text !== 'string' && typeof text !== 'number') return null;
   const normalized = String(text).trim();
-  return normalized ? { text: normalized, tone } : null;
+  return normalized ? { text: normalized, html: renderRichTextInlineHtml(normalized), tone } : null;
 }
 
 function collectRecordBlocks(value: unknown, blocks: TemplateDocumentBlock[], depth = 0, skipAvatar = false): void {
@@ -378,11 +380,11 @@ export function serializeTemplateDocumentHtml(document: TemplateDocument): strin
   ].join(';');
   const sections = document.sections.map((section) => {
     const blocks = section.blocks.map((block) => {
-      const text = block.textRuns.map((textRun) => `<span data-tone="${textRun.tone}">${escapeHtml(textRun.text)}</span>`).join(' ');
+      const text = block.textRuns.map((textRun) => `<span data-tone="${textRun.tone}">${textRun.html}</span>`).join(' ');
       const links = block.links.map((link) => `<a href="${escapeHtml(link.href)}" rel="noreferrer noopener">${escapeHtml(link.label)}</a>`).join(' ');
       const images = block.images.map((image) => `<img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" data-image-role="${image.role}">`).join('');
       if (block.kind === 'list') {
-        const items = block.textRuns.map((textRun) => `<li data-tone="${textRun.tone}">${escapeHtml(textRun.text)}</li>`).join('');
+        const items = block.textRuns.map((textRun) => `<li data-tone="${textRun.tone}">${textRun.html}</li>`).join('');
         return `<ul data-block="list">${items}</ul>`;
       }
       if (block.kind === 'qr') return `<div data-block="qr">${images}${text}${text && links ? ' ' : ''}${links}</div>`;
