@@ -4,7 +4,6 @@
 
 **AI-Powered Smart Resume Builder**
 
-
 Build professional resumes with drag-and-drop editing, real-time AI optimization, 50 templates, and multi-format export.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
