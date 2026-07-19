@@ -313,7 +313,7 @@
       "modelPlaceholder": "Enter model name...",
       "noModelsFound": "No models found. Enter a model name manually below.",
       "baseURLLockedHint": "The API address is fixed to https://xiaoni-ai.top/v1 and cannot be changed.",
-      "defaultModelHint": "The default model is gpt-5.5. You can change it to another model when needed."
+      "defaultModelHint": "The default model is gpt-5.6-sol. You can change it to another model when needed."
     },
     "appearance": {
       "title": "Appearance",

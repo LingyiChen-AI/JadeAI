@@ -313,7 +313,7 @@
       "modelPlaceholder": "输入模型名称...",
       "noModelsFound": "未找到模型，请在下方手动输入模型名称。",
       "baseURLLockedHint": "API 地址已固定为 https://xiaoni-ai.top/v1，不可更改。",
-      "defaultModelHint": "默认模型为 gpt-5.5，可按需改为其他模型。"
+      "defaultModelHint": "默认模型为 gpt-5.6-sol，可按需改为其他模型。"
     },
     "appearance": {
       "title": "外观",
