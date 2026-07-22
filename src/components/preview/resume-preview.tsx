@@ -7,9 +7,11 @@ import { loadLegacyTemplateAdapter } from '@/components/templates/legacy-templat
 import { buildTemplateDocument, normalizeResumeForTemplate } from '@/lib/templates/template-document';
 import { resolveSavedTemplateSnapshot } from '@/lib/templates/resolve-template';
 import { DeclarativeTemplateDocument } from './declarative-template-document';
+import { EditableResumeProvider, type EditableResumeContract } from './editable-resume-context';
 
 interface ResumePreviewProps {
   resume: Resume;
+  edit?: EditableResumeContract;
 }
 
 const lazyLegacyTemplates = new Map<string, React.LazyExoticComponent<React.ComponentType<{ resume: Resume }>>>(
@@ -143,7 +145,7 @@ function buildThemeCSS(scopeId: string, theme: ThemeConfig, template: string): s
   `;
 }
 
-export function ResumePreview({ resume }: ResumePreviewProps) {
+export function ResumePreview({ resume, edit }: ResumePreviewProps) {
   const scopeId = useId();
   const theme: ThemeConfig = { ...DEFAULT_THEME, ...(resume.themeConfig || {}) };
 
@@ -154,11 +156,15 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
 
   if (resolvedTemplate?.kind === 'declarative-v1' || resolvedTemplate?.kind === 'declarative-v2') {
     const document = buildTemplateDocument(normalizeResumeForTemplate(safeResume), resolvedTemplate.manifest);
-    return <DeclarativeTemplateDocument document={document} />;
+    return (
+      <EditableResumeProvider value={edit}>
+        <DeclarativeTemplateDocument document={document} />
+      </EditableResumeProvider>
+    );
   }
 
   return (
-    <>
+    <EditableResumeProvider value={edit}>
       <style>{`@font-face{font-family:"Noto Sans SC";src:url("/fonts/NotoSansSC-Regular.otf") format("opentype");font-weight:400;font-display:swap}@font-face{font-family:"Noto Sans SC";src:url("/fonts/NotoSansSC-Bold.otf") format("opentype");font-weight:700;font-display:swap}`}</style>
       <div data-theme-scope={scopeId}>
         <style dangerouslySetInnerHTML={{ __html: buildThemeCSS(scopeId, theme, safeResume.template) }} />
@@ -166,6 +172,6 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
           <LegacyTemplateRenderer slug={legacySlug} resume={safeResume} />
         </Suspense>
       </div>
-    </>
+    </EditableResumeProvider>
   );
 }
