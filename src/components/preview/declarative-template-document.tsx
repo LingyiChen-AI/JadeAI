@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 
 import type { TemplateDocument } from '@/lib/templates/template-document';
 import { QrCodesPreview } from './qr-codes-preview';
+import { EditableResumeValue } from './editable-resume-context';
 
 export function DeclarativeTemplateDocument({ document }: { document: TemplateDocument }) {
   const presentation = document.presentation;
@@ -143,7 +144,11 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
             gridColumn: isSplitHeader ? 1 : undefined,
             ...(section.headingVariant === 'compact' ? { fontSize: `${document.typography.baseFontSizePt}pt`, marginBottom: '1mm' } : {}),
             ...v2HeadingStyle,
-          }}>{section.title}</h2>
+          }}>
+            {section.titleSource
+              ? <EditableResumeValue source={section.titleSource} value={section.title}>{section.title}</EditableResumeValue>
+              : section.title}
+          </h2>
           {section.blocks.map((block, blockIndex) => {
             const element = block.kind === 'contact' ? 'contact' : block.kind === 'list' ? 'bullet' : block.kind === 'qr' ? 'qr' : 'body';
             const blockVariant = section.styleVariants[element];
@@ -154,7 +159,11 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
               return (
                 <ul key={blockIndex} data-block="list" style={{ margin: '0 0 1.5mm', paddingLeft: '5mm', gridColumn: isSplitHeader ? 2 : undefined, ...variantStyle('bullet', section.styleVariants.bullet) }}>
                   {block.textRuns.map((textRun, textIndex) => (
-                    <li key={textIndex} data-tone={textRun.tone} style={textRun.tone === 'muted' ? variantStyle('date', section.styleVariants.date) : undefined}>{textRun.text}</li>
+                    <li key={textIndex} data-tone={textRun.tone} style={textRun.tone === 'muted' ? variantStyle('date', section.styleVariants.date) : undefined}>
+                      {textRun.source
+                        ? <EditableResumeValue source={textRun.source} value={textRun.text}>{textRun.text}</EditableResumeValue>
+                        : textRun.text}
+                    </li>
                   ))}
                 </ul>
               );
@@ -175,8 +184,8 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
                 // eslint-disable-next-line @next/next/no-img-element
                 <img key={`image:${imageIndex}`} src={image.src} alt={image.alt} data-image-role={image.role} style={{ maxWidth: image.role === 'qr' ? '24mm' : '32mm', height: 'auto', objectFit: 'cover', ...variantStyle(image.role, section.styleVariants[image.role]) }} />
               ))}
-              {block.textRuns.map((textRun, textIndex) => (
-                <span
+              {block.textRuns.map((textRun, textIndex) => {
+                const rendered = <span
                   key={`text:${textIndex}`}
                   data-tone={textRun.tone}
                   style={{
@@ -186,8 +195,11 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
                     ...(section.type === 'skills' && presentation?.skills.variant === 'tags' ? { display: 'inline-block', background: presentation.palette.surface, border: `${presentation.border.widthPt}pt solid ${presentation.palette.border}`, borderRadius: `${presentation.border.radiusMm}mm`, padding: '.5mm 2mm', margin: '.5mm' } : {}),
                   }}
                 dangerouslySetInnerHTML={{ __html: `${textRun.html} ` }}
-                />
-              ))}
+                />;
+                return textRun.source
+                  ? <EditableResumeValue key={`editable:${textIndex}`} source={textRun.source} value={textRun.text}>{rendered}</EditableResumeValue>
+                  : rendered;
+              })}
               {block.links.map((link, linkIndex) => (
                 <a key={`link:${linkIndex}`} href={link.href} rel="noreferrer noopener" style={{ color: document.colors.accent, overflowWrap: 'anywhere' }}>{link.label}{' '}</a>
               ))}

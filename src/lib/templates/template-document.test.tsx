@@ -241,4 +241,26 @@ describe('declarative template document', () => {
       expect(output).toContain('data-style-qr="bordered"');
     }
   });
+
+  test('retains stable field sources for direct editing without serializing ids', () => {
+    const document = buildTemplateDocument(normalizeResumeForTemplate(resume()), manifest);
+    const summary = document.sections.find((section) => section.type === 'summary')!;
+    const project = document.sections.find((section) => section.type === 'projects')!;
+
+    expect(summary.titleSource).toEqual({
+      sectionId: 'summary-id', fieldPath: ['title'], kind: 'text', label: 'Summary title',
+    });
+    expect(summary.blocks[0].textRuns[0].source).toEqual({
+      sectionId: 'summary-id', fieldPath: ['text'], kind: 'rich-text', label: 'text',
+    });
+    expect(project.blocks.flatMap((block) => block.textRuns).map((value) => value.source))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ sectionId: 'project-id', itemId: 'p1', fieldPath: ['name'] }),
+        expect.objectContaining({ sectionId: 'project-id', itemId: 'p1', fieldPath: ['description'] }),
+        expect.objectContaining({ sectionId: 'project-id', itemId: 'p1', fieldPath: ['technologies', 0] }),
+      ]));
+
+    const html = serializeTemplateDocumentHtml(document);
+    expect(html).not.toMatch(/summary-id|project-id|p1|data-editable-source/);
+  });
 });

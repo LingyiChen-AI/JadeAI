@@ -9,14 +9,9 @@ import {
   useRef,
   useState,
 } from 'react';
+import type { ResumeFieldSource } from '@/types/editable-resume';
 
-export interface ResumeFieldSource {
-  sectionId: string;
-  itemId?: string;
-  fieldPath: readonly (string | number)[];
-  kind: 'text' | 'multiline' | 'rich-text' | 'date' | 'url' | 'list-value';
-  label: string;
-}
+export type { ResumeFieldSource } from '@/types/editable-resume';
 
 export interface EditableResumeContract {
   enabled: true;

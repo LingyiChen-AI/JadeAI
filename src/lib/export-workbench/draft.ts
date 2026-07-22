@@ -30,7 +30,7 @@ function cloneAndNormalizeResume(resume: Resume): Resume {
   cloned.sections = (cloned.sections || []).map((section, index) => ({
     ...section,
     sortOrder: index,
-    content: normalizeSectionContent(section.type, section.content) as SectionContent,
+    content: normalizeSectionContent(section.type, section.content) as unknown as SectionContent,
   }));
   return cloned;
 }
@@ -127,7 +127,7 @@ export function updateDraftField(
 
     return {
       ...section,
-      content: setPathValue(section.content, contentPath, update.value) as SectionContent,
+      content: setPathValue(section.content, contentPath, update.value) as unknown as SectionContent,
     };
   });
 
@@ -143,7 +143,7 @@ export function addDraftSection(
   const nextSection = structuredClone(section);
   nextSection.resumeId = session.draft.id;
   nextSection.sortOrder = session.draft.sections.length;
-  nextSection.content = normalizeSectionContent(nextSection.type, nextSection.content) as SectionContent;
+  nextSection.content = normalizeSectionContent(nextSection.type, nextSection.content) as unknown as SectionContent;
   return replaceDraft(session, {
     ...session.draft,
     sections: [...session.draft.sections, nextSection],

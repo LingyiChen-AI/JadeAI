@@ -1,11 +1,13 @@
 import { SECTION_TYPES } from '@/lib/constants';
 import type { DeclarativeTemplateManifest, TemplateManifestV1, TemplateManifestV2 } from '@/types/template';
 import { renderRichTextInlineHtml } from '@/lib/resume/rich-text';
+import type { ResumeFieldSource } from '@/types/editable-resume';
 
 const MAX_VIEW_NODES = 4_000;
 const MAX_VIEW_DEPTH = 8;
 const MAX_TEXT_LENGTH = 20_000;
-const INTERNAL_KEYS = new Set(['id', 'resumeId', 'userId', 'revision', 'createdAt', 'updatedAt', 'sharePassword', 'shareToken']);
+const INTERNAL_KEYS = new Set(['resumeId', 'userId', 'revision', 'createdAt', 'updatedAt', 'sharePassword', 'shareToken']);
+const NON_RENDERED_KEYS = new Set([...INTERNAL_KEYS, 'id']);
 const LINK_KEYS = new Set(['url', 'website', 'linkedin', 'github', 'repoUrl']);
 const SECTION_CONTENT_KEYS: Record<string, readonly string[]> = {
   personal_info: ['fullName', 'jobTitle', 'age', 'gender', 'politicalStatus', 'ethnicity', 'hometown', 'maritalStatus', 'yearsOfExperience', 'educationLevel', 'email', 'phone', 'wechat', 'location', 'website', 'linkedin', 'github', 'customLinks', 'avatar'],
@@ -35,6 +37,7 @@ const SECTION_ITEM_KEYS: Record<string, readonly string[]> = {
 };
 
 export type TemplateViewSection = {
+  id: string;
   type: string;
   title: string;
   sortOrder: number;
@@ -51,6 +54,7 @@ type TemplateResumeSource = {
   title: string;
   language: string;
   sections: readonly {
+    id?: string;
     type: string;
     title: string;
     sortOrder: number;
@@ -63,6 +67,7 @@ export type TemplateDocumentTextRun = {
   text: string;
   html: string;
   tone: 'default' | 'muted' | 'accent';
+  source?: ResumeFieldSource;
 };
 
 export type TemplateDocumentLink = {
@@ -90,6 +95,7 @@ export type TemplateDocumentBuildOptions = {
 export type TemplateDocumentSection = {
   type: string;
   title: string;
+  titleSource?: ResumeFieldSource;
   placement: 'header' | 'main' | 'sidebar' | 'footer';
   order: number;
   headingVariant: 'default' | 'compact' | 'accent' | 'muted' | 'bordered';
@@ -136,7 +142,7 @@ function boundedClone(
   if (typeof value !== 'object') return null;
   return Object.fromEntries(
     Object.entries(value)
-      .filter(([key]) => (allowedKeys === null || allowedKeys.has(key)) && !INTERNAL_KEYS.has(key) && !key.startsWith('_'))
+      .filter(([key]) => (key === 'id' || allowedKeys === null || allowedKeys.has(key)) && !INTERNAL_KEYS.has(key) && !key.startsWith('_'))
       .slice(0, 100)
       .map(([key, item]) => [key, boundedClone(item, state, depth + 1, nestedAllowedKeys, nestedAllowedKeys)]),
   );
@@ -158,6 +164,7 @@ export function normalizeResumeForTemplate(
         const contentKeys = known ? new Set(SECTION_CONTENT_KEYS[section.type] ?? []) : null;
         const itemKeys = known ? new Set(SECTION_ITEM_KEYS[section.type] ?? []) : null;
         return {
+          id: String(section.id ?? ''),
           type: section.type,
           title: String(section.title ?? '').slice(0, 500),
           sortOrder: section.sortOrder,
@@ -182,36 +189,84 @@ function safeAvatar(value: unknown): string | null {
   return /^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(value) ? value : null;
 }
 
-function run(text: unknown, tone: TemplateDocumentTextRun['tone'] = 'default'): TemplateDocumentTextRun | null {
+function run(
+  text: unknown,
+  tone: TemplateDocumentTextRun['tone'] = 'default',
+  source?: ResumeFieldSource,
+): TemplateDocumentTextRun | null {
   if (typeof text !== 'string' && typeof text !== 'number') return null;
   const normalized = String(text).trim();
-  return normalized ? { text: normalized, html: renderRichTextInlineHtml(normalized), tone } : null;
+  return normalized ? { text: normalized, html: renderRichTextInlineHtml(normalized), tone, source } : null;
 }
 
-function collectRecordBlocks(value: unknown, blocks: TemplateDocumentBlock[], depth = 0, skipAvatar = false): void {
+type SourceContext = {
+  sectionId: string;
+  itemId?: string;
+  path: readonly (string | number)[];
+};
+
+function fieldKind(key: string, listValue = false): ResumeFieldSource['kind'] {
+  if (listValue) return 'list-value';
+  if (/description|text|highlight/i.test(key)) return 'rich-text';
+  if (/date/i.test(key)) return 'date';
+  if (LINK_KEYS.has(key)) return 'url';
+  return 'text';
+}
+
+function sourceFor(context: SourceContext, path: readonly (string | number)[], key: string, listValue = false): ResumeFieldSource {
+  return {
+    sectionId: context.sectionId,
+    ...(context.itemId ? { itemId: context.itemId } : {}),
+    fieldPath: path,
+    kind: fieldKind(key, listValue),
+    label: key,
+  };
+}
+
+function collectRecordBlocks(
+  value: unknown,
+  blocks: TemplateDocumentBlock[],
+  context: SourceContext,
+  depth = 0,
+  skipAvatar = false,
+): void {
   if (depth > MAX_VIEW_DEPTH || value === null || value === undefined) return;
   if (Array.isArray(value)) {
-    const textRuns = value.map((item) => run(item)).filter((item): item is TemplateDocumentTextRun => item !== null);
+    const key = String(context.path.at(-1) ?? 'value');
+    const textRuns = value.map((item, index) => run(
+      item,
+      'default',
+      sourceFor(context, [...context.path, index], key, true),
+    )).filter((item): item is TemplateDocumentTextRun => item !== null);
     if (textRuns.length === value.length && textRuns.length > 0) {
       blocks.push({ kind: 'list', textRuns, links: [], images: [] });
       return;
     }
-    for (const item of value) collectRecordBlocks(item, blocks, depth + 1, skipAvatar);
+    value.forEach((item, index) => {
+      const record = item && typeof item === 'object' ? item as Record<string, unknown> : null;
+      const itemId = typeof record?.id === 'string' ? record.id : undefined;
+      collectRecordBlocks(item, blocks, {
+        sectionId: context.sectionId,
+        itemId: itemId ?? context.itemId,
+        path: itemId ? [] : [...context.path, index],
+      }, depth + 1, skipAvatar);
+    });
     return;
   }
   if (typeof value !== 'object') {
-    const text = run(value);
+    const key = String(context.path.at(-1) ?? 'value');
+    const text = run(value, 'default', sourceFor(context, context.path, key));
     if (text) blocks.push({ kind: 'paragraph', textRuns: [text], links: [], images: [] });
     return;
   }
 
   const textRuns: TemplateDocumentTextRun[] = [];
   const links: TemplateDocumentLink[] = [];
-  const nested: unknown[] = [];
+  const nested: Array<{ key: string; value: unknown }> = [];
   for (const [key, item] of Object.entries(value)) {
-    if (INTERNAL_KEYS.has(key) || key.startsWith('_') || (skipAvatar && key === 'avatar')) continue;
+    if (NON_RENDERED_KEYS.has(key) || key.startsWith('_') || (skipAvatar && key === 'avatar')) continue;
     if (Array.isArray(item) || (item !== null && typeof item === 'object')) {
-      nested.push(item);
+      nested.push({ key, value: item });
       continue;
     }
     if (LINK_KEYS.has(key)) {
@@ -223,11 +278,18 @@ function collectRecordBlocks(value: unknown, blocks: TemplateDocumentBlock[], de
       links.push({ label: item, href: `mailto:${item}` });
       continue;
     }
-    const text = run(item, /date|location|technology|proficiency/i.test(key) ? 'muted' : 'default');
+    const path = [...context.path, key];
+    const text = run(
+      item,
+      /date|location|technology|proficiency/i.test(key) ? 'muted' : 'default',
+      sourceFor(context, path, key),
+    );
     if (text) textRuns.push(text);
   }
   if (textRuns.length || links.length) blocks.push({ kind: links.length ? 'contact' : 'paragraph', textRuns, links, images: [] });
-  for (const item of nested) collectRecordBlocks(item, blocks, depth + 1, skipAvatar);
+  for (const item of nested) {
+    collectRecordBlocks(item.value, blocks, { ...context, path: [...context.path, item.key] }, depth + 1, skipAvatar);
+  }
 }
 
 function qrLink(value: unknown): string | null {
@@ -242,7 +304,9 @@ function sectionBlocks(
   options: TemplateDocumentBuildOptions,
 ): TemplateDocumentBlock[] {
   if (section.type === 'summary' && section.content && typeof section.content === 'object') {
-    const text = run((section.content as Record<string, unknown>).text);
+    const text = run((section.content as Record<string, unknown>).text, 'default', {
+      sectionId: section.id, fieldPath: ['text'], kind: 'rich-text', label: 'text',
+    });
     return text ? [{ kind: 'paragraph', textRuns: [text], links: [], images: [] }] : [];
   }
   if (section.type === 'qr_codes' && section.content && typeof section.content === 'object') {
@@ -253,7 +317,10 @@ function sectionBlocks(
       const record = item as Record<string, unknown>;
       const href = qrLink(record.url);
       if (!href) return [];
-      const label = run(record.label);
+      const itemId = typeof record.id === 'string' ? record.id : undefined;
+      const label = run(record.label, 'default', {
+        sectionId: section.id, ...(itemId ? { itemId } : {}), fieldPath: ['label'], kind: 'text', label: 'label',
+      });
       const image = options.qrImagesByUrl?.[href];
       return [{
         kind: 'qr' as const,
@@ -264,7 +331,7 @@ function sectionBlocks(
     });
   }
   const blocks: TemplateDocumentBlock[] = [];
-  collectRecordBlocks(section.content, blocks, 0, section.type === 'personal_info');
+  collectRecordBlocks(section.content, blocks, { sectionId: section.id, path: [] }, 0, section.type === 'personal_info');
   if (showAvatar && section.type === 'personal_info' && section.content && typeof section.content === 'object') {
     const avatar = safeAvatar((section.content as Record<string, unknown>).avatar);
     if (avatar) {
@@ -327,6 +394,12 @@ export function buildTemplateDocument(
     sections: ordered.map((section, index) => ({
       type: section.type,
       title: section.title,
+      titleSource: {
+        sectionId: section.id,
+        fieldPath: ['title'],
+        kind: 'text',
+        label: `${section.title} title`,
+      },
       placement: slots.get(section.type)?.placement ?? 'main',
       order: slots.get(section.type)?.order ?? manifest.sectionSlots.length + index,
       headingVariant: styles.get(section.type)?.heading ?? 'default',
