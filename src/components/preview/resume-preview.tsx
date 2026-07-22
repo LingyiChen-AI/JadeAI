@@ -8,6 +8,7 @@ import { buildTemplateDocument, normalizeResumeForTemplate } from '@/lib/templat
 import { resolveSavedTemplateSnapshot } from '@/lib/templates/resolve-template';
 import { DeclarativeTemplateDocument } from './declarative-template-document';
 import { EditableResumeProvider, type EditableResumeContract } from './editable-resume-context';
+import { LegacyEditableSurface } from './legacy-editable-surface';
 
 interface ResumePreviewProps {
   resume: Resume;
@@ -169,7 +170,9 @@ export function ResumePreview({ resume, edit }: ResumePreviewProps) {
       <div data-theme-scope={scopeId}>
         <style dangerouslySetInnerHTML={{ __html: buildThemeCSS(scopeId, theme, safeResume.template) }} />
         <Suspense fallback={<div className="min-h-[297mm] bg-white" aria-busy="true" />}>
-          <LegacyTemplateRenderer slug={legacySlug} resume={safeResume} />
+          <LegacyEditableSurface resume={safeResume} edit={edit}>
+            <LegacyTemplateRenderer slug={legacySlug} resume={safeResume} />
+          </LegacyEditableSurface>
         </Suspense>
       </div>
     </EditableResumeProvider>
