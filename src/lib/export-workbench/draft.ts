@@ -106,6 +106,20 @@ function setPathValue(root: unknown, path: DraftFieldPath, value: unknown): unkn
   return { ...record, [key]: setPathValue(record[key], rest, value) };
 }
 
+function findObjectPathById(root: unknown, itemId: string, path: DraftFieldPath = []): DraftFieldPath | null {
+  if (root === null || typeof root !== 'object') return null;
+  if (!Array.isArray(root) && (root as { id?: unknown }).id === itemId) return path;
+
+  const entries: Array<[string | number, unknown]> = Array.isArray(root)
+    ? root.map((value, index) => [index, value])
+    : Object.entries(root as Record<string, unknown>);
+  for (const [key, value] of entries) {
+    const found = findObjectPathById(value, itemId, [...path, key]);
+    if (found) return found;
+  }
+  return null;
+}
+
 export function updateDraftField(
   session: ExportDraftSession,
   update: DraftFieldUpdate,
@@ -117,12 +131,12 @@ export function updateDraftField(
 
     let contentPath: DraftFieldPath = update.fieldPath;
     if (update.itemId) {
-      const content = section.content as unknown as { items?: Array<{ id?: string }> };
-      const itemIndex = Array.isArray(content.items)
-        ? content.items.findIndex((item) => item.id === update.itemId)
-        : -1;
-      if (itemIndex < 0) throw new Error('draft_item_not_found');
-      contentPath = ['items', itemIndex, ...update.fieldPath];
+      // Section schemas use several nesting shapes (for example, skill items
+      // live under categories). Resolve by stable id so the preview contract
+      // stays independent from those presentation-specific containers.
+      const itemPath = findObjectPathById(section.content, update.itemId);
+      if (!itemPath) throw new Error('draft_item_not_found');
+      contentPath = [...itemPath, ...update.fieldPath];
     }
 
     return {

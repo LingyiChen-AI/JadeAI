@@ -149,6 +149,37 @@ describe('export workbench draft', () => {
     expect(updated.baseline).toBe(session.baseline);
   });
 
+  it('locates stable item ids below nested category collections', () => {
+    const source = resume();
+    source.sections[0] = section({
+      id: 'skills-1',
+      type: 'skills',
+      title: 'Skills',
+      content: {
+        categories: [{
+          id: 'category-1',
+          name: 'Frontend',
+          skills: ['TypeScript'],
+        }],
+      },
+    });
+
+    const session = createExportDraft(source);
+    const updated = updateDraftField(session, {
+      sectionId: 'skills-1',
+      itemId: 'category-1',
+      fieldPath: ['name'],
+      value: 'Engineering',
+    });
+    const nested = updated.draft.sections[0].content as unknown as {
+      categories: Array<{ name: string }>;
+    };
+    const original = session.draft.sections[0].content as unknown as typeof nested;
+
+    expect(nested.categories[0].name).toBe('Engineering');
+    expect(original.categories[0].name).toBe('Frontend');
+  });
+
   it('updates theme, title, visibility, order, additions, removals, and template binding immutably', () => {
     const original = createExportDraft(resume());
     const summary = section({
