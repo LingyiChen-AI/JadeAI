@@ -1092,5 +1092,61 @@
       "leader": "Leader",
       "custom": "Custom"
     }
+  },
+  "exportWorkbench": {
+    "loading": "Loading export workbench",
+    "loadFailed": "The resume could not be loaded. Return and try again.",
+    "back": "Back to editor",
+    "unsaved": "Unsaved changes",
+    "saved": "Saved",
+    "modules": "Sections",
+    "theme": "Template and theme",
+    "format": "Export format",
+    "saveAndExport": "Save and export",
+    "retryExport": "Retry export",
+    "previewFailed": "Preview rendering failed",
+    "emptyField": "Click to add content",
+    "customSection": "Custom section",
+    "moveUp": "Move section up",
+    "moveDown": "Move section down",
+    "hide": "Hide section",
+    "show": "Show section",
+    "remove": "Remove section",
+    "addModule": "Add section",
+    "selectModule": "Select a section to edit empty fields, entries, and lists.",
+    "entryOrder": "Entry order",
+    "entry": "Entry",
+    "moveEntryUp": "Move entry up",
+    "moveEntryDown": "Move entry down",
+    "leaveTitle": "Discard unsaved changes?",
+    "leaveDescription": "Temporary workbench changes will not be saved after returning.",
+    "stay": "Keep editing",
+    "discard": "Discard and return",
+    "formats": {
+      "pdf": "PDF",
+      "pdf-one-page": "Smart one-page PDF",
+      "docx": "DOCX",
+      "html": "HTML",
+      "txt": "TXT",
+      "json": "JSON"
+    },
+    "status": {
+      "success": "Resume saved and exported",
+      "saveFailed": "Save failed. Export was not started.",
+      "savedExportFailed": "Resume saved, but export failed"
+    },
+    "sectionTypes": {
+      "personal_info": "Personal information",
+      "summary": "Summary",
+      "work_experience": "Work experience",
+      "education": "Education",
+      "skills": "Skills",
+      "projects": "Projects",
+      "certifications": "Certifications",
+      "languages": "Languages",
+      "github": "GitHub",
+      "qr_codes": "QR codes",
+      "custom": "Custom section"
+    }
   }
 }

@@ -1092,5 +1092,61 @@
       "leader": "Leader面",
       "custom": "自定义"
     }
+  },
+  "exportWorkbench": {
+    "loading": "正在加载导出工作台",
+    "loadFailed": "简历加载失败，请返回后重试",
+    "back": "返回编辑器",
+    "unsaved": "有未保存修改",
+    "saved": "已保存",
+    "modules": "模块",
+    "theme": "模板与主题",
+    "format": "导出格式",
+    "saveAndExport": "保存并导出",
+    "retryExport": "重试导出",
+    "previewFailed": "预览渲染失败",
+    "emptyField": "点击添加内容",
+    "customSection": "自定义模块",
+    "moveUp": "上移模块",
+    "moveDown": "下移模块",
+    "hide": "隐藏模块",
+    "show": "显示模块",
+    "remove": "删除模块",
+    "addModule": "新增模块",
+    "selectModule": "选择模块后可编辑空字段、条目和列表",
+    "entryOrder": "条目顺序",
+    "entry": "条目",
+    "moveEntryUp": "上移条目",
+    "moveEntryDown": "下移条目",
+    "leaveTitle": "放弃未保存的修改？",
+    "leaveDescription": "返回后，导出工作台中的临时修改将不会保存。",
+    "stay": "继续编辑",
+    "discard": "放弃并返回",
+    "formats": {
+      "pdf": "PDF",
+      "pdf-one-page": "智能单页 PDF",
+      "docx": "DOCX",
+      "html": "HTML",
+      "txt": "TXT",
+      "json": "JSON"
+    },
+    "status": {
+      "success": "简历已保存并导出",
+      "saveFailed": "保存失败，未执行导出",
+      "savedExportFailed": "简历已保存，但导出失败"
+    },
+    "sectionTypes": {
+      "personal_info": "个人信息",
+      "summary": "个人简介",
+      "work_experience": "工作经历",
+      "education": "教育背景",
+      "skills": "技能特长",
+      "projects": "项目经历",
+      "certifications": "证书",
+      "languages": "语言能力",
+      "github": "GitHub",
+      "qr_codes": "二维码",
+      "custom": "自定义模块"
+    }
   }
 }

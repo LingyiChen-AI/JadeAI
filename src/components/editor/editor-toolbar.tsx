@@ -57,6 +57,13 @@ export function EditorToolbar({ resumeId, userId }: EditorToolbarProps) {
     }
   };
 
+  const openExportWorkbench = async () => {
+    // Flush the editor's existing autosave queue before the isolated workbench
+    // loads its baseline, otherwise a pending timer could overwrite that draft.
+    if (!await save()) return;
+    router.push(`/editor/${resumeId}/export`);
+  };
+
   return (
     <>
     <div className="flex h-12 items-center justify-between gap-2 border-b bg-white px-2 sm:px-3 dark:bg-background dark:border-zinc-800">
@@ -144,7 +151,7 @@ export function EditorToolbar({ resumeId, userId }: EditorToolbarProps) {
             data-tour="export"
             variant="ghost"
             size="sm"
-            onClick={() => openModal('export')}
+            onClick={() => void openExportWorkbench()}
             className="cursor-pointer"
             title={t('exportPdf')}
           >
@@ -243,7 +250,7 @@ export function EditorToolbar({ resumeId, userId }: EditorToolbarProps) {
                 <History className="mr-2 h-4 w-4" />
                 {t('aiHistory')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => openModal('export')}>
+              <DropdownMenuItem onClick={() => void openExportWorkbench()}>
                 <Download className="mr-2 h-4 w-4" />
                 {t('exportPdf')}
               </DropdownMenuItem>

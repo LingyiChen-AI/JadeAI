@@ -206,6 +206,27 @@ export function updateDraftSectionTitle(
   return replaceDraft(session, { ...session.draft, sections });
 }
 
+export function updateDraftSectionContent(
+  session: ExportDraftSession,
+  sectionId: string,
+  updates: Partial<SectionContent>,
+): ExportDraftSession {
+  let found = false;
+  const sections = session.draft.sections.map((section) => {
+    if (section.id !== sectionId) return section;
+    found = true;
+    return {
+      ...section,
+      content: normalizeSectionContent(section.type, {
+        ...section.content,
+        ...structuredClone(updates),
+      }) as unknown as SectionContent,
+    };
+  });
+  if (!found) throw new Error('draft_section_not_found');
+  return replaceDraft(session, { ...session.draft, sections });
+}
+
 export function toggleDraftSectionVisibility(
   session: ExportDraftSession,
   sectionId: string,
