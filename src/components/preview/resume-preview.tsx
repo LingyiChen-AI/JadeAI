@@ -7,10 +7,13 @@ import { loadLegacyTemplateAdapter } from '@/components/templates/legacy-templat
 import { buildTemplateDocument, normalizeResumeForTemplate } from '@/lib/templates/template-document';
 import { resolveSavedTemplateSnapshot } from '@/lib/templates/resolve-template';
 import { DeclarativeTemplateDocument } from './declarative-template-document';
+import { EditableResumeProvider, type EditableResumeContract } from './editable-resume-context';
+import { LegacyEditableSurface } from './legacy-editable-surface';
 
 interface ResumePreviewProps {
   resume: Resume;
   placeholderPaths?: ReadonlySet<string>;
+  edit?: EditableResumeContract;
 }
 
 const lazyLegacyTemplates = new Map<string, React.LazyExoticComponent<React.ComponentType<{ resume: Resume }>>>(
@@ -144,7 +147,7 @@ function buildThemeCSS(scopeId: string, theme: ThemeConfig, template: string): s
   `;
 }
 
-export function ResumePreview({ resume, placeholderPaths }: ResumePreviewProps) {
+export function ResumePreview({ resume, placeholderPaths, edit }: ResumePreviewProps) {
   const scopeId = useId();
   const theme: ThemeConfig = { ...DEFAULT_THEME, ...(resume.themeConfig || {}) };
 
@@ -157,19 +160,26 @@ export function ResumePreview({ resume, placeholderPaths }: ResumePreviewProps) 
     const document = buildTemplateDocument(normalizeResumeForTemplate(safeResume), resolvedTemplate.manifest, {
       themeConfig: (safeResume.themeConfig ?? {}) as unknown as Record<string, unknown>,
       placeholderPaths,
+      includeEmptyEditableFields: Boolean(edit?.enabled),
     });
-    return <DeclarativeTemplateDocument document={document} />;
+    return (
+      <EditableResumeProvider value={edit}>
+        <DeclarativeTemplateDocument document={document} />
+      </EditableResumeProvider>
+    );
   }
 
   return (
-    <>
+    <EditableResumeProvider value={edit}>
       <style>{`@font-face{font-family:"Noto Sans SC";src:url("/fonts/NotoSansSC-Regular.otf") format("opentype");font-weight:400;font-display:swap}@font-face{font-family:"Noto Sans SC";src:url("/fonts/NotoSansSC-Bold.otf") format("opentype");font-weight:700;font-display:swap}`}</style>
       <div data-theme-scope={scopeId}>
         <style dangerouslySetInnerHTML={{ __html: buildThemeCSS(scopeId, theme, safeResume.template) }} />
         <Suspense fallback={<div className="min-h-[297mm] bg-white" aria-busy="true" />}>
-          <LegacyTemplateRenderer slug={legacySlug} resume={safeResume} />
+          <LegacyEditableSurface resume={safeResume} edit={edit}>
+            <LegacyTemplateRenderer slug={legacySlug} resume={safeResume} />
+          </LegacyEditableSurface>
         </Suspense>
       </div>
-    </>
+    </EditableResumeProvider>
   );
 }

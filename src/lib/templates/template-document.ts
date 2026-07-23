@@ -1,13 +1,15 @@
 import { SECTION_TYPES } from '@/lib/constants';
 import { renderRichTextInlineHtml } from '@/lib/resume/rich-text';
 import type { DeclarativeTemplateManifest, TemplateManifestV1, TemplateManifestV2 } from '@/types/template';
+import type { ResumeFieldSource } from '@/types/editable-resume';
 import { resolveEffectiveTemplateStyle } from './effective-template-style';
 import type { EffectiveTemplateStyle } from './effective-template-style';
 
 const MAX_VIEW_NODES = 4_000;
 const MAX_VIEW_DEPTH = 8;
 const MAX_TEXT_LENGTH = 20_000;
-const INTERNAL_KEYS = new Set(['id', 'resumeId', 'userId', 'revision', 'createdAt', 'updatedAt', 'sharePassword', 'shareToken']);
+const INTERNAL_KEYS = new Set(['resumeId', 'userId', 'revision', 'createdAt', 'updatedAt', 'sharePassword', 'shareToken']);
+const NON_RENDERED_KEYS = new Set([...INTERNAL_KEYS, 'id']);
 const LINK_KEYS = new Set(['url', 'website', 'linkedin', 'github', 'repoUrl']);
 const SECTION_CONTENT_KEYS: Record<string, readonly string[]> = {
   personal_info: ['fullName', 'jobTitle', 'age', 'gender', 'politicalStatus', 'ethnicity', 'hometown', 'maritalStatus', 'yearsOfExperience', 'educationLevel', 'email', 'phone', 'wechat', 'location', 'website', 'linkedin', 'github', 'customLinks', 'avatar'],
@@ -37,6 +39,7 @@ const SECTION_ITEM_KEYS: Record<string, readonly string[]> = {
 };
 
 export type TemplateViewSection = {
+  id: string;
   type: string;
   title: string;
   sortOrder: number;
@@ -53,6 +56,7 @@ type TemplateResumeSource = {
   title: string;
   language: string;
   sections: readonly {
+    id?: string;
     type: string;
     title: string;
     sortOrder: number;
@@ -63,14 +67,17 @@ type TemplateResumeSource = {
 
 export type TemplateDocumentTextRun = {
   text: string;
+  html?: string;
   tone: 'default' | 'muted' | 'accent';
   placeholder?: boolean;
+  source?: ResumeFieldSource;
 };
 
 export type TemplateDocumentLink = {
   label: string;
   href: string;
   placeholder?: boolean;
+  source?: ResumeFieldSource;
 };
 
 export type TemplateDocumentImage = {
@@ -90,11 +97,13 @@ export type TemplateDocumentBuildOptions = {
   qrImagesByUrl?: Readonly<Record<string, string>>;
   themeConfig?: Record<string, unknown> | null;
   placeholderPaths?: ReadonlySet<string>;
+  includeEmptyEditableFields?: boolean;
 };
 
 export type TemplateDocumentSection = {
   type: string;
   title: string;
+  titleSource?: ResumeFieldSource;
   placement: 'header' | 'main' | 'sidebar' | 'footer';
   order: number;
   headingVariant: 'default' | 'compact' | 'accent' | 'muted' | 'bordered';
@@ -144,7 +153,7 @@ function boundedClone(
   if (typeof value !== 'object') return null;
   return Object.fromEntries(
     Object.entries(value)
-      .filter(([key]) => (allowedKeys === null || allowedKeys.has(key)) && !INTERNAL_KEYS.has(key) && !key.startsWith('_'))
+      .filter(([key]) => (key === 'id' || allowedKeys === null || allowedKeys.has(key)) && !INTERNAL_KEYS.has(key) && !key.startsWith('_'))
       .slice(0, 100)
       .map(([key, item]) => [key, boundedClone(item, state, depth + 1, nestedAllowedKeys, nestedAllowedKeys)]),
   );
@@ -166,6 +175,7 @@ export function normalizeResumeForTemplate(
         const contentKeys = known ? new Set(SECTION_CONTENT_KEYS[section.type] ?? []) : null;
         const itemKeys = known ? new Set(SECTION_ITEM_KEYS[section.type] ?? []) : null;
         return {
+          id: String(section.id ?? ''),
           type: section.type,
           title: String(section.title ?? '').slice(0, 500),
           sortOrder: section.sortOrder,
@@ -202,61 +212,147 @@ function run(
   text: unknown,
   tone: TemplateDocumentTextRun['tone'] = 'default',
   placeholder = false,
+  source?: ResumeFieldSource,
+  allowEmpty = false,
 ): TemplateDocumentTextRun | null {
   if (typeof text !== 'string' && typeof text !== 'number') return null;
   const normalized = String(text).trim();
-  return normalized ? { text: normalized, tone, ...(placeholder ? { placeholder: true } : {}) } : null;
+  return normalized || (allowEmpty && source) ? {
+    text: normalized,
+    html: renderRichTextInlineHtml(normalized),
+    tone,
+    ...(placeholder ? { placeholder: true } : {}),
+    ...(source ? { source } : {}),
+  } : null;
+}
+
+type SourceContext = {
+  sectionId: string;
+  itemId?: string;
+  fieldPath: readonly (string | number)[];
+  placeholderPath: string;
+};
+
+function fieldKind(key: string, listValue = false): ResumeFieldSource['kind'] {
+  if (listValue) return 'list-value';
+  if (/description|text|highlight/i.test(key)) return 'rich-text';
+  if (/date/i.test(key)) return 'date';
+  if (LINK_KEYS.has(key)) return 'url';
+  return 'text';
+}
+
+function sourceFor(
+  context: SourceContext,
+  fieldPath: readonly (string | number)[],
+  key: string,
+  listValue = false,
+): ResumeFieldSource {
+  return {
+    sectionId: context.sectionId,
+    ...(context.itemId ? { itemId: context.itemId } : {}),
+    fieldPath,
+    kind: fieldKind(key, listValue),
+    label: key,
+  };
 }
 
 function collectRecordBlocks(
   value: unknown,
   blocks: TemplateDocumentBlock[],
   placeholderPaths: ReadonlySet<string> | undefined,
-  path: string,
+  context: SourceContext,
   depth = 0,
   skipAvatar = false,
+  includeEmptyEditableFields = false,
 ): void {
   if (depth > MAX_VIEW_DEPTH || value === null || value === undefined) return;
   if (Array.isArray(value)) {
-    const textRuns = value.map((item, index) => run(item, 'default', pathIsPlaceholder(`${path}.${index}`, placeholderPaths)))
+    const key = String(context.fieldPath.at(-1) ?? 'value');
+    const textRuns = value.map((item, index) => run(
+      item,
+      'default',
+      pathIsPlaceholder(`${context.placeholderPath}.${index}`, placeholderPaths),
+      sourceFor(context, [...context.fieldPath, index], key, true),
+      includeEmptyEditableFields,
+    ))
       .filter((item): item is TemplateDocumentTextRun => item !== null);
     if (textRuns.length === value.length && textRuns.length > 0) {
       blocks.push({ kind: 'list', textRuns, links: [], images: [] });
       return;
     }
-    value.forEach((item, index) => collectRecordBlocks(item, blocks, placeholderPaths, `${path}.${index}`, depth + 1, skipAvatar));
+    value.forEach((item, index) => {
+      const record = item && typeof item === 'object' ? item as Record<string, unknown> : null;
+      const itemId = typeof record?.id === 'string' ? record.id : undefined;
+      collectRecordBlocks(item, blocks, placeholderPaths, {
+        sectionId: context.sectionId,
+        itemId: itemId ?? context.itemId,
+        fieldPath: itemId ? [] : [...context.fieldPath, index],
+        placeholderPath: `${context.placeholderPath}.${index}`,
+      }, depth + 1, skipAvatar, includeEmptyEditableFields);
+    });
     return;
   }
   if (typeof value !== 'object') {
-    const text = run(value, 'default', pathIsPlaceholder(path, placeholderPaths));
+    const key = String(context.fieldPath.at(-1) ?? 'value');
+    const text = run(
+      value,
+      'default',
+      pathIsPlaceholder(context.placeholderPath, placeholderPaths),
+      sourceFor(context, context.fieldPath, key),
+      includeEmptyEditableFields,
+    );
     if (text) blocks.push({ kind: 'paragraph', textRuns: [text], links: [], images: [] });
     return;
   }
 
   const textRuns: TemplateDocumentTextRun[] = [];
   const links: TemplateDocumentLink[] = [];
-  const nested: Array<{ value: unknown; path: string }> = [];
+  const nested: Array<{ key: string; value: unknown; placeholderPath: string }> = [];
   for (const [key, item] of Object.entries(value)) {
-    const itemPath = `${path}.${key}`;
-    if (INTERNAL_KEYS.has(key) || key.startsWith('_') || (skipAvatar && key === 'avatar')) continue;
+    const itemPath = `${context.placeholderPath}.${key}`;
+    if (NON_RENDERED_KEYS.has(key) || key.startsWith('_') || (skipAvatar && key === 'avatar')) continue;
     if (Array.isArray(item) || (item !== null && typeof item === 'object')) {
-      nested.push({ value: item, path: itemPath });
+      nested.push({ key, value: item, placeholderPath: itemPath });
       continue;
     }
     if (LINK_KEYS.has(key)) {
       const href = safeLink(item);
-      if (href) links.push({ label: typeof item === 'string' ? item : href, href, ...(pathIsPlaceholder(itemPath, placeholderPaths) ? { placeholder: true } : {}) });
+      const source = sourceFor(context, [...context.fieldPath, key], key);
+      if (href || (includeEmptyEditableFields && item === '')) links.push({
+        label: typeof item === 'string' ? item : href ?? '',
+        href: href ?? '',
+        source,
+        ...(pathIsPlaceholder(itemPath, placeholderPaths) ? { placeholder: true } : {}),
+      });
       continue;
     }
     if (key === 'email' && typeof item === 'string' && item.includes('@')) {
-      links.push({ label: item, href: `mailto:${item}`, ...(pathIsPlaceholder(itemPath, placeholderPaths) ? { placeholder: true } : {}) });
+      links.push({
+        label: item,
+        href: `mailto:${item}`,
+        source: sourceFor(context, [...context.fieldPath, key], key),
+        ...(pathIsPlaceholder(itemPath, placeholderPaths) ? { placeholder: true } : {}),
+      });
       continue;
     }
-    const text = run(item, /date|location|technology|proficiency/i.test(key) ? 'muted' : 'default', pathIsPlaceholder(itemPath, placeholderPaths));
+    const fieldPath = [...context.fieldPath, key];
+    const text = run(
+      item,
+      /date|location|technology|proficiency/i.test(key) ? 'muted' : 'default',
+      pathIsPlaceholder(itemPath, placeholderPaths),
+      sourceFor(context, fieldPath, key),
+      includeEmptyEditableFields,
+    );
     if (text) textRuns.push(text);
   }
   if (textRuns.length || links.length) blocks.push({ kind: links.length ? 'contact' : 'paragraph', textRuns, links, images: [] });
-  for (const item of nested) collectRecordBlocks(item.value, blocks, placeholderPaths, item.path, depth + 1, skipAvatar);
+  for (const item of nested) {
+    collectRecordBlocks(item.value, blocks, placeholderPaths, {
+      ...context,
+      fieldPath: [...context.fieldPath, item.key],
+      placeholderPath: item.placeholderPath,
+    }, depth + 1, skipAvatar, includeEmptyEditableFields);
+  }
 }
 
 function qrLink(value: unknown): string | null {
@@ -275,6 +371,8 @@ function sectionBlocks(
       (section.content as Record<string, unknown>).text,
       'default',
       pathIsPlaceholder(`${section.type}.text`, options.placeholderPaths),
+      { sectionId: section.id, fieldPath: ['text'], kind: 'rich-text', label: 'text' },
+      options.includeEmptyEditableFields,
     );
     return text ? [{ kind: 'paragraph', textRuns: [text], links: [], images: [] }] : [];
   }
@@ -285,20 +383,37 @@ function sectionBlocks(
       if (!item || typeof item !== 'object') return [];
       const record = item as Record<string, unknown>;
       const href = qrLink(record.url);
-      if (!href) return [];
+      if (!href && !options.includeEmptyEditableFields) return [];
       const itemPath = `${section.type}.items.${items.indexOf(item)}`;
-      const label = run(record.label, 'default', pathIsPlaceholder(`${itemPath}.label`, options.placeholderPaths));
-      const image = options.qrImagesByUrl?.[href];
+      const itemId = typeof record.id === 'string' ? record.id : undefined;
+      const label = run(
+        record.label,
+        'default',
+        pathIsPlaceholder(`${itemPath}.label`, options.placeholderPaths),
+        { sectionId: section.id, ...(itemId ? { itemId } : {}), fieldPath: ['label'], kind: 'text', label: 'label' },
+        options.includeEmptyEditableFields,
+      );
+      const resolvedHref = href ?? '';
+      const image = href ? options.qrImagesByUrl?.[href] : undefined;
       return [{
         kind: 'qr' as const,
         textRuns: label ? [label] : [],
-        links: [{ label: label?.text ?? href, href, ...(pathIsPlaceholder(`${itemPath}.url`, options.placeholderPaths) ? { placeholder: true } : {}) }],
+        links: [{
+          label: label?.text ?? resolvedHref,
+          href: resolvedHref,
+          source: { sectionId: section.id, ...(itemId ? { itemId } : {}), fieldPath: ['url'], kind: 'url', label: 'url' },
+          ...(pathIsPlaceholder(`${itemPath}.url`, options.placeholderPaths) ? { placeholder: true } : {}),
+        }],
         images: image ? [{ src: image, alt: label?.text ?? '', role: 'qr' as const }] : [],
       }];
     });
   }
   const blocks: TemplateDocumentBlock[] = [];
-  collectRecordBlocks(section.content, blocks, options.placeholderPaths, section.type, 0, section.type === 'personal_info');
+  collectRecordBlocks(section.content, blocks, options.placeholderPaths, {
+    sectionId: section.id,
+    fieldPath: [],
+    placeholderPath: section.type,
+  }, 0, section.type === 'personal_info', options.includeEmptyEditableFields);
   if (showAvatar && section.type === 'personal_info' && section.content && typeof section.content === 'object') {
     const avatar = safeAvatar((section.content as Record<string, unknown>).avatar);
     if (avatar) {
@@ -354,6 +469,12 @@ export function buildTemplateDocument(
     sections: ordered.map((section, index) => ({
       type: section.type,
       title: section.title,
+      titleSource: {
+        sectionId: section.id,
+        fieldPath: ['title'],
+        kind: 'text',
+        label: `${section.title} title`,
+      },
       placement: slots.get(section.type)?.placement ?? 'main',
       order: slots.get(section.type)?.order ?? manifest.sectionSlots.length + index,
       headingVariant: styles.get(section.type)?.heading ?? 'default',
@@ -427,9 +548,7 @@ export function serializeTemplateDocumentHtml(document: TemplateDocument): strin
         return `<ul data-block="list">${items}</ul>`;
       }
       if (block.kind === 'qr') {
-        const hasPlaceholder = block.textRuns.some((textRun) => textRun.placeholder)
-          || block.links.some((link) => link.placeholder);
-        return `<div data-block="qr">${images}${hasPlaceholder ? links : `${text}${text && links ? ' ' : ''}${links}`}</div>`;
+        return `<div data-block="qr">${images}${links}</div>`;
       }
       return `<p data-block="${block.kind}">${images}${text}${text && links ? ' ' : ''}${links}</p>`;
     }).join('');

@@ -1,7 +1,8 @@
-import type { CSSProperties } from 'react';
+import { Fragment, type CSSProperties } from 'react';
 
 import { renderRichTextInlineHtml } from '@/lib/resume/rich-text';
 import type { TemplateDocument } from '@/lib/templates/template-document';
+import { EditableResumeValue, useEditableResume } from './editable-resume-context';
 import { QrCodesPreview } from './qr-codes-preview';
 
 function cssNumber(value: number): string {
@@ -9,6 +10,7 @@ function cssNumber(value: number): string {
 }
 
 export function DeclarativeTemplateDocument({ document }: { document: TemplateDocument }) {
+  const edit = useEditableResume();
   const presentation = document.presentation;
   const hasColumns = document.layout.type !== 'single-column';
   const sidebarWidth = `${document.layout.sidebarWidthPercent}%`;
@@ -156,7 +158,11 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
             ...(section.headingVariant === 'compact' ? { fontSize: `${baseFontSize}pt`, marginBottom: '1mm' } : {}),
             ...v2HeadingStyle,
             ...(isHeader && presentation?.header.variant === 'band' ? { color: document.colors.background } : {}),
-          }}>{section.title}</h2>
+          }}>
+            {section.titleSource
+              ? <EditableResumeValue source={section.titleSource} value={section.title}>{section.title}</EditableResumeValue>
+              : section.title}
+          </h2>
           {section.blocks.map((block, blockIndex) => {
             const element = block.kind === 'contact' ? 'contact' : block.kind === 'list' ? 'bullet' : block.kind === 'qr' ? 'qr' : 'body';
             const blockVariant = section.styleVariants[element];
@@ -166,22 +172,30 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
             if (block.kind === 'list') {
               return (
                 <ul key={blockIndex} data-block="list" style={{ margin: '0 0 1.5mm', paddingLeft: '5mm', gridColumn: isSplitHeader ? 2 : undefined, ...variantStyle('bullet', section.styleVariants.bullet) }}>
-                  {block.textRuns.map((textRun, textIndex) => (
-                    <li
-                      key={textIndex}
-                      data-tone={textRun.tone}
-                      data-placeholder={textRun.placeholder ? 'true' : undefined}
-                      style={{
+                  {block.textRuns.map((textRun, textIndex) => {
+                    const props = {
+                      'data-tone': textRun.tone,
+                      'data-placeholder': textRun.placeholder ? 'true' : undefined,
+                      style: {
                         ...(textRun.tone === 'muted' ? variantStyle('date', section.styleVariants.date) : {}),
                         opacity: textRun.placeholder ? 0.58 : undefined,
-                      }}
-                      dangerouslySetInnerHTML={{ __html: renderRichTextInlineHtml(textRun.text) }}
-                    />
-                  ))}
+                      },
+                    };
+                    if (!edit?.enabled || !textRun.source) {
+                      return <li key={textIndex} {...props} dangerouslySetInnerHTML={{ __html: renderRichTextInlineHtml(textRun.text) }} />;
+                    }
+                    return (
+                      <li key={textIndex} {...props}>
+                        <EditableResumeValue source={textRun.source} value={textRun.text}>
+                          <span dangerouslySetInnerHTML={{ __html: renderRichTextInlineHtml(textRun.text) }} />
+                        </EditableResumeValue>
+                      </li>
+                    );
+                  })}
                 </ul>
               );
             }
-            if (block.kind === 'qr' && block.images.length === 0) {
+            if (block.kind === 'qr') {
               const linkHasPlaceholder = (linkIndex: number) => Boolean(
                 block.links[linkIndex]?.placeholder || block.textRuns[linkIndex]?.placeholder,
               );
@@ -189,7 +203,22 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
                 || block.textRuns.some((textRun) => textRun.placeholder);
               return (
                 <div key={blockIndex} data-block="qr" style={{ gridColumn: isSplitHeader ? 2 : undefined, ...variantStyle('qr', section.styleVariants.qr) }}>
-                  {hasPlaceholderContent
+                  {edit?.enabled
+                    ? block.links.map((link, linkIndex) => (
+                        <span key={`qr-edit:${linkIndex}`} className="inline-flex max-w-full items-center gap-2">
+                          {block.textRuns[linkIndex]?.source ? (
+                            <EditableResumeValue source={block.textRuns[linkIndex].source} value={block.textRuns[linkIndex].text}>
+                              {link.label}
+                            </EditableResumeValue>
+                          ) : link.label}
+                          {link.source ? (
+                            <EditableResumeValue source={link.source} value={link.href}>
+                              {link.href ? <a href={link.href} rel="noreferrer noopener">{link.href}</a> : undefined}
+                            </EditableResumeValue>
+                          ) : link.href}
+                        </span>
+                      ))
+                    : hasPlaceholderContent
                     ? block.links.map((link, linkIndex) => (
                         <a
                           key={`link:${linkIndex}`}
@@ -198,6 +227,17 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
                           data-placeholder={linkHasPlaceholder(linkIndex) ? 'true' : undefined}
                           style={{ opacity: linkHasPlaceholder(linkIndex) ? 0.58 : undefined }}
                         >{link.label}</a>
+                      ))
+                    : block.images.length > 0
+                    ? block.links.map((link, linkIndex) => (
+                        <span key={`qr-image:${linkIndex}`}>
+                          {block.images[linkIndex] ? (
+                            // Data URLs are saved Resume content; Next Image cannot optimize them without changing bytes.
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={block.images[linkIndex].src} alt={block.images[linkIndex].alt} data-image-role="qr" />
+                          ) : null}
+                          {link.href ? <a href={link.href} rel="noreferrer noopener">{link.label}</a> : link.label}
+                        </span>
                       ))
                     : <QrCodesPreview items={block.links.map((link, index) => ({ id: `${section.type}:${blockIndex}:${index}`, label: link.label, url: link.href }))} />}
                 </div>
@@ -216,8 +256,9 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
                 // eslint-disable-next-line @next/next/no-img-element
                 <img key={`image:${imageIndex}`} src={image.src} alt={image.alt} data-image-role={image.role} style={{ maxWidth: image.role === 'qr' ? '24mm' : '32mm', height: 'auto', objectFit: 'cover', borderRadius: image.role === 'avatar' && document.avatarStyle === 'circle' ? '9999px' : undefined, ...variantStyle(image.role, section.styleVariants[image.role]) }} />
               ))}
-              {block.textRuns.map((textRun, textIndex) => (
-                <span
+              {block.textRuns.map((textRun, textIndex) => {
+                const rendered = (
+                  <span
                   key={`text:${textIndex}`}
                   data-tone={textRun.tone}
                   data-placeholder={textRun.placeholder ? 'true' : undefined}
@@ -229,11 +270,20 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
                     ...(section.type === 'skills' && presentation?.skills.variant === 'tags' ? { display: 'inline-block', background: presentation.palette.surface, border: `${presentation.border.widthPt}pt solid ${presentation.palette.border}`, borderRadius: `${presentation.border.radiusMm}mm`, padding: '.5mm 2mm', margin: '.5mm' } : {}),
                   }}
                   dangerouslySetInnerHTML={{ __html: `${renderRichTextInlineHtml(textRun.text)} ` }}
-                />
-              ))}
-              {block.links.map((link, linkIndex) => (
-                <a key={`link:${linkIndex}`} href={link.href} rel="noreferrer noopener" data-placeholder={link.placeholder ? 'true' : undefined} style={{ color: document.colors.accent, overflowWrap: 'anywhere', opacity: link.placeholder ? 0.58 : undefined }}>{link.label}{' '}</a>
-              ))}
+                  />
+                );
+                return textRun.source
+                  ? <EditableResumeValue key={`editable:${textIndex}`} source={textRun.source} value={textRun.text}>{rendered}</EditableResumeValue>
+                  : rendered;
+              })}
+              {block.links.map((link, linkIndex) => {
+                const rendered = link.href ? (
+                  <a href={link.href} rel="noreferrer noopener" data-placeholder={link.placeholder ? 'true' : undefined} style={{ color: document.colors.accent, overflowWrap: 'anywhere', opacity: link.placeholder ? 0.58 : undefined }}>{link.label}{' '}</a>
+                ) : undefined;
+                return edit?.enabled && link.source
+                  ? <EditableResumeValue key={`link:${linkIndex}`} source={link.source} value={link.label}>{rendered}</EditableResumeValue>
+                  : <Fragment key={`link:${linkIndex}`}>{rendered}</Fragment>;
+              })}
             </p>
             );
           })}

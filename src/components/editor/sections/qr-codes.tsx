@@ -26,11 +26,14 @@ interface Props {
   onUpdate: (content: Partial<QrCodesContent>) => void;
 }
 
-export function QrCodesSection({ section, onUpdate }: Props) {
+interface QrCodesFieldsProps extends Props {
+  sourceSections: ResumeSection[];
+}
+
+export function QrCodesFields({ section, onUpdate, sourceSections }: QrCodesFieldsProps) {
   const t = useTranslations('editor.fields');
   const content = section.content as QrCodesContent;
   const items = Array.isArray(content.items) ? content.items : [];
-  const { currentResume } = useResumeStore();
   const [invalidIds, setInvalidIds] = useState<Set<string>>(new Set());
 
   return (
@@ -39,8 +42,7 @@ export function QrCodesSection({ section, onUpdate }: Props) {
         <button
           type="button"
           onClick={() => {
-            const sections = currentResume?.sections || [];
-            const detected = extractUrlsFromResume(sections);
+            const detected = extractUrlsFromResume(sourceSections);
             if (detected.length === 0) return;
             const existingUrls = new Set(items.map((q) => q.url.toLowerCase()));
             const merged = [
@@ -116,5 +118,16 @@ export function QrCodesSection({ section, onUpdate }: Props) {
         {t('qrAdd')}
       </button>
     </div>
+  );
+}
+
+export function QrCodesSection({ section, onUpdate }: Props) {
+  const { currentResume } = useResumeStore();
+  return (
+    <QrCodesFields
+      section={section}
+      onUpdate={onUpdate}
+      sourceSections={currentResume?.sections || []}
+    />
   );
 }

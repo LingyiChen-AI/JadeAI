@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import {
@@ -35,9 +35,9 @@ import { useResumeStore } from '@/stores/resume-store';
 import { TemplateSelector } from '@/components/templates/template-selector';
 import type { ClientTemplateBindingChoice } from '@/lib/templates/apply-template-binding.server';
 import { selectedTemplateBinding, shouldApplyTemplateSelection } from '@/lib/templates/apply-template-binding.server';
-import { resolvePublicTemplateDetail } from '@/lib/templates/resolve-template';
+import { resolvePublicTemplateDetail, type ResolvedTemplate } from '@/lib/templates/resolve-template';
 import { TemplateVersionDetailSchema } from '@/lib/templates/schema';
-import type { ThemeConfig } from '@/types/resume';
+import type { Resume, ThemeConfig } from '@/types/resume';
 
 // -- Preset Themes --
 
@@ -257,28 +257,45 @@ function ThemeSection({
 // -- Main Theme Editor --
 
 interface ThemeEditorProps {
-  onClose?: () => void;
+  adapter?: {
+    resume: Resume;
+    pendingTemplateBinding: ClientTemplateBindingChoice | null;
+    onThemeChange(updates: Partial<ThemeConfig>): void;
+    onTemplateChange(choice: ClientTemplateBindingChoice, resolution?: ResolvedTemplate): void;
+  };
 }
 
-export function ThemeEditor({ onClose }: ThemeEditorProps) {
+export function ThemeEditor({ adapter }: ThemeEditorProps) {
   const t = useTranslations('themeEditor');
   const templatesT = useTranslations('templates');
-  const { currentResume, pendingTemplateBinding } = useResumeStore();
+  const store = useResumeStore();
+  const currentResume = adapter?.resume ?? store.currentResume;
+  const pendingTemplateBinding = adapter?.pendingTemplateBinding ?? store.pendingTemplateBinding;
+  const adapterRef = useRef(adapter);
+  useEffect(() => {
+    adapterRef.current = adapter;
+  }, [adapter]);
   const templateRequestSequence = useRef(0);
 
   useEffect(() => () => {
     templateRequestSequence.current += 1;
   }, []);
 
-  const themeConfig: ThemeConfig = {
+  const themeConfig: ThemeConfig = useMemo(() => ({
     ...DEFAULT_THEME,
     ...(currentResume?.themeConfig || {}),
-  };
+  }), [currentResume?.themeConfig]);
 
   const updateTheme = useCallback(
     (updates: Partial<ThemeConfig>) => {
       if (!currentResume) return;
       const newConfig = { ...themeConfig, ...updates };
+      if (adapterRef.current) {
+        // Controlled mode is the export-workbench boundary: theme changes stay
+        // in its private draft and must never schedule the editor autosave.
+        adapterRef.current.onThemeChange(updates);
+        return;
+      }
       useResumeStore.setState((state) => ({
         currentResume: state.currentResume
           ? { ...state.currentResume, themeConfig: newConfig }
@@ -305,11 +322,12 @@ export function ThemeEditor({ onClose }: ThemeEditorProps) {
   const selectedBinding = pendingTemplateBinding ?? selectedTemplateBinding(currentResume);
 
   const selectTemplate = useCallback(async (choice: ClientTemplateBindingChoice) => {
-    const requestedResumeId = useResumeStore.getState().currentResume?.id;
+    const requestedResumeId = adapterRef.current?.resume.id ?? useResumeStore.getState().currentResume?.id;
     if (!requestedResumeId) return;
     const requestSequence = ++templateRequestSequence.current;
     if (choice.kind !== 'public') {
-      useResumeStore.getState().setTemplateBinding(choice);
+      if (adapterRef.current) adapterRef.current.onTemplateChange(choice);
+      else useResumeStore.getState().setTemplateBinding(choice);
       return;
     }
     try {
@@ -324,15 +342,16 @@ export function ThemeEditor({ onClose }: ThemeEditorProps) {
         requestSequence,
         templateRequestSequence.current,
         requestedResumeId,
-        useResumeStore.getState().currentResume?.id,
+        adapterRef.current?.resume.id ?? useResumeStore.getState().currentResume?.id,
       )) return;
-      useResumeStore.getState().setTemplateBinding(choice, resolution);
+      if (adapterRef.current) adapterRef.current.onTemplateChange(choice, resolution);
+      else useResumeStore.getState().setTemplateBinding(choice, resolution);
     } catch {
       if (shouldApplyTemplateSelection(
         requestSequence,
         templateRequestSequence.current,
         requestedResumeId,
-        useResumeStore.getState().currentResume?.id,
+        adapterRef.current?.resume.id ?? useResumeStore.getState().currentResume?.id,
       )) toast.error(templatesT('states.error'));
     }
   }, [templatesT]);

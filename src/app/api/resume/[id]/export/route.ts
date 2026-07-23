@@ -42,6 +42,20 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const expectedRevisionParam = request.nextUrl.searchParams.get('expectedRevision');
+    if (expectedRevisionParam !== null) {
+      const expectedRevision = Number(expectedRevisionParam);
+      if (!/^\d+$/.test(expectedRevisionParam) || !Number.isSafeInteger(expectedRevision)) {
+        return NextResponse.json({ error: 'invalid_expected_revision' }, { status: 400 });
+      }
+      if (resume.revision !== expectedRevision) {
+        return NextResponse.json(
+          { error: 'revision_conflict', currentRevision: resume.revision },
+          { status: 409 },
+        );
+      }
+    }
+
     const format = request.nextUrl.searchParams.get('format') || 'json';
     const title = resume.title || 'resume';
     const now = new Date();

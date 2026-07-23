@@ -22,7 +22,7 @@ vi.mock('./docx', () => ({ generateDocxBuffer: mocks.generateDocxBuffer }));
 import { GET } from './route';
 import { DocxFontEmbeddingError } from '@/lib/export/docx-fonts';
 
-const resume = { id: 'resume-1', userId: 'user-1', title: 'Resume', template: 'modern', sections: [] };
+const resume = { id: 'resume-1', userId: 'user-1', title: 'Resume', template: 'modern', revision: 6, sections: [] };
 const resolved = {
   kind: 'legacy-react', source: 'public', slug: 'modern', version: '1.0.0', degraded: false,
   capabilities: { docxFidelity: 'high-fidelity' },
@@ -49,6 +49,28 @@ describe('GET /api/resume/[id]/export', () => {
     expect(response.status).toBe(200);
     expect(mocks.resolveTemplateForResume).toHaveBeenCalledWith(resume);
     expect(mocks.generateHtml).toHaveBeenCalledWith(resume, false, resolved);
+  });
+
+  test('rejects an export when the requested saved revision is no longer current', async () => {
+    const conflict = await GET(
+      new NextRequest('http://localhost/api/resume/resume-1/export?format=html&expectedRevision=5'),
+      { params: Promise.resolve({ id: 'resume-1' }) },
+    );
+
+    expect(conflict.status).toBe(409);
+    expect(await conflict.json()).toEqual({ error: 'revision_conflict', currentRevision: 6 });
+    expect(mocks.generateHtml).not.toHaveBeenCalled();
+  });
+
+  test('rejects malformed expected revisions but keeps omission backward compatible', async () => {
+    const invalid = await GET(
+      new NextRequest('http://localhost/api/resume/resume-1/export?format=json&expectedRevision=oops'),
+      { params: Promise.resolve({ id: 'resume-1' }) },
+    );
+    const legacy = await GET(request('json'), { params: Promise.resolve({ id: 'resume-1' }) });
+
+    expect(invalid.status).toBe(400);
+    expect(legacy.status).toBe(200);
   });
 
   test('marks fail-closed template degradation on export responses', async () => {

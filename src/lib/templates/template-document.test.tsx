@@ -501,4 +501,50 @@ describe('declarative template document', () => {
     expect(normalReactHtml).not.toContain('href="https://example.com/sample"');
     expect(normalReactHtml).not.toContain('data-placeholder');
   });
+
+  test('retains stable field sources for direct editing without serializing ids', () => {
+    const document = buildTemplateDocument(normalizeResumeForTemplate(resume()), manifest);
+    const summary = document.sections.find((section) => section.type === 'summary')!;
+    const project = document.sections.find((section) => section.type === 'projects')!;
+
+    expect(summary.titleSource).toEqual({
+      sectionId: 'summary-id', fieldPath: ['title'], kind: 'text', label: 'Summary title',
+    });
+    expect(summary.blocks[0].textRuns[0].source).toEqual({
+      sectionId: 'summary-id', fieldPath: ['text'], kind: 'rich-text', label: 'text',
+    });
+    expect(project.blocks.flatMap((block) => block.textRuns).map((value) => value.source))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ sectionId: 'project-id', itemId: 'p1', fieldPath: ['name'] }),
+        expect.objectContaining({ sectionId: 'project-id', itemId: 'p1', fieldPath: ['description'] }),
+        expect.objectContaining({ sectionId: 'project-id', itemId: 'p1', fieldPath: ['technologies', 0] }),
+      ]));
+
+    const html = serializeTemplateDocumentHtml(document);
+    expect(html).not.toMatch(/summary-id|project-id|p1|data-editable-source/);
+  });
+
+  test('adds link sources and empty insertion metadata only when editing is requested', () => {
+    const source = resume();
+    source.sections.find((section) => section.type === 'personal_info')!.content = {
+      fullName: 'Alex Chen', website: 'https://example.com', jobTitle: '', avatar: '',
+    } as Resume['sections'][number]['content'];
+    const view = normalizeResumeForTemplate(source);
+    const ordinary = buildTemplateDocument(view, manifest);
+    const editable = buildTemplateDocument(view, manifest, { includeEmptyEditableFields: true });
+    const personalOrdinary = ordinary.sections.find((section) => section.type === 'personal_info')!;
+    const personalEditable = editable.sections.find((section) => section.type === 'personal_info')!;
+
+    expect(personalOrdinary.blocks.flatMap((block) => block.textRuns).some((run) => run.text === '')).toBe(false);
+    expect(personalEditable.blocks.flatMap((block) => block.textRuns)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ text: '', source: expect.objectContaining({ fieldPath: ['jobTitle'] }) }),
+    ]));
+    expect(personalEditable.blocks.flatMap((block) => block.links)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        href: 'https://example.com/',
+        source: expect.objectContaining({ fieldPath: ['website'], kind: 'url' }),
+      }),
+    ]));
+    expect(serializeTemplateDocumentHtml(editable)).not.toMatch(/data-editable-source|Add field/);
+  });
 });
