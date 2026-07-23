@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
@@ -10,6 +10,7 @@ const runtime = vi.hoisted(() => ({
   fingerprint: null as string | null,
   fingerprintLoading: true,
   localSave: vi.fn(),
+  linkNavigations: 0,
 }));
 
 vi.mock('@/components/providers/runtime-config-provider', () => ({
@@ -26,14 +27,43 @@ vi.mock('@/hooks/use-local-templates', () => ({
 vi.mock('@/lib/templates/local-template-thumbnail', () => ({
   createLocalTemplateThumbnail: async () => new Blob([new Uint8Array(8)], { type: 'image/png' }),
 }));
-vi.mock('./local-template-manager', () => ({ LocalTemplateManager: () => <div>states.localEmpty</div> }));
+vi.mock('./local-template-manager', () => ({
+  LocalTemplateManager: ({
+    onBrowsePublic,
+    onDirtyChange,
+  }: {
+    onBrowsePublic?: () => void;
+    onDirtyChange?: (dirty: boolean) => void;
+  }) => (
+    <div>
+      states.localEmpty
+      <button type="button" onClick={onBrowsePublic}>localManager.actions.browsePublic</button>
+      <button type="button" onClick={() => onDirtyChange?.(true)}>manager-dirty</button>
+      <button type="button" onClick={() => onDirtyChange?.(false)}>manager-clean</button>
+    </div>
+  ),
+}));
 vi.mock('@/i18n/routing', () => ({
-  Link: ({ children, ...props }: { children: ReactNode } & AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a>,
+  Link: ({ children, onClick, ...props }: { children: ReactNode } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a
+      {...props}
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented) runtime.linkNavigations += 1;
+        event.preventDefault();
+      }}
+    >
+      {children}
+    </a>
+  ),
   useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock('next-intl', () => ({
   useLocale: () => 'en',
-  useTranslations: () => Object.assign((key: string) => key, { raw: (key: string) => key }),
+  useTranslations: (namespace: string) => Object.assign(
+    (key: string) => namespace === 'templates.localManager' ? `localManager.${key}` : key,
+    { raw: (key: string) => key },
+  ),
 }));
 vi.mock('@/stores/tour-store', () => ({
   hasCompletedTour: () => true,
@@ -106,6 +136,21 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
+function selectCatalogView(view: 'public' | 'local' | 'favorites' | 'recent') {
+  fireEvent.mouseDown(screen.getByRole('tab', { name: `views.${view}` }), {
+    button: 0,
+    ctrlKey: false,
+  });
+}
+
+async function traverseHistory(direction: 'back' | 'forward') {
+  const popped = new Promise<void>((resolve) => {
+    window.addEventListener('popstate', () => resolve(), { once: true });
+  });
+  window.history[direction]();
+  await popped;
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -113,9 +158,11 @@ afterEach(() => {
 });
 
 beforeEach(() => {
+  vi.clearAllMocks();
   runtime.authEnabled = false;
   runtime.fingerprint = null;
   runtime.fingerprintLoading = true;
+  runtime.linkNavigations = 0;
   window.history.replaceState({}, '', '/en/templates');
 });
 
@@ -926,5 +973,151 @@ describe('template catalog readiness effects', () => {
 
     await waitFor(() => expect(calls).toHaveLength(0));
     expect(mounted.container.textContent).toContain('states.localEmpty');
+  });
+
+  test('switches the local empty state to the public catalog through canonical URL state', async () => {
+    window.history.replaceState({}, '', '/en/templates?view=local');
+    const calls = installCatalogFetch();
+    const confirm = vi.spyOn(window, 'confirm');
+    const { TemplateCatalog } = await import('./template-catalog');
+    render(<TemplateCatalog />);
+
+    await waitFor(() => expect(calls).toHaveLength(0));
+    fireEvent.click(screen.getByRole('button', { name: 'localManager.actions.browsePublic' }));
+
+    expect(new URLSearchParams(window.location.search).get('view')).toBe('public');
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  test.each(['public', 'favorites', 'recent'] as const)(
+    'keeps a dirty local draft on %s when navigation is declined',
+    async (view) => {
+      window.history.replaceState({}, '', '/en/templates?view=local');
+      installCatalogFetch();
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      const { TemplateCatalog } = await import('./template-catalog');
+      render(<TemplateCatalog />);
+      fireEvent.click(screen.getByRole('button', { name: 'manager-dirty' }));
+
+      selectCatalogView(view);
+
+      expect(new URLSearchParams(window.location.search).get('view')).toBe('local');
+      expect(confirm).toHaveBeenCalledWith('localManager.dirtyConfirm');
+    },
+  );
+
+  test.each(['public', 'favorites', 'recent'] as const)(
+    'leaves a dirty local draft for %s when navigation is confirmed',
+    async (view) => {
+      window.history.replaceState({}, '', '/en/templates?view=local');
+      installCatalogFetch();
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const { TemplateCatalog } = await import('./template-catalog');
+      render(<TemplateCatalog />);
+      fireEvent.click(screen.getByRole('button', { name: 'manager-dirty' }));
+
+      selectCatalogView(view);
+
+      expect(new URLSearchParams(window.location.search).get('view')).toBe(view);
+      expect(confirm).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  test('does not confirm clean local tab navigation', async () => {
+    window.history.replaceState({}, '', '/en/templates?view=local');
+    installCatalogFetch();
+    const confirm = vi.spyOn(window, 'confirm');
+    const { TemplateCatalog } = await import('./template-catalog');
+    render(<TemplateCatalog />);
+
+    selectCatalogView('public');
+
+    expect(new URLSearchParams(window.location.search).get('view')).toBe('public');
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  test('guards Dashboard navigation and clears the dirty gate after confirmation', async () => {
+    window.history.replaceState({}, '', '/en/templates?view=local');
+    installCatalogFetch();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+    const { TemplateCatalog } = await import('./template-catalog');
+    render(<TemplateCatalog />);
+    fireEvent.click(screen.getByRole('button', { name: 'manager-dirty' }));
+
+    fireEvent.click(screen.getByRole('link', { name: 'back' }));
+    expect(runtime.linkNavigations).toBe(0);
+    fireEvent.click(screen.getByRole('link', { name: 'back' }));
+    expect(runtime.linkNavigations).toBe(1);
+    selectCatalogView('public');
+    expect(confirm).toHaveBeenCalledTimes(2);
+  });
+
+  test('restores canonical local state when dirty Back navigation is declined', async () => {
+    window.history.replaceState({}, '', '/en/templates?view=public');
+    window.history.pushState({}, '', '/en/templates?view=local');
+    installCatalogFetch();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const { TemplateCatalog } = await import('./template-catalog');
+    render(<TemplateCatalog />);
+    fireEvent.click(screen.getByRole('button', { name: 'manager-dirty' }));
+
+    await traverseHistory('back');
+
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get('view')).toBe('local'));
+    expect(screen.getByText('states.localEmpty')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'manager-dirty' })).toBeTruthy();
+    expect(confirm).toHaveBeenCalledTimes(1);
+  });
+
+  test('accepts dirty Back navigation and clears the local gate', async () => {
+    window.history.replaceState({}, '', '/en/templates?view=public');
+    window.history.pushState({}, '', '/en/templates?view=local');
+    installCatalogFetch();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { TemplateCatalog } = await import('./template-catalog');
+    render(<TemplateCatalog />);
+    fireEvent.click(screen.getByRole('button', { name: 'manager-dirty' }));
+
+    await traverseHistory('back');
+
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get('view')).toBe('public'));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'manager-dirty' })).toBeNull());
+    expect(confirm).toHaveBeenCalledTimes(1);
+  });
+
+  test('accepts clean Back navigation without confirmation', async () => {
+    window.history.replaceState({}, '', '/en/templates?view=public');
+    window.history.pushState({}, '', '/en/templates?view=local');
+    installCatalogFetch();
+    const confirm = vi.spyOn(window, 'confirm');
+    const { TemplateCatalog } = await import('./template-catalog');
+    render(<TemplateCatalog />);
+
+    await traverseHistory('back');
+
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get('view')).toBe('public'));
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    [false, 'local'],
+    [true, 'recent'],
+  ] as const)('protects dirty Forward navigation when confirmation is %s', async (allowed, expectedView) => {
+    window.history.replaceState({}, '', '/en/templates?view=public');
+    window.history.pushState({}, '', '/en/templates?view=local');
+    window.history.pushState({}, '', '/en/templates?view=recent');
+    await traverseHistory('back');
+    expect(new URLSearchParams(window.location.search).get('view')).toBe('local');
+    installCatalogFetch();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(allowed);
+    const { TemplateCatalog } = await import('./template-catalog');
+    render(<TemplateCatalog />);
+    fireEvent.click(screen.getByRole('button', { name: 'manager-dirty' }));
+
+    await traverseHistory('forward');
+
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get('view')).toBe(expectedView));
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(Boolean(screen.queryByRole('button', { name: 'manager-dirty' }))).toBe(!allowed);
   });
 });

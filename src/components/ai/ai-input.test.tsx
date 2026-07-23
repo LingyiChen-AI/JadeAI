@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 afterEach(cleanup);
-vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
+vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key === 'beautify' ? '美化样式' : key }));
 
 import { AIInput } from './ai-input';
 
@@ -27,7 +27,7 @@ describe('AIInput beautify authorization', () => {
     const inputProps = props();
     render(<AIInput {...inputProps} />);
 
-    const checkbox = screen.getByRole('checkbox', { name: 'beautify' }) as HTMLInputElement;
+    const checkbox = screen.getByRole('checkbox', { name: '美化样式' }) as HTMLInputElement;
     expect(checkbox.checked).toBe(false);
 
     fireEvent.click(checkbox);
@@ -38,7 +38,7 @@ describe('AIInput beautify authorization', () => {
     const inputProps = { ...props(), isLoading: true };
     render(<AIInput {...inputProps} />);
 
-    const checkbox = screen.getByRole('checkbox', { name: 'beautify' }) as HTMLInputElement;
+    const checkbox = screen.getByRole('checkbox', { name: '美化样式' }) as HTMLInputElement;
     expect(checkbox.disabled).toBe(true);
   });
 });

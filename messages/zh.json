@@ -115,6 +115,7 @@
       "undo": "撤销",
       "redo": "重做",
       "preview": "预览",
+      "samplePreview": "示例预览",
       "export": "导出",
       "template": "切换模板",
       "settings": "设置",
@@ -263,7 +264,10 @@
     "panelTitle": "AI 助手",
     "placeholder": "描述你想优化的内容...",
     "send": "发送",
-    "beautify": "美化",
+    "beautify": "美化样式",
+    "styleUpdated": "已调整样式：{fields}",
+    "styleUnchanged": "样式没有产生可见变化",
+    "styleFields": { "primaryColor": "主色", "accentColor": "强调色", "fontFamily": "字体", "fontSize": "字号", "lineSpacing": "行距", "sectionSpacing": "模块间距", "margin": "页边距", "avatarStyle": "头像样式" },
     "thinking": "AI 思考中...",
     "suggestion": "AI 建议",
     "applySuggestion": "应用建议",
@@ -659,7 +663,9 @@
         "export": "导出",
         "delete": "删除",
         "cancel": "取消",
-        "save": "保存"
+        "save": "保存",
+        "browsePublic": "浏览公共模板",
+        "more": "更多操作"
       },
       "fields": {
         "name": "模板名称",
@@ -675,13 +681,54 @@
         "error": "无法加载本地模板。",
         "corrupt": "部分损坏的本地记录已被隔离，其余有效模板仍可使用。",
         "quota": "本地模板存储配额已用完。",
-        "operation": "无法完成本地模板操作。"
+        "operation": "无法完成本地模板操作。",
+        "saving": "正在保存...",
+        "saved": "已保存"
       },
+      "templateInfo": "模板信息",
+      "lastUpdated": "更新于 {date}",
+      "dirtyConfirm": "放弃未保存的模板更改？",
       "copySuccess": "模板已复制到我的模板。",
       "copyError": "无法复制此模板。",
       "deleteSnapshotWarning": "删除这个本地模板？已保存的简历会继续保留其已验证模板快照。"
     },
     "localEditor": {
+      "presets": {
+        "title": "预设",
+        "atsClean": "ATS 清爽",
+        "modernTwoColumn": "现代双栏",
+        "compactProfessional": "紧凑专业"
+      },
+      "history": {
+        "undo": "撤销",
+        "redo": "重做",
+        "reset": "重置",
+        "saved": "已保存"
+      },
+      "movement": {
+        "dragHandle": "拖动{section}",
+        "moveUp": "上移{section}",
+        "moveDown": "下移{section}",
+        "placement": "{section}的位置",
+        "advanced": "高级设置",
+        "dragStart": "开始拖动{section}",
+        "dragOver": "{section}已移动到{over}附近",
+        "dragEnd": "已将{section}移动到{over}",
+        "dragCancel": "已取消拖动{section}"
+      },
+      "controls": {
+        "slider": "{label}滑块"
+      },
+      "mobile": {
+        "settings": "设置",
+        "preview": "预览"
+      },
+      "preview": {
+        "resume": "预览简历",
+        "loading": "正在加载预览",
+        "ready": "预览就绪",
+        "fallback": "固定预览"
+      },
       "layout": {
         "title": "布局",
         "single-column": "单栏",

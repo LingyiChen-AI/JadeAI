@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
@@ -58,6 +58,7 @@ function SkeletonGrid() {
 
 export function TemplateCatalog() {
   const t = useTranslations('templates');
+  const localT = useTranslations('templates.localManager');
   const locale = useLocale();
   const router = useRouter();
   const { authEnabled } = useRuntimeConfig();
@@ -70,6 +71,7 @@ export function TemplateCatalog() {
   const [previewSlug, setPreviewSlug] = useState<string | null>(null);
   const [creatingSlug, setCreatingSlug] = useState<string | null>(null);
   const [urlReady, setUrlReady] = useState(false);
+  const [localDirty, setLocalDirty] = useState(false);
   const searchInputRef = useRef(false);
   const startTour = useTourStore((state) => state.startTour);
   const catalog = useTemplateCatalog({
@@ -86,16 +88,11 @@ export function TemplateCatalog() {
   const previewItem = catalog.items.find((item) => item.slug === previewSlug) ?? null;
 
   useEffect(() => {
-    const syncLocation = () => {
-      searchInputRef.current = false;
-      const next = parseTemplateCatalogUrl(new URLSearchParams(window.location.search));
-      setFilters(next);
-      setSearchValue(next.q ?? '');
-      setUrlReady(true);
-    };
-    syncLocation();
-    window.addEventListener('popstate', syncLocation);
-    return () => window.removeEventListener('popstate', syncLocation);
+    searchInputRef.current = false;
+    const next = parseTemplateCatalogUrl(new URLSearchParams(window.location.search));
+    setFilters(next);
+    setSearchValue(next.q ?? '');
+    setUrlReady(true);
   }, []);
 
   useEffect(() => {
@@ -120,6 +117,33 @@ export function TemplateCatalog() {
     setSearchValue(value);
     commitFilters({ q: value || undefined }, 'replace', true);
   };
+
+  const canLeaveLocal = useCallback(() => {
+    if (filters.view !== 'local' || !localDirty) return true;
+    if (!window.confirm(localT('dirtyConfirm'))) return false;
+    setLocalDirty(false);
+    return true;
+  }, [filters.view, localDirty, localT]);
+
+  useEffect(() => {
+    const syncPopstate = () => {
+      const next = parseTemplateCatalogUrl(new URLSearchParams(window.location.search));
+      if (filters.view === 'local' && next.view !== 'local' && !canLeaveLocal()) {
+        window.history.pushState(
+          {},
+          '',
+          buildTemplateCatalogHistoryUrl(window.location.pathname, filters),
+        );
+        return;
+      }
+      searchInputRef.current = false;
+      setFilters(next);
+      setSearchValue(next.q ?? '');
+      setUrlReady(true);
+    };
+    window.addEventListener('popstate', syncPopstate);
+    return () => window.removeEventListener('popstate', syncPopstate);
+  }, [canLeaveLocal, filters]);
 
   const handleUse = async (slug: string) => {
     const item = catalog.items.find((candidate) => candidate.slug === slug);
@@ -182,12 +206,12 @@ export function TemplateCatalog() {
   return (
     <div className="min-w-0 overflow-x-hidden">
       <header className="mb-6">
-        <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-950 dark:hover:text-zinc-50"><ArrowLeft className="size-4" />{t('back')}</Link>
+        <Link href="/dashboard" onClick={(event) => { if (!canLeaveLocal()) event.preventDefault(); }} className="mb-4 inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-950 dark:hover:text-zinc-50"><ArrowLeft className="size-4" />{t('back')}</Link>
         <h1 className="text-2xl font-bold">{t('title')}</h1>
         <p className="mt-1 text-sm text-zinc-500">{t('subtitle')}</p>
       </header>
 
-      <Tabs value={filters.view} onValueChange={(view) => commitFilters({ view: view as TemplateCatalogView })} className="min-w-0">
+      <Tabs value={filters.view} onValueChange={(view) => { if (view !== filters.view && !canLeaveLocal()) return; commitFilters({ view: view as TemplateCatalogView }); }} className="min-w-0">
         <TabsList className="grid h-auto w-full grid-cols-4 overflow-hidden">
           {(['public', 'local', 'favorites', 'recent'] as const).map((view) => <TabsTrigger key={view} value={view} className="min-w-0 px-1 text-xs sm:text-sm">{t(`views.${view}`)}</TabsTrigger>)}
         </TabsList>
@@ -195,7 +219,12 @@ export function TemplateCatalog() {
 
       {filters.view === 'local' ? (
         <div className="mt-5 min-w-0">
-          <LocalTemplateManager userId={user?.id} onApply={handleUseLocal} />
+          <LocalTemplateManager
+            userId={user?.id}
+            onApply={handleUseLocal}
+            onBrowsePublic={() => commitFilters({ view: 'public', cursor: undefined })}
+            onDirtyChange={setLocalDirty}
+          />
         </div>
       ) : <div className="mt-5 grid min-w-0 gap-4 md:grid-cols-[14rem_minmax(0,1fr)]">
         <TemplateFilters filters={filters} facets={catalog.facets} locale={locale} searchValue={searchValue} labels={filterLabels} onSearch={handleSearch} onChange={commitFilters} />

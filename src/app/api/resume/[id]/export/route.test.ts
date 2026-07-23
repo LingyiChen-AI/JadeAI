@@ -96,6 +96,24 @@ describe('GET /api/resume/[id]/export', () => {
     });
   });
 
+  test('enforces declarative-v2 manifest maxPages for PDF', async () => {
+    mocks.resolveTemplateForResume.mockResolvedValue({
+      ...resolved,
+      kind: 'declarative-v2',
+      source: 'public',
+      manifest: { features: { maxPages: 5 } },
+    });
+    mocks.generatePdf.mockResolvedValueOnce(Buffer.from('pdf'));
+
+    const response = await GET(request('pdf'), { params: Promise.resolve({ id: 'resume-1' }) });
+
+    expect(response.status).toBe(200);
+    expect(mocks.generatePdf).toHaveBeenCalledWith('<html>resolved</html>', {
+      fitOnePage: false,
+      maxPages: 5,
+    });
+  });
+
   test('keeps TXT template-independent without loading a renderer', async () => {
     const response = await GET(request('txt'), { params: Promise.resolve({ id: 'resume-1' }) });
 

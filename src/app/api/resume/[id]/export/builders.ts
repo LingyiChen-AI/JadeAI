@@ -196,8 +196,13 @@ async function generateDeclarativeHtml(
       }
     }
   }
-  const document = buildTemplateDocument(normalizeResumeForTemplate(resume), resolvedTemplate.manifest, { qrImagesByUrl });
+  const document = buildTemplateDocument(normalizeResumeForTemplate(resume), resolvedTemplate.manifest, {
+    qrImagesByUrl,
+    themeConfig: (resume.themeConfig ?? {}) as unknown as Record<string, unknown>,
+  });
   const content = serializeTemplateDocumentHtml(document);
+  const pageMargin = `${document.page.marginMm.top}mm ${document.page.marginMm.right}mm ${document.page.marginMm.bottom}mm ${document.page.marginMm.left}mm`;
+  const fontFamily = document.fontFamily === 'noto-sans-sc' ? '"Noto Sans SC", sans-serif' : 'sans-serif';
   return `<!DOCTYPE html>
 <html lang="${esc(resume.language || 'en')}">
 <head>
@@ -209,15 +214,15 @@ async function generateDeclarativeHtml(
     @font-face { font-family: "Noto Sans SC"; src: url("/fonts/NotoSansSC-Bold.otf") format("opentype"); font-weight: 700; font-display: swap; }
     @page {
       size: A4;
-      margin: ${document.page.marginMm}mm;
+      margin: ${pageMargin};
       ${document.page.showPageNumbers ? `@bottom-center {
         content: counter(page);
         color: ${document.colors.muted};
-        font: 8pt "Noto Sans SC", sans-serif;
+        font: 8pt ${fontFamily};
       }` : ''}
     }
     html, body { margin: 0; padding: 0; background: ${document.colors.background}; color: ${document.colors.text}; }
-    body { ${forPdf ? '' : `padding: ${document.page.marginMm}mm;`} font-family: "Noto Sans SC", sans-serif; }
+    body { ${forPdf ? '' : `padding: ${pageMargin};`} font-family: ${fontFamily}; }
     .declarative-resume { box-sizing: border-box; max-width: 210mm; margin: 0 auto; font-size: var(--template-font-size); line-height: var(--template-line-height); }
     .declarative-resume[data-layout="two-column"], .declarative-resume[data-layout="sidebar"] { display: grid; grid-auto-flow: row dense; grid-template-columns: minmax(0, 1fr) var(--template-sidebar-width); gap: var(--template-column-gap); }
     .declarative-resume[data-sidebar-position="left"] { grid-template-columns: var(--template-sidebar-width) minmax(0, 1fr); }
@@ -225,7 +230,7 @@ async function generateDeclarativeHtml(
     [data-placement="main"] { grid-column: ${document.layout.sidebarPosition === 'left' ? '2' : '1'}; }
     [data-placement="sidebar"] { grid-column: ${document.layout.sidebarPosition === 'left' ? '1' : '2'}; }
     [data-section] { margin-bottom: var(--template-section-gap); break-inside: auto; }
-    h2 { margin: 0 0 2mm; font-size: calc(var(--template-font-size) * ${document.typography.headingScale}); color: var(--template-text); }
+    h2 { margin: 0 0 2mm; font-size: calc(var(--template-font-size) * ${document.typography.headingScale}); color: var(--template-heading); }
     [data-heading-variant="accent"] h2 { color: var(--template-accent); }
     [data-heading-variant="muted"] h2, [data-tone="muted"] { color: var(--template-muted); }
     [data-heading-variant="compact"] h2 { font-size: var(--template-font-size); margin-bottom: 1mm; }
@@ -239,6 +244,7 @@ async function generateDeclarativeHtml(
     [data-style-body="muted"] [data-block="paragraph"], [data-style-contact="muted"] [data-block="contact"], [data-style-bullet="muted"] [data-block="list"] { color: var(--template-muted); }
     [data-style-body="bordered"] [data-block="paragraph"], [data-style-contact="bordered"] [data-block="contact"], [data-style-bullet="bordered"] [data-block="list"] { border-left: 2px solid var(--template-accent); padding-left: 2mm; }
     [data-image-role="avatar"] { max-width: 32mm; height: auto; object-fit: cover; }
+    [data-avatar-style="circle"] [data-image-role="avatar"] { border-radius: 9999px; }
     [data-image-role="qr"] { max-width: 24mm; height: auto; }
     [data-style-avatar="compact"] [data-image-role="avatar"] { max-width: 24mm; }
     [data-style-avatar="accent"] [data-image-role="avatar"] { border: 2px solid var(--template-accent); }

@@ -1,20 +1,31 @@
 import type { CSSProperties } from 'react';
 
+import { renderRichTextInlineHtml } from '@/lib/resume/rich-text';
 import type { TemplateDocument } from '@/lib/templates/template-document';
 import { QrCodesPreview } from './qr-codes-preview';
+
+function cssNumber(value: number): string {
+  return String(Number(value.toFixed(3)));
+}
 
 export function DeclarativeTemplateDocument({ document }: { document: TemplateDocument }) {
   const presentation = document.presentation;
   const hasColumns = document.layout.type !== 'single-column';
   const sidebarWidth = `${document.layout.sidebarWidthPercent}%`;
+  const pageMargin = document.page.marginMm;
+  const baseFontSize = cssNumber(document.typography.baseFontSizePt);
   const style = {
     '--template-text': document.colors.text,
+    '--template-heading': document.headingColor,
     '--template-muted': document.colors.muted,
     '--template-accent': document.colors.accent,
     '--template-background': document.colors.background,
-    '--template-font-size': `${document.typography.baseFontSizePt}pt`,
+    '--template-font-size': `${baseFontSize}pt`,
     '--template-line-height': document.typography.lineHeight,
-    '--template-page-margin': `${document.spacing.pageMarginMm}mm`,
+    '--template-page-margin-top': `${pageMargin.top}mm`,
+    '--template-page-margin-right': `${pageMargin.right}mm`,
+    '--template-page-margin-bottom': `${pageMargin.bottom}mm`,
+    '--template-page-margin-left': `${pageMargin.left}mm`,
     '--template-section-gap': `${document.spacing.sectionGapMm}mm`,
     '--template-column-gap': `${document.layout.columnGapMm}mm`,
     '--template-sidebar-width': `${document.layout.sidebarWidthPercent}%`,
@@ -25,10 +36,10 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
     '--template-radius': presentation ? `${presentation.border.radiusMm}mm` : undefined,
     color: document.colors.text,
     backgroundColor: document.colors.background,
-    fontFamily: '"Noto Sans SC", sans-serif',
-    fontSize: `${document.typography.baseFontSizePt}pt`,
+    fontFamily: document.fontFamily === 'noto-sans-sc' ? '"Noto Sans SC", sans-serif' : 'sans-serif',
+    fontSize: `${baseFontSize}pt`,
     lineHeight: document.typography.lineHeight,
-    padding: `${document.spacing.pageMarginMm}mm`,
+    padding: `${pageMargin.top}mm ${pageMargin.right}mm ${pageMargin.bottom}mm ${pageMargin.left}mm`,
     display: hasColumns ? 'grid' : 'block',
     gridAutoFlow: hasColumns ? 'row dense' : undefined,
     gridTemplateColumns: hasColumns
@@ -91,6 +102,7 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
       data-decoration={presentation?.decoration.variant}
       data-density={presentation?.density}
       data-layout={document.layout.type}
+      data-avatar-style={document.avatarStyle}
       data-sidebar-position={document.layout.sidebarPosition}
       data-page-numbers={document.page.showPageNumbers}
       data-max-pages={document.page.maxPages}
@@ -106,7 +118,7 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
             : presentation?.section.headingVariant === 'accent-block'
               ? { background: document.colors.accent, color: document.colors.background, borderRadius: `${presentation.border.radiusMm}mm`, padding: '1mm 2mm' }
               : presentation?.section.headingVariant === 'small-caps'
-                ? { fontSize: `${document.typography.baseFontSizePt}pt`, textTransform: 'uppercase', letterSpacing: 0 }
+                ? { fontSize: `${baseFontSize}pt`, textTransform: 'uppercase', letterSpacing: 0 }
                 : presentation?.section.headingVariant === 'side-rule'
                   ? { borderLeft: `${presentation.border.widthPt * 2}pt solid ${document.colors.accent}`, paddingLeft: '2mm' }
                   : {};
@@ -135,14 +147,15 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
           <h2 style={{
             color: section.headingVariant === 'accent'
               ? document.colors.accent
-              : section.headingVariant === 'muted' ? document.colors.muted : document.colors.text,
-            fontSize: `${document.typography.baseFontSizePt * document.typography.headingScale}pt`,
+              : section.headingVariant === 'muted' ? document.colors.muted : document.headingColor,
+            fontSize: `${cssNumber(document.typography.baseFontSizePt * document.typography.headingScale)}pt`,
             margin: '0 0 2mm',
             borderBottom: section.headingVariant === 'bordered' ? `1px solid ${document.colors.accent}` : undefined,
             paddingBottom: section.headingVariant === 'bordered' ? '1mm' : undefined,
             gridColumn: isSplitHeader ? 1 : undefined,
-            ...(section.headingVariant === 'compact' ? { fontSize: `${document.typography.baseFontSizePt}pt`, marginBottom: '1mm' } : {}),
+            ...(section.headingVariant === 'compact' ? { fontSize: `${baseFontSize}pt`, marginBottom: '1mm' } : {}),
             ...v2HeadingStyle,
+            ...(isHeader && presentation?.header.variant === 'band' ? { color: document.colors.background } : {}),
           }}>{section.title}</h2>
           {section.blocks.map((block, blockIndex) => {
             const element = block.kind === 'contact' ? 'contact' : block.kind === 'list' ? 'bullet' : block.kind === 'qr' ? 'qr' : 'body';
@@ -154,13 +167,41 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
               return (
                 <ul key={blockIndex} data-block="list" style={{ margin: '0 0 1.5mm', paddingLeft: '5mm', gridColumn: isSplitHeader ? 2 : undefined, ...variantStyle('bullet', section.styleVariants.bullet) }}>
                   {block.textRuns.map((textRun, textIndex) => (
-                    <li key={textIndex} data-tone={textRun.tone} style={textRun.tone === 'muted' ? variantStyle('date', section.styleVariants.date) : undefined}>{textRun.text}</li>
+                    <li
+                      key={textIndex}
+                      data-tone={textRun.tone}
+                      data-placeholder={textRun.placeholder ? 'true' : undefined}
+                      style={{
+                        ...(textRun.tone === 'muted' ? variantStyle('date', section.styleVariants.date) : {}),
+                        opacity: textRun.placeholder ? 0.58 : undefined,
+                      }}
+                      dangerouslySetInnerHTML={{ __html: renderRichTextInlineHtml(textRun.text) }}
+                    />
                   ))}
                 </ul>
               );
             }
             if (block.kind === 'qr' && block.images.length === 0) {
-              return <div key={blockIndex} data-block="qr" style={{ gridColumn: isSplitHeader ? 2 : undefined, ...variantStyle('qr', section.styleVariants.qr) }}><QrCodesPreview items={block.links.map((link, index) => ({ id: `${section.type}:${blockIndex}:${index}`, label: link.label, url: link.href }))} /></div>;
+              const linkHasPlaceholder = (linkIndex: number) => Boolean(
+                block.links[linkIndex]?.placeholder || block.textRuns[linkIndex]?.placeholder,
+              );
+              const hasPlaceholderContent = block.links.some((_, linkIndex) => linkHasPlaceholder(linkIndex))
+                || block.textRuns.some((textRun) => textRun.placeholder);
+              return (
+                <div key={blockIndex} data-block="qr" style={{ gridColumn: isSplitHeader ? 2 : undefined, ...variantStyle('qr', section.styleVariants.qr) }}>
+                  {hasPlaceholderContent
+                    ? block.links.map((link, linkIndex) => (
+                        <a
+                          key={`link:${linkIndex}`}
+                          href={link.href}
+                          rel="noreferrer noopener"
+                          data-placeholder={linkHasPlaceholder(linkIndex) ? 'true' : undefined}
+                          style={{ opacity: linkHasPlaceholder(linkIndex) ? 0.58 : undefined }}
+                        >{link.label}</a>
+                      ))
+                    : <QrCodesPreview items={block.links.map((link, index) => ({ id: `${section.type}:${blockIndex}:${index}`, label: link.label, url: link.href }))} />}
+                </div>
+              );
             }
             return (
             <p key={blockIndex} data-block={block.kind} style={{
@@ -173,22 +214,25 @@ export function DeclarativeTemplateDocument({ document }: { document: TemplateDo
               {block.images.map((image, imageIndex) => (
                 // Data URLs are saved Resume content; Next Image cannot optimize them without changing bytes.
                 // eslint-disable-next-line @next/next/no-img-element
-                <img key={`image:${imageIndex}`} src={image.src} alt={image.alt} data-image-role={image.role} style={{ maxWidth: image.role === 'qr' ? '24mm' : '32mm', height: 'auto', objectFit: 'cover', ...variantStyle(image.role, section.styleVariants[image.role]) }} />
+                <img key={`image:${imageIndex}`} src={image.src} alt={image.alt} data-image-role={image.role} style={{ maxWidth: image.role === 'qr' ? '24mm' : '32mm', height: 'auto', objectFit: 'cover', borderRadius: image.role === 'avatar' && document.avatarStyle === 'circle' ? '9999px' : undefined, ...variantStyle(image.role, section.styleVariants[image.role]) }} />
               ))}
               {block.textRuns.map((textRun, textIndex) => (
                 <span
                   key={`text:${textIndex}`}
                   data-tone={textRun.tone}
+                  data-placeholder={textRun.placeholder ? 'true' : undefined}
                   style={{
+                    opacity: textRun.placeholder ? 0.58 : undefined,
                     color: textRun.tone === 'muted' ? document.colors.muted : textRun.tone === 'accent' ? document.colors.accent : blockTextColor,
                     ...(textRun.tone === 'muted' ? variantStyle('date', section.styleVariants.date) : {}),
                     ...(textRun.tone === 'muted' && presentation?.entry.variant === 'date-rail' ? { display: 'inline-block', minWidth: '24mm', color: presentation.palette.secondary } : {}),
                     ...(section.type === 'skills' && presentation?.skills.variant === 'tags' ? { display: 'inline-block', background: presentation.palette.surface, border: `${presentation.border.widthPt}pt solid ${presentation.palette.border}`, borderRadius: `${presentation.border.radiusMm}mm`, padding: '.5mm 2mm', margin: '.5mm' } : {}),
                   }}
-                >{textRun.text}{' '}</span>
+                  dangerouslySetInnerHTML={{ __html: `${renderRichTextInlineHtml(textRun.text)} ` }}
+                />
               ))}
               {block.links.map((link, linkIndex) => (
-                <a key={`link:${linkIndex}`} href={link.href} rel="noreferrer noopener" style={{ color: document.colors.accent, overflowWrap: 'anywhere' }}>{link.label}{' '}</a>
+                <a key={`link:${linkIndex}`} href={link.href} rel="noreferrer noopener" data-placeholder={link.placeholder ? 'true' : undefined} style={{ color: document.colors.accent, overflowWrap: 'anywhere', opacity: link.placeholder ? 0.58 : undefined }}>{link.label}{' '}</a>
               ))}
             </p>
             );

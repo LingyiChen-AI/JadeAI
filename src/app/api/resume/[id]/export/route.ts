@@ -106,7 +106,7 @@ export async function GET(
         const fitOnePage = request.nextUrl.searchParams.get('fitOnePage') === 'true';
         const resolvedTemplate = await resolveTemplateForResume(resume);
         const pdfHtml = await generateHtml(resume, true, resolvedTemplate);
-        const maxPages = resolvedTemplate.kind === 'declarative-v1'
+        const maxPages = resolvedTemplate.kind === 'declarative-v1' || resolvedTemplate.kind === 'declarative-v2'
           ? resolvedTemplate.manifest.features.maxPages
           : undefined;
         const pdfBuffer = await generatePdf(pdfHtml, { fitOnePage, ...(maxPages ? { maxPages } : {}) });

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as diffModule from '@/lib/resume/diff-ai-changes';
-import { shouldReloadAIWriteback } from './use-ai-chat';
+import { newlyCompletedToolTypes, shouldReloadAIWriteback } from './use-ai-chat';
+import type { UIMessage } from 'ai';
 import type { AIChangeSource } from '@/types/editor';
 
 const originalSection = {
@@ -37,6 +38,24 @@ function historyWriter() {
 }
 
 describe('AI writeback history', () => {
+  it('only classifies tool parts completed since the previous count', () => {
+    const messages = [
+      {
+        role: 'assistant',
+        parts: [
+          { type: 'tool-updateResumeStyle', state: 'output-available' },
+          { type: 'tool-updateSection', state: 'output-available' },
+        ],
+      },
+      {
+        role: 'assistant',
+        parts: [{ type: 'tool-rewriteText', state: 'output-available' }],
+      },
+    ] as unknown as UIMessage[];
+
+    expect(newlyCompletedToolTypes(messages, 2)).toEqual(['tool-rewriteText']);
+  });
+
   it('groups completed tools until the whole assistant response settles', () => {
     expect(shouldReloadAIWriteback(0, 1, 'streaming')).toBe(false);
     expect(shouldReloadAIWriteback(0, 2, 'submitted')).toBe(false);

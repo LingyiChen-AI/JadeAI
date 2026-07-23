@@ -10,6 +10,7 @@ import { DeclarativeTemplateDocument } from './declarative-template-document';
 
 interface ResumePreviewProps {
   resume: Resume;
+  placeholderPaths?: ReadonlySet<string>;
 }
 
 const lazyLegacyTemplates = new Map<string, React.LazyExoticComponent<React.ComponentType<{ resume: Resume }>>>(
@@ -143,7 +144,7 @@ function buildThemeCSS(scopeId: string, theme: ThemeConfig, template: string): s
   `;
 }
 
-export function ResumePreview({ resume }: ResumePreviewProps) {
+export function ResumePreview({ resume, placeholderPaths }: ResumePreviewProps) {
   const scopeId = useId();
   const theme: ThemeConfig = { ...DEFAULT_THEME, ...(resume.themeConfig || {}) };
 
@@ -153,7 +154,10 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
   const legacySlug = resolvedTemplate?.kind === 'legacy-react' ? resolvedTemplate.slug : safeResume.template;
 
   if (resolvedTemplate?.kind === 'declarative-v1' || resolvedTemplate?.kind === 'declarative-v2') {
-    const document = buildTemplateDocument(normalizeResumeForTemplate(safeResume), resolvedTemplate.manifest);
+    const document = buildTemplateDocument(normalizeResumeForTemplate(safeResume), resolvedTemplate.manifest, {
+      themeConfig: (safeResume.themeConfig ?? {}) as unknown as Record<string, unknown>,
+      placeholderPaths,
+    });
     return <DeclarativeTemplateDocument document={document} />;
   }
 
