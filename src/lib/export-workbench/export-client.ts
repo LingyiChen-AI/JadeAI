@@ -9,12 +9,13 @@ const EXTENSIONS: Record<ExportFormat, string> = {
   json: 'json',
 };
 
-export function buildExportUrl(resumeId: string, format: ExportFormat): string {
+export function buildExportUrl(resumeId: string, format: ExportFormat, expectedRevision?: number): string {
   const encodedId = encodeURIComponent(resumeId);
+  const revision = expectedRevision === undefined ? '' : `&expectedRevision=${expectedRevision}`;
   if (format === 'pdf-one-page') {
-    return `/api/resume/${encodedId}/export?format=pdf&fitOnePage=true`;
+    return `/api/resume/${encodedId}/export?format=pdf&fitOnePage=true${revision}`;
   }
-  return `/api/resume/${encodedId}/export?format=${format}`;
+  return `/api/resume/${encodedId}/export?format=${format}${revision}`;
 }
 
 function decodeFilename(value: string): string | null {

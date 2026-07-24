@@ -42,6 +42,20 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const expectedRevisionParam = request.nextUrl.searchParams.get('expectedRevision');
+    if (expectedRevisionParam !== null) {
+      const expectedRevision = Number(expectedRevisionParam);
+      if (!/^\d+$/.test(expectedRevisionParam) || !Number.isSafeInteger(expectedRevision)) {
+        return NextResponse.json({ error: 'invalid_expected_revision' }, { status: 400 });
+      }
+      if (resume.revision !== expectedRevision) {
+        return NextResponse.json(
+          { error: 'revision_conflict', currentRevision: resume.revision },
+          { status: 409 },
+        );
+      }
+    }
+
     const format = request.nextUrl.searchParams.get('format') || 'json';
     const title = resume.title || 'resume';
     const now = new Date();
@@ -106,7 +120,7 @@ export async function GET(
         const fitOnePage = request.nextUrl.searchParams.get('fitOnePage') === 'true';
         const resolvedTemplate = await resolveTemplateForResume(resume);
         const pdfHtml = await generateHtml(resume, true, resolvedTemplate);
-        const maxPages = resolvedTemplate.kind === 'declarative-v1'
+        const maxPages = resolvedTemplate.kind === 'declarative-v1' || resolvedTemplate.kind === 'declarative-v2'
           ? resolvedTemplate.manifest.features.maxPages
           : undefined;
         const pdfBuffer = await generatePdf(pdfHtml, { fitOnePage, ...(maxPages ? { maxPages } : {}) });

@@ -12,6 +12,7 @@ import { LegacyEditableSurface } from './legacy-editable-surface';
 
 interface ResumePreviewProps {
   resume: Resume;
+  placeholderPaths?: ReadonlySet<string>;
   edit?: EditableResumeContract;
 }
 
@@ -146,7 +147,7 @@ function buildThemeCSS(scopeId: string, theme: ThemeConfig, template: string): s
   `;
 }
 
-export function ResumePreview({ resume, edit }: ResumePreviewProps) {
+export function ResumePreview({ resume, placeholderPaths, edit }: ResumePreviewProps) {
   const scopeId = useId();
   const theme: ThemeConfig = { ...DEFAULT_THEME, ...(resume.themeConfig || {}) };
 
@@ -156,7 +157,11 @@ export function ResumePreview({ resume, edit }: ResumePreviewProps) {
   const legacySlug = resolvedTemplate?.kind === 'legacy-react' ? resolvedTemplate.slug : safeResume.template;
 
   if (resolvedTemplate?.kind === 'declarative-v1' || resolvedTemplate?.kind === 'declarative-v2') {
-    const document = buildTemplateDocument(normalizeResumeForTemplate(safeResume), resolvedTemplate.manifest);
+    const document = buildTemplateDocument(normalizeResumeForTemplate(safeResume), resolvedTemplate.manifest, {
+      themeConfig: (safeResume.themeConfig ?? {}) as unknown as Record<string, unknown>,
+      placeholderPaths,
+      includeEmptyEditableFields: Boolean(edit?.enabled),
+    });
     return (
       <EditableResumeProvider value={edit}>
         <DeclarativeTemplateDocument document={document} />

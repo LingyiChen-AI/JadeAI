@@ -14,6 +14,11 @@ interface Props {
   onUpdate: (content: Partial<PersonalInfoContent>) => void;
 }
 
+interface PersonalInfoFieldsProps extends Props {
+  avatarStyle: 'circle' | 'oneInch';
+  onAvatarStyleChange: (style: 'circle' | 'oneInch') => void;
+}
+
 function resizeImage(file: File, maxSize: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -47,25 +52,16 @@ function resizeImage(file: File, maxSize: number): Promise<string> {
   });
 }
 
-export function PersonalInfoSection({ section, onUpdate }: Props) {
+export function PersonalInfoFields({
+  section,
+  onUpdate,
+  avatarStyle,
+  onAvatarStyleChange,
+}: PersonalInfoFieldsProps) {
   const t = useTranslations('editor.fields');
   const tTheme = useTranslations('themeEditor');
   const content = section.content as PersonalInfoContent;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { currentResume } = useResumeStore();
-  const avatarStyle = currentResume?.themeConfig?.avatarStyle || 'oneInch';
-
-  const updateAvatarStyle = (style: 'circle' | 'oneInch') => {
-    if (!currentResume) return;
-    const newConfig = { ...currentResume.themeConfig, avatarStyle: style };
-    useResumeStore.setState((state) => ({
-      currentResume: state.currentResume
-        ? { ...state.currentResume, themeConfig: newConfig }
-        : null,
-      isDirty: true,
-    }));
-    useResumeStore.getState()._scheduleSave();
-  };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -100,7 +96,7 @@ export function PersonalInfoSection({ section, onUpdate }: Props) {
               <button
                 key={value}
                 type="button"
-                onClick={() => updateAvatarStyle(value)}
+                onClick={() => onAvatarStyleChange(value)}
                 className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-all duration-200 ${
                   avatarStyle === value
                     ? 'bg-white font-medium text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-100'
@@ -196,5 +192,31 @@ export function PersonalInfoSection({ section, onUpdate }: Props) {
       </FieldWrapper>
 
     </div>
+  );
+}
+
+export function PersonalInfoSection({ section, onUpdate }: Props) {
+  const { currentResume } = useResumeStore();
+  const avatarStyle = currentResume?.themeConfig?.avatarStyle || 'oneInch';
+
+  const updateAvatarStyle = (style: 'circle' | 'oneInch') => {
+    if (!currentResume) return;
+    const newConfig = { ...currentResume.themeConfig, avatarStyle: style };
+    useResumeStore.setState((state) => ({
+      currentResume: state.currentResume
+        ? { ...state.currentResume, themeConfig: newConfig }
+        : null,
+      isDirty: true,
+    }));
+    useResumeStore.getState()._scheduleSave();
+  };
+
+  return (
+    <PersonalInfoFields
+      section={section}
+      onUpdate={onUpdate}
+      avatarStyle={avatarStyle}
+      onAvatarStyleChange={updateAvatarStyle}
+    />
   );
 }

@@ -51,7 +51,6 @@ function collectCandidates(
   }
   if (typeof value === 'string' || typeof value === 'number') {
     const raw = String(value);
-    if (!raw.trim()) return;
     const last = path.at(-1);
     const key = String(typeof last === 'number' ? path.at(-2) ?? 'value' : last ?? 'value');
     output.push({
@@ -77,7 +76,6 @@ function collectCandidates(
     }
     if (typeof nested !== 'string' && typeof nested !== 'number') return;
     const raw = String(nested);
-    if (!raw.trim()) return;
     const sourcePath = [...path, key];
     output.push({
       value: raw,
@@ -111,10 +109,22 @@ export function buildLegacyFieldCandidates(resume: Resume): LegacyFieldCandidate
 function resolveCandidate(
   target: HTMLElement,
   candidates: readonly LegacyFieldCandidate[],
-): LegacyFieldCandidate | null {
-  const targetText = target.textContent?.trim() ?? '';
+): { candidate: LegacyFieldCandidate; host: HTMLElement } | null {
+  const scope = target.closest<HTMLElement>('[data-section]') ?? target.parentElement;
+  const possibleHosts: HTMLElement[] = [];
+  let node: HTMLElement | null = target;
+  while (node) {
+    possibleHosts.push(node);
+    if (node === scope) break;
+    node = node.parentElement;
+  }
+  const host = possibleHosts.find((element) => {
+    const text = element.textContent?.trim() ?? '';
+    return text && candidates.some((candidate) => candidate.displayValue === text);
+  }) ?? target;
+  const targetText = host.textContent?.trim() ?? '';
   if (!targetText) return null;
-  const sectionText = target.closest('[data-section]')?.textContent ?? target.parentElement?.textContent ?? targetText;
+  const sectionText = scope?.textContent ?? targetText;
   const sectionScores = new Map<string, number>();
   candidates.forEach((candidate) => {
     if (candidate.displayValue && sectionText.includes(candidate.displayValue)) {
@@ -122,7 +132,27 @@ function resolveCandidate(
     }
   });
 
-  return candidates
+  const scoredSections = [...sectionScores.entries()].sort((left, right) => right[1] - left[1]);
+  const likelySectionId = scoredSections[0]?.[0];
+  const exactCandidates = candidates.filter((candidate) => (
+    candidate.displayValue === targetText
+    && (!likelySectionId || candidate.source.sectionId === likelySectionId)
+  ));
+  if (exactCandidates.length > 1) {
+    const renderedMatches = scope
+      ? [scope, ...Array.from(scope.querySelectorAll<HTMLElement>('*'))].filter((element) => (
+          element instanceof HTMLElement
+          && element.textContent?.trim() === targetText
+          && !Array.from(element.children).some((child) => child.textContent?.trim() === targetText)
+        ))
+      : [];
+    const occurrence = renderedMatches.indexOf(host);
+    if (occurrence >= 0 && occurrence < exactCandidates.length) {
+      return { candidate: exactCandidates[occurrence], host };
+    }
+  }
+
+  const candidate = candidates
     .filter((candidate) => candidate.displayValue === targetText
       || targetText.includes(candidate.displayValue)
       || candidate.displayValue.includes(targetText))
@@ -133,6 +163,7 @@ function resolveCandidate(
         + Math.min(candidate.displayValue.length, targetText.length),
     }))
     .sort((left, right) => right.score - left.score)[0]?.candidate ?? null;
+  return candidate ? { candidate, host } : null;
 }
 
 type ActiveEditor = LegacyFieldCandidate & {
@@ -163,6 +194,16 @@ export function LegacyEditableSurface({
   };
 
   const cancel = () => setActive(null);
+  const beginEditing = (candidate: LegacyFieldCandidate, host: HTMLElement) => {
+    const rect = host.getBoundingClientRect();
+    const style = window.getComputedStyle(host);
+    setValue(candidate.value);
+    setActive({
+      ...candidate,
+      rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
+      typography: { font: style.font, color: style.color, lineHeight: style.lineHeight, textAlign: style.textAlign },
+    });
+  };
   const multiline = active?.source.kind === 'rich-text' || active?.source.kind === 'multiline';
   const controlStyle = active ? {
     position: 'fixed' as const,
@@ -183,21 +224,32 @@ export function LegacyEditableSurface({
       onClickCapture={(event) => {
         const target = event.target instanceof HTMLElement ? event.target : null;
         if (!target || target.closest('[data-legacy-edit-control]') || target.closest('button,input,textarea,select')) return;
-        const candidate = resolveCandidate(target, candidates);
-        if (!candidate) return;
+        const resolved = resolveCandidate(target, candidates);
+        if (!resolved) return;
         event.preventDefault();
         event.stopPropagation();
-        const rect = target.getBoundingClientRect();
-        const style = window.getComputedStyle(target);
-        setValue(candidate.value);
-        setActive({
-          ...candidate,
-          rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
-          typography: { font: style.font, color: style.color, lineHeight: style.lineHeight, textAlign: style.textAlign },
-        });
+        beginEditing(resolved.candidate, resolved.host);
       }}
     >
       {children}
+      <div className="flex flex-wrap gap-1 print:hidden" data-legacy-edit-control>
+        {candidates.filter((candidate) => !candidate.displayValue).map((candidate) => {
+          const key = [candidate.source.sectionId, candidate.source.itemId, ...candidate.source.fieldPath]
+            .filter((part) => part !== undefined)
+            .join('.');
+          return (
+            <button
+              key={key}
+              type="button"
+              aria-label={`${candidate.source.label}: ${edit.emptyLabel ?? 'Add field'}`}
+              className="rounded-sm border border-dashed border-zinc-300 px-1 text-[10px] text-zinc-400"
+              onClick={(event) => beginEditing(candidate, event.currentTarget)}
+            >
+              {edit.emptyLabel ?? 'Add field'}
+            </button>
+          );
+        })}
+      </div>
       {active && (multiline ? (
         <textarea
           data-legacy-edit-control

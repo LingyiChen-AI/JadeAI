@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, test } from 'vitest';
 
 import { DeclarativeTemplateDocument } from '@/components/preview/declarative-template-document';
+import { ResumePreview } from '@/components/preview/resume-preview';
 import type { Resume } from '@/types/resume';
 import type { TemplateManifestV1, TemplateManifestV2 } from '@/types/template';
 
@@ -62,6 +63,172 @@ function resume(): Resume {
 }
 
 describe('declarative template document', () => {
+  test('preserves safe inline rich text in React and serialized HTML output', () => {
+    const source = resume();
+    source.sections.find((section) => section.type === 'summary')!.content = {
+      text: '**Led** platform delivery with <unsafe> input',
+    };
+    const projects = source.sections.find((section) => section.type === 'projects')!;
+    const projectContent = projects.content as unknown as { items: Array<Record<string, unknown>> };
+    projects.content = {
+      ...projectContent,
+      items: [{
+        ...projectContent.items[0],
+        technologies: ['**TypeScript**'],
+      }],
+    } as Resume['sections'][number]['content'];
+    const document = buildTemplateDocument(normalizeResumeForTemplate(source), manifest);
+
+    for (const output of [
+      serializeTemplateDocumentHtml(document),
+      renderToStaticMarkup(<DeclarativeTemplateDocument document={document} />),
+    ]) {
+      expect(output).toContain('<strong>Led</strong> platform delivery with &lt;unsafe&gt; input');
+      expect(output).toContain('<li data-tone="default"><strong>TypeScript</strong></li>');
+      expect(output).not.toContain('**Led**');
+      expect(output).not.toContain('**TypeScript**');
+    }
+  });
+
+  test('marks only editor fixture text and links from stable section paths', () => {
+    const source = resume();
+    source.sections.find((section) => section.type === 'personal_info')!.content = {
+      fullName: 'JADEAI_EDITOR_SAMPLE_ONLY',
+      website: 'https://sample.example.com',
+    } as Resume['sections'][number]['content'];
+    source.sections.find((section) => section.type === 'summary')!.content = {
+      text: 'Sample summary',
+    };
+    const document = buildTemplateDocument(normalizeResumeForTemplate(source), manifest, {
+      placeholderPaths: new Set(['personal_info.fullName', 'personal_info.website', 'summary.text', 'projects.items']),
+    });
+    const runs = document.sections.flatMap((section) => section.blocks.flatMap((block) => block.textRuns));
+    const links = document.sections.flatMap((section) => section.blocks.flatMap((block) => block.links));
+
+    expect(runs).toEqual(expect.arrayContaining([
+      expect.objectContaining({ text: 'JADEAI_EDITOR_SAMPLE_ONLY', placeholder: true }),
+      expect.objectContaining({ text: 'Sample summary', placeholder: true }),
+      expect.objectContaining({ text: 'Jade', placeholder: true }),
+    ]));
+    expect(links).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: 'https://sample.example.com', placeholder: true }),
+      expect.objectContaining({ label: 'https://example.com/work?q=1&x=2', placeholder: true }),
+    ]));
+
+    const html = serializeTemplateDocumentHtml(document);
+    const reactHtml = renderToStaticMarkup(<DeclarativeTemplateDocument document={document} />);
+    const placeholderListItems = document.sections.flatMap((section) => section.blocks)
+      .filter((block) => block.kind === 'list')
+      .flatMap((block) => block.textRuns)
+      .filter((textRun) => textRun.placeholder);
+    expect(placeholderListItems.map((item) => item.text)).toEqual(['TypeScript']);
+    for (const output of [html, reactHtml]) {
+      expect(output).toContain('data-placeholder="true"');
+      expect(output).toContain('opacity:0.58');
+      expect(output).not.toContain('data-placeholder="false"');
+      expect(output.match(/<li[^>]*data-placeholder="true"[^>]*opacity:0\.58[^>]*>/g)).toHaveLength(placeholderListItems.length);
+      expect(output).toContain('<li data-tone="default" data-placeholder="true" style="opacity:0.58">TypeScript</li>');
+    }
+    const baseline = serializeTemplateDocumentHtml(buildTemplateDocument(normalizeResumeForTemplate(source), manifest));
+    expect(baseline).not.toContain('data-placeholder');
+    expect(baseline).not.toContain('opacity:0.58');
+  });
+
+  test('carries effective theme style without changing V2 structure or section order', () => {
+    const view = normalizeResumeForTemplate(resume());
+    const baseline = buildTemplateDocument(view, v2Manifest);
+    const document = buildTemplateDocument(view, v2Manifest, {
+      themeConfig: {
+        primaryColor: '#ABCDEF', accentColor: '#FEDCBA', fontFamily: 'Georgia', fontSize: 'small',
+        lineSpacing: 1.8, sectionSpacing: 12, margin: { top: 8, right: 16, bottom: 24, left: 32 }, avatarStyle: 'circle',
+      },
+    });
+
+    expect(document.sections).toEqual(baseline.sections);
+    expect(document.layout).toEqual(baseline.layout);
+    expect(collectTemplateDocumentText(document)).toEqual(collectTemplateDocumentText(baseline));
+    expect(collectTemplateDocumentLinks(document)).toEqual(collectTemplateDocumentLinks(baseline));
+    expect(document.headingColor).toBe('#ABCDEF');
+    expect(document.fontFamily).toBe('noto-sans-sc');
+    expect(document.avatarStyle).toBe('circle');
+    expect(document.colors).toEqual({ ...v2Manifest.colors, accent: '#FEDCBA' });
+    expect(document.typography).toEqual({ ...v2Manifest.typography, baseFontSizePt: 9.9, lineHeight: 1.8 });
+    expect(document.spacing).toEqual({ ...v2Manifest.spacing, sectionGapMm: 3.175 });
+    expect(document.page.marginMm).toEqual({ top: 2.117, right: 4.233, bottom: 6.35, left: 8.467 });
+    expect(document.presentation).toEqual({
+      header: v2Manifest.header, entry: v2Manifest.entry, section: v2Manifest.section, skills: v2Manifest.skills,
+      decoration: v2Manifest.decoration, density: v2Manifest.density, palette: v2Manifest.palette, border: v2Manifest.border,
+    });
+  });
+
+  test('renders effective style consistently without changing heading variants or layout', () => {
+    const document = buildTemplateDocument(normalizeResumeForTemplate(resume()), manifest, {
+      themeConfig: {
+        primaryColor: '#ABCDEF', accentColor: '#FEDCBA', fontSize: 'small', lineSpacing: 1.8,
+        sectionSpacing: 12, margin: { top: 8, right: 16, bottom: 24, left: 32 }, avatarStyle: 'circle',
+      },
+    });
+    const html = serializeTemplateDocumentHtml(document);
+    const reactHtml = renderToStaticMarkup(<DeclarativeTemplateDocument document={document} />);
+
+    for (const output of [html, reactHtml]) {
+      expect(output).toContain('--template-heading:#ABCDEF');
+      expect(output).toContain('--template-accent:#FEDCBA');
+      expect(output).toContain('--template-font-size:9.9pt');
+      expect(output).toContain('--template-line-height:1.8');
+      expect(output).toContain('--template-section-gap:3.175mm');
+      expect(output).toContain('--template-page-margin-top:2.117mm');
+      expect(output).toContain('--template-page-margin-right:4.233mm');
+      expect(output).toContain('--template-page-margin-bottom:6.35mm');
+      expect(output).toContain('--template-page-margin-left:8.467mm');
+      expect(output).toContain('data-avatar-style="circle"');
+      expect(output).toContain('data-layout="two-column"');
+      expect(output).not.toContain('[object Object]mm');
+    }
+    expect(reactHtml).toContain('padding:2.117mm 4.233mm 6.35mm 8.467mm');
+    expect(reactHtml).toContain('font-family:&quot;Noto Sans SC&quot;, sans-serif');
+    expect(reactHtml).toMatch(/data-heading-variant="accent"[^>]*><h2 style="[^"]*color:#FEDCBA/);
+    expect(reactHtml).toMatch(/data-heading-variant="bordered"[^>]*><h2 style="[^"]*color:#ABCDEF/);
+    expect(reactHtml).toMatch(/data-image-role="avatar" style="[^"]*border-radius:9999px/);
+    expect(html).toContain('data-heading-variant="accent"');
+    expect(html).toContain('data-heading-variant="bordered"');
+
+    const baseline = buildTemplateDocument(normalizeResumeForTemplate(resume()), manifest);
+    for (const output of [serializeTemplateDocumentHtml(baseline), renderToStaticMarkup(<DeclarativeTemplateDocument document={baseline} />)]) {
+      expect(output).toContain('--template-heading:#111111');
+      expect(output).toContain('--template-page-margin-top:14mm');
+      expect(output).toContain('--template-page-margin-right:14mm');
+      expect(output).toContain('--template-page-margin-bottom:14mm');
+      expect(output).toContain('--template-page-margin-left:14mm');
+      expect(output).toContain('data-avatar-style="oneInch"');
+      expect(output).not.toContain('[object Object]mm');
+    }
+  });
+
+  test('passes only persisted declarative theme values through ResumePreview', () => {
+    const source = {
+      ...resume(),
+      themeConfig: { accentColor: '#ABCDEF' } as Resume['themeConfig'],
+      resolvedTemplate: {
+        kind: 'declarative-v1', source: 'public', slug: 'test', version: '1.0.0', manifest, degraded: false,
+        capabilities: {
+          supportedSections: [], paperSizes: ['a4'], supportsAvatar: true, atsCompatible: true,
+          supportsZh: true, supportsEn: true, supportsHtml: true, supportsPdf: true, docxFidelity: 'generic',
+        },
+      } as NonNullable<Resume['resolvedTemplate']>,
+    };
+
+    const output = renderToStaticMarkup(<ResumePreview resume={source} />);
+
+    expect(output).toContain('--template-accent:#ABCDEF');
+    expect(output).toContain('--template-heading:#111111');
+    expect(output).toContain('--template-page-margin-top:14mm');
+    expect(output).toContain('--template-page-margin-right:14mm');
+    expect(output).toContain('--template-page-margin-bottom:14mm');
+    expect(output).toContain('--template-page-margin-left:14mm');
+    expect(output).not.toContain('[object Object]mm');
+  });
+
   test('keeps declarative-v2 presentation metadata identical in React and HTML', () => {
     const document = buildTemplateDocument(normalizeResumeForTemplate(resume()), v2Manifest);
     const outputs = [serializeTemplateDocumentHtml(document), renderToStaticMarkup(<DeclarativeTemplateDocument document={document} />)];
@@ -79,6 +246,36 @@ describe('declarative template document', () => {
       expect(output).toContain('#f8fafc');
       expect(output).toContain('#cbd5e1');
     }
+  });
+
+  test('keeps a V2 band header title readable after effective heading overrides', () => {
+    const bandManifest: TemplateManifestV2 = {
+      ...v2Manifest,
+      sectionSlots: [
+        { sectionType: 'personal_info', placement: 'header', order: 0 },
+        ...v2Manifest.sectionSlots,
+      ],
+      sectionStyles: [
+        ...v2Manifest.sectionStyles,
+        { sectionType: 'personal_info', element: 'heading', variant: 'accent' },
+      ],
+    };
+    const document = buildTemplateDocument(normalizeResumeForTemplate(resume()), bandManifest, {
+      themeConfig: { primaryColor: '#ABCDEF' },
+    });
+    const html = serializeTemplateDocumentHtml(document);
+    const reactHtml = renderToStaticMarkup(<DeclarativeTemplateDocument document={document} />);
+
+    for (const output of [html, reactHtml]) {
+      expect(output).toContain('data-header-variant="band"');
+      expect(output).toContain('data-placement="header"');
+      expect(output).toContain('data-heading-variant="accent"');
+      expect(output).toContain('--template-heading:#ABCDEF');
+      expect(output).toContain('--template-background:#ffffff');
+    }
+    expect(html).toMatch(/data-placement="header"[^>]*><h2>Profile<\/h2>/);
+    expect(reactHtml).toMatch(/data-placement="header"[^>]*><h2 style="[^"]*color:#ffffff[^"]*">Profile<\/h2>/);
+    expect(reactHtml).not.toMatch(/data-placement="header"[^>]*><h2 style="[^"]*color:(?:#ABCDEF|#0f766e)/);
   });
 
   test('keeps split headers in two explicit columns so long contact links cannot create implicit narrow columns', () => {
@@ -242,6 +439,69 @@ describe('declarative template document', () => {
     }
   });
 
+  test('preserves placeholder QR link provenance in React and serialized HTML without changing normal QR fallback', () => {
+    const source = {
+      ...resume(),
+      sections: [{
+        type: 'qr_codes', title: 'QR', sortOrder: 0, visible: true,
+        content: { items: [{ label: 'Sample portfolio', url: 'https://example.com/sample' }] },
+      }],
+    };
+    const qrManifest: TemplateManifestV1 = {
+      ...manifest,
+      sectionSlots: [{ sectionType: 'qr_codes', placement: 'main', order: 0 }],
+      features: { ...manifest.features, showQrCodes: true },
+    };
+    const view = normalizeResumeForTemplate(source);
+    const document = buildTemplateDocument(view, qrManifest, {
+      placeholderPaths: new Set(['qr_codes.items']),
+    });
+    const link = document.sections[0].blocks[0].links[0];
+    expect(link).toMatchObject({
+      label: 'Sample portfolio',
+      href: 'https://example.com/sample',
+      placeholder: true,
+    });
+
+    for (const output of [serializeTemplateDocumentHtml(document), renderToStaticMarkup(<DeclarativeTemplateDocument document={document} />)]) {
+      expect(output).toContain('data-block="qr"');
+      expect(output).toContain('href="https://example.com/sample"');
+      expect(output).toContain('data-placeholder="true"');
+      expect(output).toContain('style="opacity:0.58"');
+      expect(output).toContain('>Sample portfolio</a>');
+    }
+
+    const labelOnlyDocument = buildTemplateDocument(view, qrManifest, {
+      placeholderPaths: new Set(['qr_codes.items.0.label']),
+    });
+    const labelOnlyBlock = labelOnlyDocument.sections[0].blocks[0];
+    expect(labelOnlyBlock.textRuns[0]).toMatchObject({ text: 'Sample portfolio', placeholder: true });
+    expect(labelOnlyBlock.links[0].placeholder).toBeUndefined();
+    const labelOnlyReactHtml = renderToStaticMarkup(<DeclarativeTemplateDocument document={labelOnlyDocument} />);
+    expect(labelOnlyReactHtml).toContain('href="https://example.com/sample"');
+    expect(labelOnlyReactHtml).toContain('data-placeholder="true"');
+    expect(labelOnlyReactHtml).toContain('style="opacity:0.58"');
+    expect(labelOnlyReactHtml).toContain('>Sample portfolio</a>');
+
+    const hrefOnlyDocument = buildTemplateDocument(view, qrManifest, {
+      placeholderPaths: new Set(['qr_codes.items.0.url']),
+    });
+    const hrefOnlyBlock = hrefOnlyDocument.sections[0].blocks[0];
+    expect(hrefOnlyBlock.textRuns[0].placeholder).toBeUndefined();
+    expect(hrefOnlyBlock.links[0]).toMatchObject({ href: 'https://example.com/sample', placeholder: true });
+    const hrefOnlyReactHtml = renderToStaticMarkup(<DeclarativeTemplateDocument document={hrefOnlyDocument} />);
+    expect(hrefOnlyReactHtml).toContain('href="https://example.com/sample"');
+    expect(hrefOnlyReactHtml).toContain('data-placeholder="true"');
+    expect(hrefOnlyReactHtml).toContain('style="opacity:0.58"');
+
+    const normalReactHtml = renderToStaticMarkup(
+      <DeclarativeTemplateDocument document={buildTemplateDocument(view, qrManifest)} />,
+    );
+    expect(normalReactHtml).toContain('data-block="qr"');
+    expect(normalReactHtml).not.toContain('href="https://example.com/sample"');
+    expect(normalReactHtml).not.toContain('data-placeholder');
+  });
+
   test('retains stable field sources for direct editing without serializing ids', () => {
     const document = buildTemplateDocument(normalizeResumeForTemplate(resume()), manifest);
     const summary = document.sections.find((section) => section.type === 'summary')!;
@@ -262,5 +522,29 @@ describe('declarative template document', () => {
 
     const html = serializeTemplateDocumentHtml(document);
     expect(html).not.toMatch(/summary-id|project-id|p1|data-editable-source/);
+  });
+
+  test('adds link sources and empty insertion metadata only when editing is requested', () => {
+    const source = resume();
+    source.sections.find((section) => section.type === 'personal_info')!.content = {
+      fullName: 'Alex Chen', website: 'https://example.com', jobTitle: '', avatar: '',
+    } as Resume['sections'][number]['content'];
+    const view = normalizeResumeForTemplate(source);
+    const ordinary = buildTemplateDocument(view, manifest);
+    const editable = buildTemplateDocument(view, manifest, { includeEmptyEditableFields: true });
+    const personalOrdinary = ordinary.sections.find((section) => section.type === 'personal_info')!;
+    const personalEditable = editable.sections.find((section) => section.type === 'personal_info')!;
+
+    expect(personalOrdinary.blocks.flatMap((block) => block.textRuns).some((run) => run.text === '')).toBe(false);
+    expect(personalEditable.blocks.flatMap((block) => block.textRuns)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ text: '', source: expect.objectContaining({ fieldPath: ['jobTitle'] }) }),
+    ]));
+    expect(personalEditable.blocks.flatMap((block) => block.links)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        href: 'https://example.com/',
+        source: expect.objectContaining({ fieldPath: ['website'], kind: 'url' }),
+      }),
+    ]));
+    expect(serializeTemplateDocumentHtml(editable)).not.toMatch(/data-editable-source|Add field/);
   });
 });

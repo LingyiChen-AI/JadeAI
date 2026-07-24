@@ -27,6 +27,7 @@ import {
   type ExportFormat,
 } from '@/lib/export-workbench/export-client';
 import { createExportTransaction, type ExportTransactionState } from '@/lib/export-workbench/transaction';
+import { createSameUrlHistoryGuard, type SameUrlHistoryGuard } from '@/lib/export-workbench/history-guard';
 import type { ResolvedTemplate } from '@/lib/templates/resolve-template';
 import type { Resume, ResumeSection, SectionContent, ThemeConfig } from '@/types/resume';
 
@@ -62,6 +63,11 @@ export function useExportWorkbench(resumeId: string) {
   const [transactionState, setTransactionState] = useState<ExportTransactionState>({ status: 'idle' });
   const sessionRef = useRef(session);
   const formatRef = useRef(format);
+  const activeResumeIdRef = useRef(resumeId);
+  const mountedRef = useRef(false);
+  const operationControllersRef = useRef(new Set<AbortController>());
+  const historyGuardRef = useRef<SameUrlHistoryGuard | null>(null);
+  const [historyBackRequested, setHistoryBackRequested] = useState(false);
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
@@ -70,14 +76,36 @@ export function useExportWorkbench(resumeId: string) {
   }, [format]);
 
   useEffect(() => {
+    const operationControllers = operationControllersRef.current;
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      operationControllers.forEach((controller) => controller.abort());
+      operationControllers.clear();
+    };
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
+    operationControllersRef.current.forEach((operationController) => operationController.abort());
+    operationControllersRef.current.clear();
+    activeResumeIdRef.current = resumeId;
+    setSession(null);
+    sessionRef.current = null;
+    setIsLoading(true);
+    setLoadError(null);
+    setTransactionState({ status: 'idle' });
     void fetch(`/api/resume/${encodeURIComponent(resumeId)}`, {
       headers: requestHeaders(),
       signal: controller.signal,
     }).then(async (response) => {
       if (!response.ok) throw new Error(`resume_load_failed:${response.status}`);
       const loaded = await response.json() as Resume;
-      if (!controller.signal.aborted) setSession(createExportDraft(loaded));
+      if (!controller.signal.aborted && activeResumeIdRef.current === resumeId) {
+        const loadedSession = createExportDraft(loaded);
+        sessionRef.current = loadedSession;
+        setSession(loadedSession);
+      }
     }).catch((error: unknown) => {
       if (!controller.signal.aborted) setLoadError(error instanceof Error ? error : new Error(String(error)));
     }).finally(() => {
@@ -88,34 +116,64 @@ export function useExportWorkbench(resumeId: string) {
 
   // The factory only captures refs here; their values are read later from user
   // event callbacks, so a format/draft change does not recreate an in-flight transaction.
-  // eslint-disable-next-line react-hooks/refs
   const transaction = useMemo(() => createExportTransaction({
     saveDraft: async () => {
       const current = sessionRef.current;
       if (!current) throw new Error('draft_not_loaded');
+      if (current.draft.id !== resumeId || activeResumeIdRef.current !== resumeId) throw new Error('draft_resume_mismatch');
       if (validateExportDraft(current.draft).issues.length > 0) throw new Error('draft_validation_failed');
-      const response = await fetch(`/api/resume/${encodeURIComponent(resumeId)}`, {
-        method: 'PUT', headers: requestHeaders(), body: JSON.stringify(savePayload(current)),
-      });
-      if (!response.ok) throw new Error(response.status === 409 ? 'resume_revision_conflict' : `resume_save_failed:${response.status}`);
-      const saved = await response.json() as Resume;
+      const controller = new AbortController();
+      operationControllersRef.current.add(controller);
+      let saved: Partial<Resume>;
+      try {
+        const response = await fetch(`/api/resume/${encodeURIComponent(resumeId)}`, {
+          method: 'PUT', headers: requestHeaders(), body: JSON.stringify(savePayload(current)), signal: controller.signal,
+        });
+        if (!mountedRef.current || activeResumeIdRef.current !== resumeId) throw new Error('operation_aborted');
+        if (!response.ok) throw new Error(response.status === 409 ? 'resume_revision_conflict' : `resume_save_failed:${response.status}`);
+        saved = await response.json() as Partial<Resume>;
+        if (!mountedRef.current || activeResumeIdRef.current !== resumeId) throw new Error('operation_aborted');
+      } finally {
+        operationControllersRef.current.delete(controller);
+      }
+      if (saved.id !== resumeId
+        || !Number.isSafeInteger(saved.revision)
+        || Number(saved.revision) < current.baseline.revision
+        || !Array.isArray(saved.sections)) {
+        throw new Error('resume_save_response_invalid');
+      }
+      const confirmed = saved as Resume;
       // Advance the baseline before export. If export fails, the confirmed data
       // remains clean and retrying does not issue another destructive PUT.
-      setSession((latest) => latest ? acceptSavedResume(latest, saved) : createExportDraft(saved));
-      sessionRef.current = acceptSavedResume(current, saved);
-      return saved;
+      const accepted = acceptSavedResume(current, confirmed);
+      sessionRef.current = accepted;
+      setSession(accepted);
+      return confirmed;
     },
     exportSaved: async (saved) => {
       const selected = formatRef.current;
-      const response = await fetch(buildExportUrl(saved.id, selected), { headers: requestHeaders() });
-      if (!response.ok) throw new Error(`resume_export_failed:${response.status}`);
-      return {
-        blob: await response.blob(),
-        filename: filenameFromContentDisposition(response.headers.get('Content-Disposition'))
-          ?? fallbackExportFilename(saved.title, selected),
-      };
+      const controller = new AbortController();
+      operationControllersRef.current.add(controller);
+      try {
+        const response = await fetch(buildExportUrl(saved.id, selected, saved.revision), {
+          headers: requestHeaders(), signal: controller.signal,
+        });
+        if (!mountedRef.current || activeResumeIdRef.current !== resumeId) throw new Error('operation_aborted');
+        if (!response.ok) throw new Error(`resume_export_failed:${response.status}`);
+        const blob = await response.blob();
+        if (!mountedRef.current || activeResumeIdRef.current !== resumeId) throw new Error('operation_aborted');
+        return {
+          blob,
+          filename: filenameFromContentDisposition(response.headers.get('Content-Disposition'))
+            ?? fallbackExportFilename(saved.title, selected),
+        };
+      } finally {
+        operationControllersRef.current.delete(controller);
+      }
     },
-    download: ({ blob, filename }) => downloadBlob(blob, filename),
+    download: ({ blob, filename }) => {
+      if (mountedRef.current && activeResumeIdRef.current === resumeId) downloadBlob(blob, filename);
+    },
   }), [resumeId]);
 
   useEffect(() => transaction.subscribe(setTransactionState), [transaction]);
@@ -131,9 +189,41 @@ export function useExportWorkbench(resumeId: string) {
     return () => window.removeEventListener('beforeunload', protectExit);
   }, [isDirty]);
 
+  useEffect(() => {
+    const guard = createSameUrlHistoryGuard(
+      window.history,
+      window.location.href,
+      () => setHistoryBackRequested(true),
+    );
+    const handlePopState = (event: PopStateEvent) => guard.handlePopState(event);
+    historyGuardRef.current = guard;
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      guard.deactivate();
+      if (historyGuardRef.current === guard) historyGuardRef.current = null;
+    };
+  }, [resumeId]);
+
+  useEffect(() => {
+    const guard = historyGuardRef.current;
+    if (!guard) return;
+    if (isDirty) guard.activate();
+    else {
+      setHistoryBackRequested(false);
+      guard.deactivate();
+    }
+  }, [isDirty]);
+
   const updateSession = useCallback((change: (current: ExportDraftSession) => ExportDraftSession) => {
-    setSession((current) => current ? change(current) : current);
-  }, []);
+    const status = transaction.getState().status;
+    if (status === 'saving' || status === 'exporting') return;
+    const current = sessionRef.current;
+    if (!current || current.draft.id !== resumeId) return;
+    const next = change(current);
+    sessionRef.current = next;
+    setSession(next);
+  }, [resumeId, transaction]);
 
   const updateField = useCallback((update: DraftFieldUpdate) => {
     updateSession((current) => update.itemId === undefined
@@ -171,9 +261,20 @@ export function useExportWorkbench(resumeId: string) {
     updateSession((current) => setDraftTemplateBinding(current, binding, resolved));
   }, [updateSession]);
 
+  const visibleSession = session?.draft.id === resumeId ? session : null;
+  const primaryAction = useCallback(() => {
+    const current = sessionRef.current;
+    if (transaction.getState().status === 'saved_export_failed'
+      && current
+      && !isExportDraftDirty(current)) {
+      return transaction.retryExport();
+    }
+    return transaction.run();
+  }, [transaction]);
+
   return {
-    draft: session?.draft ?? null,
-    session,
+    draft: visibleSession?.draft ?? null,
+    session: visibleSession,
     isLoading,
     loadError,
     isDirty,
@@ -189,7 +290,20 @@ export function useExportWorkbench(resumeId: string) {
     reorderSections,
     toggleSectionVisibility,
     selectTemplate,
-    setSession,
+    historyBackRequested,
+    cancelHistoryBack: () => {
+      setHistoryBackRequested(false);
+      historyGuardRef.current?.cancelBlockedNavigation();
+    },
+    confirmHistoryBack: () => {
+      setHistoryBackRequested(false);
+      historyGuardRef.current?.confirmBlockedNavigation();
+    },
+    discardAndLeave: (leave: () => void) => {
+      setHistoryBackRequested(false);
+      historyGuardRef.current?.deactivate(leave);
+    },
+    primaryAction,
     saveAndExport: transaction.run,
     retryExport: transaction.retryExport,
   };

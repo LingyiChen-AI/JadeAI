@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { ResumePreview } from '@/components/preview/resume-preview';
 import { PreviewErrorBoundary } from '@/components/preview/preview-error-boundary';
 import { useResumeStore } from '@/stores/resume-store';
+import { buildEditorPreviewResume } from '@/lib/templates/editor-preview-resume';
+import { buildTemplatePreviewResume } from '@/lib/templates/template-preview-fixture';
 import { useIsMobile } from "@/hooks/use-media-query";
 import type { Resume } from '@/types/resume';
 
@@ -24,7 +26,16 @@ export function EditorPreviewPanel() {
     return { ...currentResume, sections };
   }, [currentResume, sections]);
 
-  if (!liveResume) return null;
+  const fixture = useMemo(
+    () => currentResume ? buildTemplatePreviewResume(currentResume.template, currentResume.language) : null,
+    [currentResume],
+  );
+  const preview = useMemo(
+    () => liveResume && fixture ? buildEditorPreviewResume(liveResume, fixture) : null,
+    [fixture, liveResume],
+  );
+
+  if (!preview) return null;
 
   const scale = zoom / 100;
 
@@ -32,7 +43,10 @@ export function EditorPreviewPanel() {
     <div data-tour="preview" className="flex h-full min-w-0 flex-col border-l bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800">
       {/* Header */}
       <div className="hidden shrink-0 items-center justify-between border-b bg-white px-4 py-2 md:flex dark:bg-background dark:border-zinc-800">
-        <span className="text-xs font-medium text-zinc-500">{t('preview')}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-zinc-500">{t('preview')}</span>
+          {preview.placeholderPaths.size > 0 && <span className="text-xs text-zinc-400">{t('samplePreview')}</span>}
+        </div>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -68,12 +82,12 @@ export function EditorPreviewPanel() {
             }}
           >
             <PreviewErrorBoundary
-              resetKey={liveResume.sections}
+              resetKey={preview.resume.sections}
               fallback={
                 <div className="p-8 text-center text-sm text-zinc-500">{t('previewError')}</div>
               }
             >
-              <ResumePreview resume={liveResume} />
+              <ResumePreview resume={preview.resume} placeholderPaths={preview.placeholderPaths} />
             </PreviewErrorBoundary>
           </div>
         </div>

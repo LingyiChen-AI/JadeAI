@@ -56,6 +56,7 @@ export function ExportWorkbenchPage({ resumeId }: { resumeId: string }) {
   const draft = workbench.draft;
   const selectedSection = draft?.sections.find((section) => section.id === selectedSectionId) ?? null;
   const selectedEntries = selectedSection ? sectionEntries(selectedSection) : null;
+  const canRetryExport = workbench.transactionState.status === 'saved_export_failed' && !workbench.isDirty;
 
   useEffect(() => {
     if (workbench.transactionState.status === 'success') toast.success(t('status.success'));
@@ -73,8 +74,14 @@ export function ExportWorkbenchPage({ resumeId }: { resumeId: string }) {
     else router.push(`/editor/${resumeId}`);
   };
 
-  if (workbench.isLoading) return <div className="flex h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" aria-label={t('loading')} /></div>;
-  if (workbench.loadError || !draft) return <div className="flex h-screen flex-col items-center justify-center gap-3"><p className="text-sm text-red-600">{t('loadFailed')}</p><Button variant="outline" onClick={() => router.push(`/editor/${resumeId}`)}>{t('back')}</Button></div>;
+  const runPrimaryAction = async () => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    await Promise.resolve();
+    await workbench.primaryAction();
+  };
+
+  if (workbench.isLoading) return <div className="flex h-dvh items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" aria-label={t('loading')} /></div>;
+  if (workbench.loadError || !draft) return <div className="flex h-dvh flex-col items-center justify-center gap-3"><p className="text-sm text-red-600">{t('loadFailed')}</p><Button variant="outline" onClick={() => router.push(`/editor/${resumeId}`)}>{t('back')}</Button></div>;
 
   const moveSection = (sectionId: string, direction: -1 | 1) => {
     const index = draft.sections.findIndex((section) => section.id === sectionId);
@@ -105,30 +112,30 @@ export function ExportWorkbenchPage({ resumeId }: { resumeId: string }) {
   };
 
   return (
-    <div className="flex h-screen min-w-0 flex-col bg-zinc-100 dark:bg-zinc-950">
+    <div className="flex h-dvh min-w-0 flex-col bg-zinc-100 dark:bg-zinc-950" data-testid="export-workbench-page">
       <header className="flex min-h-14 flex-wrap items-center justify-between gap-2 border-b bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex min-w-0 items-center gap-2">
           <Button variant="ghost" size="icon" onClick={leave} aria-label={t('back')}><ArrowLeft className="h-4 w-4" /></Button>
           <div className="min-w-0"><h1 className="truncate text-sm font-semibold">{draft.title}</h1><p className="text-xs text-zinc-500">{workbench.isDirty ? t('unsaved') : t('saved')}</p></div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => setModulesOpen(true)}><Layers3 className="h-4 w-4" /><span className="hidden sm:inline">{t('modules')}</span></Button>
-          <Button variant="outline" size="sm" onClick={() => setThemeOpen(true)}><Palette className="h-4 w-4" /><span className="hidden sm:inline">{t('theme')}</span></Button>
+          <Button variant="outline" size="sm" onClick={() => setModulesOpen(true)} disabled={workbench.isSubmitting}><Layers3 className="h-4 w-4" /><span className="hidden sm:inline">{t('modules')}</span></Button>
+          <Button variant="outline" size="sm" onClick={() => setThemeOpen(true)} disabled={workbench.isSubmitting}><Palette className="h-4 w-4" /><span className="hidden sm:inline">{t('theme')}</span></Button>
           <Select value={workbench.format} onValueChange={(value) => workbench.setFormat(value as ExportFormat)} disabled={workbench.isSubmitting}>
             <SelectTrigger className="w-36" aria-label={t('format')}><SelectValue /></SelectTrigger>
             <SelectContent>{FORMATS.map((format) => <SelectItem key={format} value={format}>{t(`formats.${format}`)}</SelectItem>)}</SelectContent>
           </Select>
-          <Button onClick={() => void (workbench.transactionState.status === 'saved_export_failed' ? workbench.retryExport() : workbench.saveAndExport())} disabled={workbench.isSubmitting}>
+          <Button onClick={() => void runPrimaryAction()} disabled={workbench.isSubmitting}>
             {workbench.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            {workbench.transactionState.status === 'saved_export_failed' ? t('retryExport') : t('saveAndExport')}
+            {canRetryExport ? t('retryExport') : t('saveAndExport')}
           </Button>
         </div>
       </header>
 
       <main className="min-h-0 flex-1 overflow-auto p-2 md:p-6">
-        <div className="mx-auto w-[794px] bg-white shadow-md" data-testid="export-a4-preview">
+        <div className="mx-auto w-[794px] max-w-full bg-white shadow-md" data-testid="export-a4-preview">
           <PreviewErrorBoundary resetKey={draft.sections} fallback={<div className="p-8 text-center text-sm text-zinc-500">{t('previewFailed')}</div>}>
-            <ResumePreview resume={draft} edit={{
+            <ResumePreview resume={draft} edit={workbench.isSubmitting ? undefined : {
               enabled: true,
               updateField: (source, value) => workbench.updateField({
                 sectionId: source.sectionId,
@@ -152,10 +159,10 @@ export function ExportWorkbenchPage({ resumeId }: { resumeId: string }) {
           <div className="space-y-2 border-b p-3">
             {draft.sections.map((section, index) => <div key={section.id} className="flex items-center gap-1 rounded border p-1.5">
               <button type="button" className="min-w-0 flex-1 truncate px-2 text-left text-sm" onClick={() => setSelectedSectionId(section.id)}>{section.title}</button>
-              <Button variant="ghost" size="icon-xs" onClick={() => moveSection(section.id, -1)} disabled={index === 0} aria-label={t('moveUp')}><ChevronUp className="h-3.5 w-3.5" /></Button>
-              <Button variant="ghost" size="icon-xs" onClick={() => moveSection(section.id, 1)} disabled={index === draft.sections.length - 1} aria-label={t('moveDown')}><ChevronDown className="h-3.5 w-3.5" /></Button>
-              <Button variant="ghost" size="icon-xs" onClick={() => workbench.toggleSectionVisibility(section.id)} aria-label={section.visible ? t('hide') : t('show')}>{section.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}</Button>
-              <Button variant="ghost" size="icon-xs" onClick={() => { workbench.removeSection(section.id); if (selectedSectionId === section.id) setSelectedSectionId(null); }} disabled={section.type === 'personal_info'} aria-label={t('remove')}><Trash2 className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon-xs" className="h-11 w-11 md:h-6 md:w-6" onClick={() => moveSection(section.id, -1)} disabled={index === 0} aria-label={t('moveUp')}><ChevronUp className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon-xs" className="h-11 w-11 md:h-6 md:w-6" onClick={() => moveSection(section.id, 1)} disabled={index === draft.sections.length - 1} aria-label={t('moveDown')}><ChevronDown className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon-xs" className="h-11 w-11 md:h-6 md:w-6" onClick={() => workbench.toggleSectionVisibility(section.id)} aria-label={section.visible ? t('hide') : t('show')}>{section.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}</Button>
+              <Button variant="ghost" size="icon-xs" className="h-11 w-11 md:h-6 md:w-6" onClick={() => { workbench.removeSection(section.id); if (selectedSectionId === section.id) setSelectedSectionId(null); }} disabled={section.type === 'personal_info'} aria-label={t('remove')}><Trash2 className="h-3.5 w-3.5" /></Button>
             </div>)}
             <Select onValueChange={(value) => addSection(value as SectionType)}><SelectTrigger><Plus className="h-4 w-4" /><SelectValue placeholder={t('addModule')} /></SelectTrigger><SelectContent>{availableTypes.map((type) => <SelectItem key={type} value={type}>{t(`sectionTypes.${type}`)}</SelectItem>)}</SelectContent></Select>
           </div>
@@ -164,16 +171,23 @@ export function ExportWorkbenchPage({ resumeId }: { resumeId: string }) {
               <p className="px-1 text-xs font-medium text-zinc-500">{t('entryOrder')}</p>
               {selectedEntries.values.map((entry, index) => <div key={String(entry.id ?? index)} className="flex items-center gap-1">
                 <span className="min-w-0 flex-1 truncate px-1 text-xs">{entryLabel(entry, index, t('entry'))}</span>
-                <Button variant="ghost" size="icon-xs" onClick={() => moveEntry(index, -1)} disabled={index === 0} aria-label={t('moveEntryUp')}><ChevronUp className="h-3.5 w-3.5" /></Button>
-                <Button variant="ghost" size="icon-xs" onClick={() => moveEntry(index, 1)} disabled={index === selectedEntries.values.length - 1} aria-label={t('moveEntryDown')}><ChevronDown className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="icon-xs" className="h-11 w-11 md:h-6 md:w-6" onClick={() => moveEntry(index, -1)} disabled={index === 0} aria-label={t('moveEntryUp')}><ChevronUp className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="icon-xs" className="h-11 w-11 md:h-6 md:w-6" onClick={() => moveEntry(index, 1)} disabled={index === selectedEntries.values.length - 1} aria-label={t('moveEntryDown')}><ChevronDown className="h-3.5 w-3.5" /></Button>
               </div>)}
             </div>}
-            <DraftSectionEditor section={selectedSection} onUpdate={(updates) => workbench.updateSectionContent(selectedSection.id, updates)} />
+            <DraftSectionEditor section={selectedSection} draftSections={draft.sections} themeConfig={draft.themeConfig} onThemeChange={workbench.updateTheme} onUpdate={(updates) => workbench.updateSectionContent(selectedSection.id, updates)} />
           </> : <p className="text-sm text-zinc-500">{t('selectModule')}</p>}</div>
         </SheetContent>
       </Sheet>
 
-      <AlertDialog open={confirmLeave} onOpenChange={setConfirmLeave}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t('leaveTitle')}</AlertDialogTitle><AlertDialogDescription>{t('leaveDescription')}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{t('stay')}</AlertDialogCancel><AlertDialogAction onClick={() => router.push(`/editor/${resumeId}`)}>{t('discard')}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={confirmLeave || workbench.historyBackRequested} onOpenChange={(open) => {
+        if (open) return;
+        setConfirmLeave(false);
+        workbench.cancelHistoryBack();
+      }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t('leaveTitle')}</AlertDialogTitle><AlertDialogDescription>{t('leaveDescription')}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{t('stay')}</AlertDialogCancel><AlertDialogAction onClick={() => {
+        if (workbench.historyBackRequested) workbench.confirmHistoryBack();
+        else workbench.discardAndLeave(() => router.push(`/editor/${resumeId}`));
+      }}>{t('discard')}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
   );
 }

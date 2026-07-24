@@ -5,7 +5,6 @@ import {
   Fragment,
   type ReactNode,
   useContext,
-  useEffect,
   useRef,
   useState,
 } from 'react';
@@ -46,10 +45,6 @@ export function EditableResumeValue({ source, value, children }: EditableResumeV
   const [isEditing, setIsEditing] = useState(false);
   const [draftValue, setDraftValue] = useState(value);
   const entryValueRef = useRef(value);
-
-  useEffect(() => {
-    if (!isEditing) setDraftValue(value);
-  }, [isEditing, value]);
 
   // Returning a fragment here is deliberate: ordinary previews and exports must
   // not receive an extra inline box that could change wrapping or pagination.

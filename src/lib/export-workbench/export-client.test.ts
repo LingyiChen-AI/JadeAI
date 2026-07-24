@@ -18,6 +18,12 @@ describe('export client contract', () => {
     expect(buildExportUrl('r1', format)).toBe(expected);
   });
 
+  it('optionally pins export to the saved revision without changing legacy callers', () => {
+    expect(buildExportUrl('r 1', 'pdf', 7)).toBe('/api/resume/r%201/export?format=pdf&expectedRevision=7');
+    expect(buildExportUrl('r1', 'pdf-one-page', 8)).toBe('/api/resume/r1/export?format=pdf&fitOnePage=true&expectedRevision=8');
+    expect(buildExportUrl('r1', 'json')).toBe('/api/resume/r1/export?format=json');
+  });
+
   it('prefers a UTF-8 RFC 5987 response filename', () => {
     expect(filenameFromContentDisposition(
       "attachment; filename=resume.pdf; filename*=UTF-8''%E7%AE%80%E5%8E%86-20260722.pdf",

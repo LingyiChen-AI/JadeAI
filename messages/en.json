@@ -115,6 +115,7 @@
       "undo": "Undo",
       "redo": "Redo",
       "preview": "Preview",
+      "samplePreview": "Sample preview",
       "export": "Export",
       "template": "Switch Template",
       "settings": "Settings",
@@ -263,7 +264,10 @@
     "panelTitle": "AI Assistant",
     "placeholder": "Describe what you want to improve...",
     "send": "Send",
-    "beautify": "Beautify",
+    "beautify": "Style",
+    "styleUpdated": "Style updated: {fields}",
+    "styleUnchanged": "No visible style changes were made",
+    "styleFields": { "primaryColor": "primary color", "accentColor": "accent color", "fontFamily": "font", "fontSize": "font size", "lineSpacing": "line spacing", "sectionSpacing": "section spacing", "margin": "page margins", "avatarStyle": "avatar style" },
     "thinking": "AI is thinking...",
     "suggestion": "AI Suggestion",
     "applySuggestion": "Apply",
@@ -313,7 +317,7 @@
       "modelPlaceholder": "Enter model name...",
       "noModelsFound": "No models found. Enter a model name manually below.",
       "baseURLLockedHint": "The API address is fixed to https://xiaoni-ai.top/v1 and cannot be changed.",
-      "defaultModelHint": "The default model is gpt-5.5. You can change it to another model when needed."
+      "defaultModelHint": "The default model is gpt-5.6-sol. You can change it to another model when needed."
     },
     "appearance": {
       "title": "Appearance",
@@ -659,7 +663,9 @@
         "export": "Export",
         "delete": "Delete",
         "cancel": "Cancel",
-        "save": "Save"
+        "save": "Save",
+        "browsePublic": "Browse public templates",
+        "more": "More actions"
       },
       "fields": {
         "name": "Template name",
@@ -675,13 +681,54 @@
         "error": "Local templates could not be loaded.",
         "corrupt": "Some damaged local records were isolated. Your valid templates remain available.",
         "quota": "The local template storage quota has been reached.",
-        "operation": "The local template operation could not be completed."
+        "operation": "The local template operation could not be completed.",
+        "saving": "Saving...",
+        "saved": "Saved"
       },
+      "templateInfo": "Template information",
+      "lastUpdated": "Updated {date}",
+      "dirtyConfirm": "Discard unsaved template changes?",
       "copySuccess": "Template copied to My Templates.",
       "copyError": "The template could not be copied.",
       "deleteSnapshotWarning": "Delete this local template? Saved resumes keep their validated template snapshot."
     },
     "localEditor": {
+      "presets": {
+        "title": "Presets",
+        "atsClean": "ATS Clean",
+        "modernTwoColumn": "Modern Two Column",
+        "compactProfessional": "Compact Professional"
+      },
+      "history": {
+        "undo": "Undo",
+        "redo": "Redo",
+        "reset": "Reset",
+        "saved": "Saved"
+      },
+      "movement": {
+        "dragHandle": "Drag {section}",
+        "moveUp": "Move {section} up",
+        "moveDown": "Move {section} down",
+        "placement": "Placement for {section}",
+        "advanced": "Advanced settings",
+        "dragStart": "Started dragging {section}",
+        "dragOver": "{section} is over {over}",
+        "dragEnd": "Moved {section} to {over}",
+        "dragCancel": "Cancelled dragging {section}"
+      },
+      "controls": {
+        "slider": "{label} slider"
+      },
+      "mobile": {
+        "settings": "Settings",
+        "preview": "Preview"
+      },
+      "preview": {
+        "resume": "Preview resume",
+        "loading": "Loading preview",
+        "ready": "Preview ready",
+        "fallback": "Fixture preview"
+      },
       "layout": {
         "title": "Layout",
         "single-column": "Single column",
@@ -972,6 +1019,62 @@
     "invalidPassword": "Invalid password. Please try again.",
     "notFound": "This resume is not available or has been removed.",
     "viewOnBrand": "View on 小逆offer"
+  },
+  "exportWorkbench": {
+    "loading": "Loading export workbench",
+    "loadFailed": "The resume could not be loaded. Return and try again.",
+    "back": "Back to editor",
+    "unsaved": "Unsaved changes",
+    "saved": "Saved",
+    "modules": "Sections",
+    "theme": "Template and theme",
+    "format": "Export format",
+    "saveAndExport": "Save and export",
+    "retryExport": "Retry export",
+    "previewFailed": "Preview rendering failed",
+    "emptyField": "Click to add content",
+    "customSection": "Custom section",
+    "moveUp": "Move section up",
+    "moveDown": "Move section down",
+    "hide": "Hide section",
+    "show": "Show section",
+    "remove": "Remove section",
+    "addModule": "Add section",
+    "selectModule": "Select a section to edit empty fields, entries, and lists.",
+    "entryOrder": "Entry order",
+    "entry": "Entry",
+    "moveEntryUp": "Move entry up",
+    "moveEntryDown": "Move entry down",
+    "leaveTitle": "Discard unsaved changes?",
+    "leaveDescription": "Temporary workbench changes will not be saved after returning.",
+    "stay": "Keep editing",
+    "discard": "Discard and return",
+    "formats": {
+      "pdf": "PDF",
+      "pdf-one-page": "Smart one-page PDF",
+      "docx": "DOCX",
+      "html": "HTML",
+      "txt": "TXT",
+      "json": "JSON"
+    },
+    "status": {
+      "success": "Resume saved and exported",
+      "saveFailed": "Save failed. Export was not started.",
+      "savedExportFailed": "Resume saved, but export failed"
+    },
+    "sectionTypes": {
+      "personal_info": "Personal information",
+      "summary": "Summary",
+      "work_experience": "Work experience",
+      "education": "Education",
+      "skills": "Skills",
+      "projects": "Projects",
+      "certifications": "Certifications",
+      "languages": "Languages",
+      "github": "GitHub",
+      "qr_codes": "QR codes",
+      "custom": "Custom section"
+    }
   },
   "interview": {
     "nav": "Mock Interview",

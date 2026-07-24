@@ -46,7 +46,7 @@ function artifactResume(template: string) {
   const now = new Date('2026-01-01T00:00:00.000Z');
   return {
     id: 'artifact-resume', userId: 'artifact-user', title: 'Phase 2 Artifact', template,
-    themeConfig: { primaryColor: '#18181b', accentColor: '#0f766e', fontFamily: 'Inter', fontSize: 'medium', lineSpacing: 1.5, margin: { top: 20, right: 20, bottom: 20, left: 20 }, sectionSpacing: 16, avatarStyle: 'oneInch' },
+    themeConfig: { primaryColor: '#123456', accentColor: '#A1B2C3', fontFamily: 'Inter', fontSize: 'small', lineSpacing: 1.8, margin: { top: 8, right: 16, bottom: 24, left: 32 }, sectionSpacing: 12, avatarStyle: 'circle' },
     isDefault: false, language: 'en', shareToken: null, isPublic: false, sharePassword: null, viewCount: 0,
     revision: 1, templateVersionId: null, templateSource: 'legacy', templateSnapshot: null,
     createdAt: now, updatedAt: now,
@@ -97,6 +97,14 @@ describe('representative renderer artifacts', () => {
     expect(declarativeHtml).toContain('data-layout="two-column"');
     expect(declarativeHtml).toContain('href="https://example.com/jade"');
     expect(declarativeHtml).toContain('Alex Chen');
+    expect(declarativeHtml).toContain('--template-heading:#123456');
+    expect(declarativeHtml).toContain('--template-accent:#A1B2C3');
+    expect(declarativeHtml).toContain('--template-font-size:9.45pt');
+    expect(declarativeHtml).toContain('--template-line-height:1.8');
+    expect(declarativeHtml).toContain('--template-section-gap:3.175mm');
+    expect(declarativeHtml).toContain('margin: 2.117mm 4.233mm 6.35mm 8.467mm;');
+    expect(declarativeHtml).toContain('data-avatar-style="circle"');
+    expect(declarativeHtml).not.toContain('[object Object]mm');
     for (const pdf of [legacyPdf, declarativePdf]) {
       expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
       expect(pdf.byteLength).toBeGreaterThan(5_000);

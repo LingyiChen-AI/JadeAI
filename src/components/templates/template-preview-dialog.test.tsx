@@ -17,6 +17,7 @@ vi.mock('next/image', () => ({ default: () => <span data-testid="preview-image" 
 vi.mock('./legacy-template-registry', () => ({ loadLegacyTemplateAdapter: vi.fn() }));
 
 import { TemplatePreviewDialog } from './template-preview-dialog';
+import { buildLegacyPreviewResume } from './legacy-preview-fixture';
 
 const manifest: TemplateManifestV1 = {
   schemaVersion: 1,
@@ -38,6 +39,16 @@ const item: TemplateCatalogItem = {
   capabilities: { supportedSections: ['summary'], paperSizes: ['a4'], supportsAvatar: true, atsCompatible: true, supportsZh: true, supportsEn: true, supportsHtml: true, supportsPdf: true, docxFidelity: 'generic' },
   favorite: false,
 };
+
+test('keeps the legacy catalog fixture deterministic while covering API default sections', () => {
+  const preview = buildLegacyPreviewResume('classic', 'zh');
+
+  expect(preview.id).toBe('template-preview');
+  expect(preview.sections.map((section) => section.type)).toEqual([
+    'personal_info', 'summary', 'work_experience', 'education', 'skills', 'projects', 'certifications', 'languages',
+  ]);
+  expect(preview.sections[0].content).toMatchObject({ fullName: '陈曦' });
+});
 
 afterEach(() => {
   cleanup();

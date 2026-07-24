@@ -7,10 +7,10 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TemplateVersionDetailSchema } from '@/lib/templates/schema';
+import { buildTemplatePreviewResume } from '@/lib/templates/template-preview-fixture';
 import type { Resume } from '@/types/resume';
 import type { DeclarativeTemplateManifest, TemplateCatalogItem, TemplateVersionDetail } from '@/types/template';
 
-import { buildLegacyPreviewResume } from './legacy-preview-fixture';
 import { loadLegacyTemplateAdapter } from './legacy-template-registry';
 
 type PreviewDiscriminant = { rendererKind: string; manifest: unknown };
@@ -126,7 +126,7 @@ export function TemplatePreviewDialog({ item, locale, creating, labels, onClose,
           )}
           {status === 'ready' && detail?.rendererKind === 'legacy-react' && LegacyRenderer && (
             <div data-renderer-kind="legacy-react" className="mx-auto w-full max-w-[794px] bg-white p-8 shadow-sm">
-              <LegacyRenderer resume={buildLegacyPreviewResume(detail.slug, locale)} />
+              <LegacyRenderer resume={buildTemplatePreviewResume(detail.slug, locale)} />
             </div>
           )}
         </div>
