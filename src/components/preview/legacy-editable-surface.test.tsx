@@ -69,6 +69,54 @@ describe('legacy editable surface', () => {
     expect((textarea as HTMLTextAreaElement).value).toBe('**Reliable** systems');
   });
 
+  it('bounds a rich-text editor when the rendered host is stretched to the page height', () => {
+    const source = resume();
+    const realResumeText = 'NLP 与模型训练：掌握文本清洗、分词、分类、关键词提取和向量表示等 NLP 基础；能够使用 PyTorch、Transformers 对 BERT 中文分类模型进行微调，完成数据编码、训练验证、模型保存、推理接口封装，并使用 Accuracy、Precision、Recall、Macro-F1 等指标评估模型效果。';
+    const work = source.sections[1].content as unknown as { items: Array<Record<string, unknown>> };
+    work.items[0].description = realResumeText;
+    const updateField = vi.fn();
+    render(
+      <LegacyEditableSurface resume={source} edit={{ enabled: true, updateField }}>
+        <section data-section><h2>Work</h2><p>{realResumeText}</p></section>
+      </LegacyEditableSurface>,
+    );
+
+    const richText = screen.getByText(realResumeText);
+    const host = richText.closest('p')!;
+    vi.spyOn(host, 'getBoundingClientRect').mockReturnValue({
+      x: 20, y: 40, top: 40, left: 20, right: 814, bottom: 1040,
+      width: 794, height: 1000, toJSON: () => ({}),
+    });
+
+    fireEvent.click(richText);
+    const textarea = screen.getByRole('textbox', { name: 'description' });
+
+    // A template may stretch the text host, but its editor must remain a compact,
+    // readable control instead of inheriting an A4-sized minimum height.
+    expect(textarea).toHaveProperty('value', realResumeText);
+    expect(Number.parseFloat(textarea.style.minHeight)).toBeLessThanOrEqual(360);
+    expect(Number.parseFloat(textarea.style.maxHeight)).toBeLessThanOrEqual(window.innerHeight - 32);
+  });
+
+  it('shows a long rich-text field from the beginning when its editor receives focus', () => {
+    render(
+      <LegacyEditableSurface resume={resume()} edit={{ enabled: true, updateField: vi.fn() }}>
+        <section data-section><h2>Work</h2><p><strong>Reliable</strong> systems</p></section>
+      </LegacyEditableSurface>,
+    );
+
+    fireEvent.click(screen.getByText('Reliable'));
+    const textarea = screen.getByRole('textbox', { name: 'description' }) as HTMLTextAreaElement;
+    textarea.scrollTop = 240;
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    fireEvent.focus(textarea);
+
+    expect(textarea.scrollTop).toBe(0);
+    expect(textarea.selectionStart).toBe(0);
+    expect(textarea.selectionEnd).toBe(0);
+  });
+
   it('maps the second duplicate rendered value to the second stable item', () => {
     const source = resume();
     const work = source.sections[1].content as unknown as { items: Array<Record<string, unknown>> };

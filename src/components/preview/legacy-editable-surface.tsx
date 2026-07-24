@@ -205,18 +205,35 @@ export function LegacyEditableSurface({
     });
   };
   const multiline = active?.source.kind === 'rich-text' || active?.source.kind === 'multiline';
-  const controlStyle = active ? {
-    position: 'fixed' as const,
-    zIndex: 80,
-    top: active.rect.top,
-    left: active.rect.left,
-    width: Math.max(active.rect.width, 120),
-    minHeight: active.rect.height,
-    font: active.typography.font,
-    color: active.typography.color,
-    lineHeight: active.typography.lineHeight,
-    textAlign: active.typography.textAlign as React.CSSProperties['textAlign'],
-  } : undefined;
+  const controlStyle = active ? (() => {
+    const viewportHeight = Math.max(window.innerHeight, 320);
+    const viewportWidth = Math.max(window.innerWidth, 320);
+    const maxHeight = multiline ? Math.min(360, viewportHeight - 32) : 48;
+
+    // Some legacy templates stretch a text host to the remaining A4 height.
+    // Bound the overlay independently so a field editor cannot cover the page.
+    const minHeight = multiline
+      ? Math.min(Math.max(active.rect.height, 48), 160, maxHeight)
+      : Math.min(Math.max(active.rect.height, 24), maxHeight);
+    const width = Math.min(Math.max(active.rect.width, 120), viewportWidth - 32);
+    const left = Math.min(Math.max(active.rect.left, 16), viewportWidth - width - 16);
+    const top = Math.min(Math.max(active.rect.top, 16), viewportHeight - minHeight - 16);
+
+    return {
+      position: 'fixed' as const,
+      zIndex: 80,
+      top,
+      left,
+      width,
+      minHeight,
+      maxHeight,
+      overflowY: multiline ? 'auto' as const : undefined,
+      font: active.typography.font,
+      color: active.typography.color,
+      lineHeight: active.typography.lineHeight,
+      textAlign: active.typography.textAlign as React.CSSProperties['textAlign'],
+    };
+  })() : undefined;
 
   return (
     <div
@@ -258,6 +275,12 @@ export function LegacyEditableSurface({
           aria-label={active.source.label}
           value={value}
           onChange={(event) => setValue(event.target.value)}
+          onFocus={(event) => {
+            // Autofocus normally places the caret at the end and scrolls long
+            // content down. Start at the first line so the field is discoverable.
+            event.currentTarget.scrollTop = 0;
+            event.currentTarget.setSelectionRange(0, 0);
+          }}
           onBlur={commit}
           onKeyDown={(event) => {
             if (event.key === 'Escape') { event.preventDefault(); cancel(); }
