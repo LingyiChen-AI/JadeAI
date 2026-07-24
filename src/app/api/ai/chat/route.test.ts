@@ -35,6 +35,7 @@ vi.mock('@/lib/db/repositories/chat.repository', () => ({
     addMessage: mocks.addMessage,
   },
 }));
+
 vi.mock('@/lib/ai/tools', () => ({ createExecutableTools: mocks.createExecutableTools }));
 
 import { POST } from './route';
