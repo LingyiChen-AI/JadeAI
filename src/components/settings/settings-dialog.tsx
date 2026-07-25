@@ -74,6 +74,7 @@ export function SettingsDialog() {
   const [fetchedModels, setFetchedModels] = useState<string[]>([]);
   const [modelsFetching, setModelsFetching] = useState(false);
   const [modelsFetched, setModelsFetched] = useState(false);
+  const [modelsError, setModelsError] = useState<'missing-api-key' | 'fetch' | null>(null);
   const modelSearchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -85,19 +86,30 @@ export function SettingsDialog() {
   // Fetch models when combobox opens or when apiKey/baseURL changes
   const fetchModels = useCallback(async () => {
     setModelsFetching(true);
+    setModelsError(null);
+    if (!aiApiKey.trim()) {
+      setFetchedModels([]);
+      setModelsFetched(true);
+      setModelsError('missing-api-key');
+      setModelsFetching(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/ai/models', { headers: getAIHeaders() });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch models');
       const ids = (data.models || []).map((m: { id: string }) => m.id);
       setFetchedModels(ids);
       setModelsFetched(true);
     } catch {
       setFetchedModels([]);
       setModelsFetched(true);
+      setModelsError('fetch');
     } finally {
       setModelsFetching(false);
     }
-  }, []);
+  }, [aiApiKey]);
 
   // Re-fetch models when apiKey or baseURL changes
   const prevKeyRef = useRef(aiApiKey);
@@ -108,6 +120,7 @@ export function SettingsDialog() {
       prevUrlRef.current = aiBaseURL;
       setModelsFetched(false);
       setFetchedModels([]);
+      setModelsError(null);
     }
   }, [aiApiKey, aiBaseURL]);
 
@@ -255,7 +268,19 @@ export function SettingsDialog() {
                       </div>
                     )}
 
-                    {!modelsFetching && filteredModels.length === 0 && modelsFetched && (
+                    {!modelsFetching && modelsError === 'missing-api-key' && (
+                      <div className="px-2 py-3 text-center text-xs text-amber-600 dark:text-amber-400">
+                        {t('ai.modelsMissingApiKey')}
+                      </div>
+                    )}
+
+                    {!modelsFetching && modelsError === 'fetch' && (
+                      <div className="px-2 py-3 text-center text-xs text-red-500">
+                        {t('ai.modelsFetchError')}
+                      </div>
+                    )}
+
+                    {!modelsFetching && !modelsError && filteredModels.length === 0 && modelsFetched && (
                       <div className="py-3 text-center text-xs text-zinc-400">
                         {t('ai.noModelsFound')}
                       </div>

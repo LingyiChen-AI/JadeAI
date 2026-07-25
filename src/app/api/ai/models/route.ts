@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const baseURL = request.headers.get('x-base-url') || '';
 
   if (!apiKey) {
-    return Response.json({ models: [] });
+    return Response.json({ models: [], error: 'API key is required. Please configure it in Settings.' }, { status: 401 });
   }
 
   try {
