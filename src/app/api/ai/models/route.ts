@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { normalizeAIBaseURL } from '@/lib/ai/provider';
 
 export async function GET(request: NextRequest) {
   const provider = request.headers.get('x-provider') || 'openai';
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
 
       default: {
         // openai
-        const effectiveBaseURL = baseURL || 'https://api.openai.com/v1';
+        const effectiveBaseURL = normalizeAIBaseURL(provider, baseURL || 'https://api.openai.com/v1');
         const res = await fetch(`${effectiveBaseURL}/models`, {
           headers: { Authorization: `Bearer ${apiKey}` },
         });

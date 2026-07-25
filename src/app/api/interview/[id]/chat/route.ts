@@ -71,8 +71,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const result = streamText({
       model,
+      maxRetries: 0,
+      timeout: 60_000,
       system: systemPrompt,
       messages: modelMessages,
+      onError: ({ error }) => {
+        console.error('Interview AI stream error:', error);
+      },
       onFinish: async ({ text }) => {
         if (!text) return;
 
