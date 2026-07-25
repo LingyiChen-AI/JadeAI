@@ -266,6 +266,8 @@
       "baseURL": "API 地址",
       "model": "默认模型",
       "modelPlaceholder": "输入模型名称...",
+      "modelsMissingApiKey": "请先填写 API Key，再获取模型列表。",
+      "modelsFetchError": "模型列表获取失败，请检查 API 地址和 API Key。",
       "noModelsFound": "未找到模型，请在下方手动输入模型名称。"
     },
     "appearance": {
@@ -840,6 +842,9 @@
       "generating": "面试官正在思考...",
       "roundComplete": "本轮面试结束",
       "allComplete": "所有面试轮次已完成",
+      "chatErrorTitle": "AI 对话发送失败",
+      "chatErrorHint": "请检查设置中的 API Key、Base URL 和模型是否正确，然后重试。",
+      "openAISettings": "检查 AI 配置",
       "generateReport": "生成面试报告",
       "generatingReport": "正在生成报告..."
     },
@@ -877,6 +882,11 @@
       "stable": "持平",
       "exportPdf": "导出 PDF",
       "exportMarkdown": "导出 Markdown",
+      "generationErrorTitle": "面试报告生成失败",
+      "generationErrorHint": "请检查设置中的 API Key、Base URL 和模型是否正确，然后重试。",
+      "generationError": "报告生成失败",
+      "loadError": "报告加载失败",
+      "openAISettings": "检查 AI 配置",
       "backToLobby": "返回面试大厅",
       "markedForReview": "标记复习",
       "usedHint": "使用了提示",

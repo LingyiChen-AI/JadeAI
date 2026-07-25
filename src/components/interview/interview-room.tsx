@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { UIMessage } from 'ai';
+import { AlertTriangle, Settings } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
 import { useInterviewStore } from '@/stores/interview-store';
 import { useInterviewChat } from '@/hooks/use-interview-chat';
 import { useSettingsStore } from '@/stores/settings-store';
+import { useUIStore } from '@/stores/ui-store';
 import { INIT_TRIGGER } from '@/lib/interview/constants';
 import { isRoundViewOnly } from '@/lib/interview/round-status';
 import { ProgressBar } from './progress-bar';
@@ -37,6 +39,8 @@ interface InterviewRoomProps {
 export function InterviewRoom({ sessionId, initialMessages }: InterviewRoomProps) {
   const t = useTranslations('interview.room');
   const router = useRouter();
+  const { openModal, setSettingsTab } = useUIStore();
+  const selectedModel = useSettingsStore((state) => state.aiModel);
   const { rounds, currentRoundIndex, setCurrentRoundIndex, advanceToNextRound, setIsGeneratingReport, status: sessionStatus } =
     useInterviewStore();
   const [showTransition, setShowTransition] = useState(false);
@@ -46,11 +50,11 @@ export function InterviewRoom({ sessionId, initialMessages }: InterviewRoomProps
   const interviewerConfig = currentRound?.interviewerConfig as InterviewerConfig;
   const isRoundDone = isRoundViewOnly(currentRound?.status, sessionStatus);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, resetMessages, sendMessage, setMessages } =
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error: chatError, resetMessages, sendMessage, setMessages } =
     useInterviewChat({
       sessionId,
       roundId: currentRound?.id || '',
-      selectedModel: useSettingsStore.getState().aiModel,
+      selectedModel,
     });
 
   // Load initial messages from DB on first render
@@ -202,6 +206,27 @@ export function InterviewRoom({ sessionId, initialMessages }: InterviewRoomProps
         </div>
       ) : (
         <div className="space-y-2 border-t border-zinc-100 pt-2 pb-2 dark:border-zinc-800">
+          {chatError && (
+            <div role="alert" className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{t('chatErrorTitle')}</p>
+                <p className="mt-1 text-xs leading-relaxed opacity-90">{t('chatErrorHint')}</p>
+                {chatError.message && <p className="mt-1 break-words text-[11px] opacity-70">{chatError.message}</p>}
+                <button
+                  type="button"
+                  className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-amber-100 px-2.5 py-1.5 text-xs font-medium hover:bg-amber-200 dark:bg-amber-900/50 dark:hover:bg-amber-900"
+                  onClick={() => {
+                    setSettingsTab('ai');
+                    openModal('settings');
+                  }}
+                >
+                  <Settings className="h-3.5 w-3.5" />
+                  {t('openAISettings')}
+                </button>
+              </div>
+            </div>
+          )}
           {controls}
           <MessageInput
             input={input}

@@ -10,6 +10,21 @@ export interface AIConfig {
   model: string;
 }
 
+export function normalizeAIBaseURL(provider: string, baseURL: string) {
+  const trimmed = baseURL.trim().replace(/\/+$/, '');
+  if (!trimmed || provider !== 'openai') return trimmed;
+
+  try {
+    const url = new URL(trimmed);
+    if (url.pathname === '' || url.pathname === '/') {
+      url.pathname = '/v1';
+    }
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return trimmed;
+  }
+}
+
 export function extractAIConfig(request: NextRequest): AIConfig {
   const provider = request.headers.get('x-provider') || 'openai';
   const apiKey = request.headers.get('x-api-key') || '';
@@ -23,18 +38,19 @@ export function getModel(config: AIConfig, modelOverride?: string) {
     throw new AIConfigError('API key is required. Please configure it in Settings.');
   }
   const modelId = modelOverride || config.model;
+  const baseURL = normalizeAIBaseURL(config.provider, config.baseURL);
 
   switch (config.provider) {
     case 'anthropic': {
-      const p = createAnthropic({ apiKey: config.apiKey, baseURL: config.baseURL || undefined });
+      const p = createAnthropic({ apiKey: config.apiKey, baseURL: baseURL || undefined });
       return p(modelId);
     }
     case 'gemini': {
-      const p = createGoogleGenerativeAI({ apiKey: config.apiKey, baseURL: config.baseURL || undefined });
+      const p = createGoogleGenerativeAI({ apiKey: config.apiKey, baseURL: baseURL || undefined });
       return p(modelId);
     }
     default: {
-      const p = createOpenAI({ apiKey: config.apiKey, baseURL: config.baseURL });
+      const p = createOpenAI({ apiKey: config.apiKey, baseURL });
       return p.chat(modelId);
     }
   }

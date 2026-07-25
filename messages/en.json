@@ -266,6 +266,8 @@
       "baseURL": "Base URL",
       "model": "Default Model",
       "modelPlaceholder": "Enter model name...",
+      "modelsMissingApiKey": "Enter an API Key first to fetch available models.",
+      "modelsFetchError": "Failed to fetch models. Check the Base URL and API Key.",
       "noModelsFound": "No models found. Enter a model name manually below."
     },
     "appearance": {
@@ -840,6 +842,9 @@
       "generating": "Interviewer is thinking...",
       "roundComplete": "This round is complete",
       "allComplete": "All interview rounds completed",
+      "chatErrorTitle": "AI message failed to send",
+      "chatErrorHint": "Check the API Key, Base URL, and model in Settings, then try again.",
+      "openAISettings": "Check AI settings",
       "generateReport": "Generate Report",
       "generatingReport": "Generating report..."
     },
@@ -877,6 +882,11 @@
       "stable": "Stable",
       "exportPdf": "Export PDF",
       "exportMarkdown": "Export Markdown",
+      "generationErrorTitle": "Failed to generate interview report",
+      "generationErrorHint": "Check the API Key, Base URL, and model in Settings, then try again.",
+      "generationError": "Failed to generate report",
+      "loadError": "Failed to load report",
+      "openAISettings": "Check AI settings",
       "backToLobby": "Back to Lobby",
       "markedForReview": "Marked for Review",
       "usedHint": "Used Hint",
