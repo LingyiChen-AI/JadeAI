@@ -10,7 +10,79 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { open, rename, rm } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { dirname } from 'node:path';
+
+/**
+ * Concurrency contract: this module does NOT serialize overlapping writes to
+ * the same `finalPath`. Each call gets its own uniquely-named temp file (see
+ * `tempPathFor`), so overlapping writers never share an inode. The worst case
+ * degrades to an ordinary last-rename-wins lost update: `finalPath` always
+ * ends up holding one writer's complete payload, but callers cannot predict
+ * which one. Callers that need "the last call wins with the newest data"
+ * (e.g. a SettingsStore that serializes its own async writes and does a
+ * final flushSync on quit) get that for free; callers that need strict
+ * ordering must serialize themselves before calling in.
+ */
+
+/**
+ * Unique per call, not a fixed `${finalPath}.tmp`: two overlapping writes to
+ * the same target would otherwise open the SAME inode (no O_EXCL), and the
+ * slower one's bytes land in the file the faster one already renamed into
+ * place — producing exactly the torn/incorrect content this module exists to
+ * prevent. With unique names the worst case degrades to an ordinary
+ * last-rename-wins lost update, where finalPath always holds one writer's
+ * complete payload.
+ */
+function tempPathFor(finalPath: string): string {
+  return `${finalPath}.${process.pid}.${randomUUID()}.tmp`;
+}
+
+// Windows file locks are closer to mandatory than POSIX's advisory locks: a
+// virus scanner, backup agent, or Explorer's indexer holding a transient
+// handle can make a rename that would always succeed on macOS/Linux fail
+// with EBUSY/EPERM. Retry briefly, Windows only — elsewhere a rename failure
+// is real and should surface immediately, not be delayed ~185ms for nothing.
+const RENAME_RETRY_DELAYS_MS = [10, 25, 50, 100];
+
+function isTransientRenameError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException)?.code;
+  return code === 'EBUSY' || code === 'EPERM';
+}
+
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+async function renameWithRetry(tmpPath: string, finalPath: string): Promise<void> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await rename(tmpPath, finalPath);
+      return;
+    } catch (error) {
+      const delay = RENAME_RETRY_DELAYS_MS[attempt];
+      if (process.platform !== 'win32' || delay === undefined || !isTransientRenameError(error)) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+
+function renameWithRetrySync(tmpPath: string, finalPath: string): void {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      renameSync(tmpPath, finalPath);
+      return;
+    } catch (error) {
+      const delay = RENAME_RETRY_DELAYS_MS[attempt];
+      if (process.platform !== 'win32' || delay === undefined || !isTransientRenameError(error)) {
+        throw error;
+      }
+      sleepSync(delay);
+    }
+  }
+}
 
 /**
  * fsync a directory so a rename inside it is durable.
@@ -60,7 +132,10 @@ function backupExisting(finalPath: string): void {
 
 /** Write `payload` durably: temp file → fsync → rename → fsync directory. */
 export async function writeFileDurable(finalPath: string, payload: string): Promise<void> {
-  const tmpPath = `${finalPath}.tmp`;
+  const tmpPath = tempPathFor(finalPath);
+  // Synchronous by design even on the async path: the settings file is tiny,
+  // so the event-loop stall is negligible, and fs.promises.copyFile would
+  // just introduce a different failure interleaving for no real benefit.
   backupExisting(finalPath);
   try {
     const handle = await open(tmpPath, 'w');
@@ -69,9 +144,12 @@ export async function writeFileDurable(finalPath: string, payload: string): Prom
       // fsync BEFORE rename. A rename that lands first can expose a zero-length file.
       await handle.sync();
     } finally {
-      await handle.close();
+      // Never let a close failure supersede a real write/sync error — the
+      // latter is the one a postmortem needs. (finally always overrides the
+      // try's error in JS, so this must be swallowed explicitly.)
+      await handle.close().catch(() => {});
     }
-    await rename(tmpPath, finalPath);
+    await renameWithRetry(tmpPath, finalPath);
   } catch (error) {
     await rm(tmpPath, { force: true }).catch(() => {});
     throw error;
@@ -81,7 +159,7 @@ export async function writeFileDurable(finalPath: string, payload: string): Prom
 
 /** Synchronous variant, for the quit path where there is no time to await. */
 export function writeFileDurableSync(finalPath: string, payload: string): void {
-  const tmpPath = `${finalPath}.tmp`;
+  const tmpPath = tempPathFor(finalPath);
   backupExisting(finalPath);
   try {
     const fd = openSync(tmpPath, 'w');
@@ -89,9 +167,15 @@ export function writeFileDurableSync(finalPath: string, payload: string): void {
       writeFileSync(fd, payload, 'utf-8');
       fsyncSync(fd);
     } finally {
-      closeSync(fd);
+      // Same rationale as the async path: don't let a close failure hide the
+      // real write/sync error.
+      try {
+        closeSync(fd);
+      } catch {
+        // Intentionally swallowed.
+      }
     }
-    renameSync(tmpPath, finalPath);
+    renameWithRetrySync(tmpPath, finalPath);
   } catch (error) {
     try {
       unlinkSync(tmpPath);

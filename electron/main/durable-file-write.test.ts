@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   chmodSync,
-  existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -20,6 +20,13 @@ beforeEach(() => {
   target = join(dir, 'state.json');
 });
 
+// Temp paths are now unique per call (`${finalPath}.${pid}.${uuid}.tmp`), so
+// checking for the literal `${target}.tmp` would always trivially pass.
+// Scan the directory instead.
+function tmpFilesRemaining(): string[] {
+  return readdirSync(dir).filter((f) => f.endsWith('.tmp'));
+}
+
 afterEach(() => {
   chmodSync(dir, 0o700);
   rmSync(dir, { recursive: true, force: true });
@@ -29,7 +36,7 @@ describe('writeFileDurable', () => {
   it('writes the payload and leaves no temp file behind', async () => {
     await writeFileDurable(target, '{"a":1}');
     expect(readFileSync(target, 'utf-8')).toBe('{"a":1}');
-    expect(existsSync(`${target}.tmp`)).toBe(false);
+    expect(tmpFilesRemaining()).toHaveLength(0);
   });
 
   it('keeps the previous contents in a .bak sidecar', async () => {
@@ -47,7 +54,7 @@ describe('writeFileDurable', () => {
     await expect(writeFileDurable(target, '{"gen":2}')).rejects.toThrow();
     chmodSync(dir, 0o700);
     expect(readFileSync(target, 'utf-8')).toBe('{"gen":1}');
-    expect(existsSync(`${target}.tmp`)).toBe(false);
+    expect(tmpFilesRemaining()).toHaveLength(0);
   });
 
   // Induces a failure AFTER the temp file exists — something the chmod fixture
@@ -59,7 +66,21 @@ describe('writeFileDurable', () => {
     // while the temp write itself succeeds.
     mkdirSync(target);
     await expect(writeFileDurable(target, '{"gen":2}')).rejects.toThrow();
-    expect(existsSync(`${target}.tmp`)).toBe(false);
+    expect(tmpFilesRemaining()).toHaveLength(0);
+  });
+
+  // Overlapping writes must never leave a torn file. Before unique temp paths,
+  // both writers shared one inode and the loser's bytes landed in the file the
+  // winner had already renamed into place.
+  it('never leaves torn content when two writes overlap', async () => {
+    const results = await Promise.allSettled([
+      writeFileDurable(target, JSON.stringify({ gen: 1 })),
+      writeFileDurable(target, JSON.stringify({ gen: 2 })),
+    ]);
+    expect(results.some((r) => r.status === 'fulfilled')).toBe(true);
+    const parsed = JSON.parse(readFileSync(target, 'utf-8'));
+    expect([1, 2]).toContain(parsed.gen);
+    expect(tmpFilesRemaining()).toHaveLength(0);
   });
 });
 
@@ -67,7 +88,7 @@ describe('writeFileDurableSync', () => {
   it('writes the payload synchronously', () => {
     writeFileDurableSync(target, '{"sync":true}');
     expect(readFileSync(target, 'utf-8')).toBe('{"sync":true}');
-    expect(existsSync(`${target}.tmp`)).toBe(false);
+    expect(tmpFilesRemaining()).toHaveLength(0);
   });
 });
 
