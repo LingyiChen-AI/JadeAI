@@ -1908,13 +1908,23 @@ Expected: `window` 里的数值与你调整后的一致。
 
 - [ ] **Step 7: 确认启动失败会进错误页**
 
+> **不能用 `JADE_MIGRATIONS_DIR=/nonexistent` 来制造这个失败**，初版计划写错了，两个原因：
+> 1. `next-server-host.ts` 的 `env` 先展开 `...process.env` 再**显式覆盖** `JADE_MIGRATIONS_DIR: options.migrationsDir`（值来自主进程的 `resolveMigrationsDirectory()`），所以父进程设的那个环境变量根本传不到子进程。这个优先级是对的——路径应由主进程掌控。
+> 2. 即使传进去了也不会进错误页：`/api/health` 刻意不碰数据库（Task 2 的设计），而 `next dev` 是懒编译，所以迁移坏掉时 health 照样 200、窗口正常加载，数据库故障只在访问 DB 路由时按路由浮现成 500。
+>
+> 这两点合起来意味着：**dev 模式下数据库故障不阻塞启动**。这是有意的分层——"服务没起来"与"数据库坏了"是两类故障，前者进错误页重试，后者应该在具体请求上暴露。
+
+改用杀子进程来制造真实的启动失败——这同时覆盖 `onUnexpectedExit` 与 `waitForHealthy` 超时两条路径（它们都会走到 `showStartupError`，代际去重就是为这个场景加的）：
+
 ```bash
-JADE_MIGRATIONS_DIR=/nonexistent pnpm dev:desktop
+pnpm dev:desktop > /tmp/p2-err.log 2>&1 &
+sleep 1
+pkill -f "next dev" || true      # 在 waitForHealthy 还在轮询时杀掉子进程
+sleep 35                          # 等 waitForHealthy 走到 30s 超时
+grep -n "startup-error\|exited unexpectedly\|did not become healthy" /tmp/p2-err.log
 ```
 
-Expected: 窗口显示“JadeAI 没能启动”，`<pre>` 里有可读的错误详情，两个按钮都在。点“打开数据目录”应弹出 Finder。
-
-（这里 Next 子进程会因为阶段一的"迁移失败必须抛出"而退出，从而触发 `onUnexpectedExit`——两个阶段的改动在这里合上。）
+Expected: 日志里同时出现 `server exited unexpectedly` 与 `did not become healthy`，但错误页**只被加载一次**（代际去重生效，无闪烁、无空白页）。
 
 - [ ] **Step 8: 确认没有残留孤儿进程**
 
