@@ -686,8 +686,23 @@ describe('resolveUser in desktop mode', () => {
     expect(await resolveUser('abc123')).toEqual({ id: 'fp-user', authType: 'fingerprint' });
     expect(ensureLocalUser).not.toHaveBeenCalled();
   });
+
+  // Pins the branch ORDER, not just the branch: the desktop check sits ahead of
+  // config.auth.enabled on purpose, so "desktop has exactly one user" cannot be
+  // defeated by an env-var combination. Without this case, moving the desktop
+  // branch below the auth branch passes the whole suite.
+  // Cannot use loadWithDesktop() — that helper hardcodes auth.enabled to false.
+  it('desktop still wins even if auth is (misconfigured to be) enabled', async () => {
+    vi.doMock('@/lib/config', () => ({
+      config: { auth: { enabled: true }, runtime: { desktop: true }, i18n: { defaultLocale: 'zh', locales: ['zh', 'en'] } },
+    }));
+    const { resolveUser } = await import('./helpers');
+    expect(await resolveUser('whatever-fingerprint')).toEqual(LOCAL_USER);
+  });
 });
 ```
+
+> **为什么需要第四个用例。** 前三个用例的 `config.auth.enabled` 全是 `false`，NextAuth 分支从未被激活，所以分支顺序怎么排都测不出来。代码质量审查用变异测试证实：把 desktop 分支挪到 `config.auth.enabled` 块之后，三个用例**全绿**通过——而"desktop 分支必须前置"正是 Step 3 里被明确称为刻意设计的那条不变式。第四个用例让这个变异变红。
 
 - [ ] **Step 2: 运行测试确认失败**
 
@@ -1038,14 +1053,40 @@ desktop 下服务端本就忽略 fingerprint，再算一次纯属浪费。"
 
 ---
 
-### Task 9: 清理文档里的 PostgreSQL 说明
+### Task 9: 清理残留（文档 PG 说明 + 死代码）
 
 **Files:**
+- Modify: `src/lib/auth/helpers.ts`（删除 `getCurrentUserId()`，见 Step 0）
 - Modify: `README.md`
 - Modify: `README.zh-CN.md`
 - Modify: `Dockerfile`（若含 PG 配置）
 - Modify: `docker_run_local.sh`（若含 PG 配置）
 - Modify: `ARCHITECTURE.md`（若含 PG 说明）
+- Modify: `.env.example`（Task 1 的 spec 审查发现它仍有 `DB_TYPE=sqlite`、`DATABASE_URL` 与一段 PostgreSQL 注释块）
+
+- [ ] **Step 0: 删除 `getCurrentUserId()` 这段死代码**
+
+Task 6 的代码质量审查发现 `src/lib/auth/helpers.ts` 里的 `getCurrentUserId()`：
+
+- **没有任何消费者**（`grep -rn "getCurrentUserId" src` 除定义处外无命中）
+- 它只复刻了 `resolveUser()` 的 NextAuth 分支，**既没有 desktop 分支也没有 fingerprint 分支**——它不是 `resolveUser()` 的可用替代品，而是它的一个残缺影子
+- 它直接对抗 Task 6 的"收口点"设计意图：留着第二个、且对 desktop 无感知的身份解析函数，等于给后来者一个 50/50 的选择，而错的那个会编译通过、肉眼评审也看不出问题，只在 `JADE_RUNTIME=desktop` 下才静默返回 `null`
+
+先确认它确实没有消费者：
+
+```bash
+grep -rn "getCurrentUserId" src
+```
+
+Expected: 只有 `src/lib/auth/helpers.ts` 里的定义那一处。若出现别的命中，**停下来报告**——说明它不是死代码，删除的前提不成立。
+
+确认后从 `src/lib/auth/helpers.ts` 删掉整个 `getCurrentUserId` 函数连同其上方注释。注意 `auth` 这个 import 仍被 `resolveUser()` 使用，**不要**一并删掉。
+
+```bash
+pnpm type-check && pnpm test
+```
+
+Expected: 仍全绿。
 
 - [ ] **Step 1: 找出所有残留提及**
 
