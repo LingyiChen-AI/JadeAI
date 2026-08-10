@@ -3,6 +3,7 @@ import { db } from '../index';
 import { users, resumes } from '../schema';
 import { resumeRepository } from './resume.repository';
 import { createSampleResume } from '../sample-resume';
+import { LOCAL_USER_ID, LOCAL_USER_NAME } from '../../auth/local-user';
 
 export const userRepository = {
   async findById(id: string) {
@@ -44,6 +45,39 @@ export const userRepository = {
     }
 
     return this.findById(id);
+  },
+
+  /**
+   * Return the desktop client's single local user, creating it on first call.
+   *
+   * Idempotent and cheap (one indexed lookup on the hot path), so it is safe to
+   * call from resolveUser() on every request. Deliberately NOT called from
+   * SQLiteAdapter.initialize(): this module imports `db` from '../index', so
+   * having the adapter call back into it would close an import cycle during
+   * module evaluation.
+   */
+  async ensureLocalUser() {
+    const existing = await this.findById(LOCAL_USER_ID);
+    if (existing) return existing;
+
+    await db
+      .insert(users)
+      .values({
+        id: LOCAL_USER_ID,
+        authType: 'local',
+        name: LOCAL_USER_NAME,
+      })
+      .onConflictDoNothing();
+
+    const created = await this.findById(LOCAL_USER_ID);
+    if (!created) {
+      throw new Error(`Failed to create the local user (id=${LOCAL_USER_ID})`);
+    }
+
+    // First run: give the user something to look at instead of an empty dashboard.
+    await createSampleResume(LOCAL_USER_ID);
+
+    return created;
   },
 
   async create(data: { id?: string; email?: string; name?: string; avatarUrl?: string; authType: 'oauth' | 'fingerprint' | 'local'; fingerprint?: string }) {
