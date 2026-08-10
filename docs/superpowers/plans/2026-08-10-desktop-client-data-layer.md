@@ -1129,10 +1129,21 @@ git commit -m "docs: drop PostgreSQL references, document JADE_RUNTIME"
 
 ---
 
+## 收尾时补的一个并发修复（最终整体审查发现）
+
+`ensureLocalUser()` 起初用"插入后再 `findById` 一次"来判断是否需要种示例简历。这在**顺序**重复调用下正确，但并发下每个调用都看到用户不存在、各自种一份——实测三个并发调用产生 3 份重复简历。
+
+触发路径是真实的首次启动：`src/stores/settings-store.ts` 在模块加载期就发 `GET /api/user/settings`，而 dashboard 的 `useEffect` 同时发 `GET /api/resume`，两条链路在本地用户尚不存在时并行进入 `ensureLocalUser()`。
+
+改法：用 `.returning({ id: users.id })` 让 `onConflictDoNothing()` 的插入告诉我们**本次调用是否真的插入了**行；返回空数组即表示并发对手赢了竞态，此时只读回并返回，不种简历。只有真正插入的那次调用负责种。
+
+> **值得记住的教训。** Task 5 那轮变异测试针对的正是"重复示例简历"这个 bug 类，并且当时确实抓到了一个真盲区——但它只覆盖顺序调用，对并发完全无感。一个专门为某个 bug 类设计的测试，仍然可能对同类 bug 的另一种触发方式毫无防护，而它通过时给出的信心是满的。逐任务审查在结构上也看不见这个问题：它横跨 Task 5（实现）与 Task 8（前端调用时机），单看任一任务都正常。
+
 ## 已知遗留（不在阶段一范围，记录以免丢失）
 
 - **`x-fingerprint` 请求头形状在 desktop 下并不真正一致**：Task 8 让 `useFingerprint()` 在 desktop 下返回 `LOCAL_USER_ID`，理由是"让请求头形状在两种模式下一致，便于排查"。但 `src/stores/settings-store.ts:59` 的 `getFingerprint()` **绕过了这个 hook**，直接读 `localStorage.getItem('jade_fingerprint')`——而 desktop 下 hook 不再往 localStorage 写，所以它拿到 `null`，其请求不带该头。功能上无害（`resolveUser()` 在 desktop 下完全忽略该头），但上述理由对这条路径不成立。若将来要让形状真正统一，应让 `settings-store` 也走 hook 或走同一个来源，而不是各读各的。
 
+- **`ARCHITECTURE.md` 的 schema 伪代码仍有非 PG 维度的陈旧**：Task 9 把它从 `pgTable`/`jsonb` 改写成了 SQLite 形态，但没做逐字段同步——仍缺 `resumeShares` 表、`users.settings` 列等（源自 interview/share 等更早的功能）。Task 9 的执行者刻意只修了与 PG 纠缠的部分，边界划得对。留给将来的文档同步任务。
 - **`createSampleResume` 不是事务性的**（`src/lib/db/sample-resume.ts`）：简历行与各 section 是分开的多条 insert，没有包 `db.transaction`。若中途失败（比如第 4 个 section 出错），一份残缺简历会被提交下来；而 Task 5 之后 `ensureLocalUser()` 会吞掉这个错误并走提前返回，**再也不会重试**，于是那份残缺简历永久存在。这个风险在本阶段之前就有，但 Task 5 把 `ensureLocalUser()` 放到了每请求路径上、又刻意容忍了 seed 失败，使它的后果从"一次性报错"变成"静默的永久脏数据"。建议在阶段五（导入导出）一并处理：把 `createSampleResume` 包进事务。
 
 ## 阶段一验收
