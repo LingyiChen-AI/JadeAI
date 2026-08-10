@@ -168,6 +168,10 @@ git commit -m "refactor(db): drop PostgreSQL adapter and DB_TYPE switch
 
 现状缺陷：`src/lib/db/adapters/sqlite.ts` 用 `resolve(process.cwd(), 'drizzle/migrations')` 定位迁移目录，并把失败包在 `try/catch` 里只打一行 `console.error`。打包后 cwd 不是仓库根，迁移必然找不到，症状会表现为运行时"表不存在"。
 
+> **这个任务才是真正交付"响亮失败"的地方。** Task 1 只拆掉了 `db/index.ts` 外层的 `.catch()`，而那一层在 `sqlite.ts` 内层 `try/catch` 还在的前提下是**惰性的**——迁移失败仍会被吞成一行 log。Task 1 的提交信息在这点上说早了。真正的行为改变发生在下面 Step 5：`migrate()` 不再被包住，于是它在构造函数里**同步抛出**，表现为模块加载失败。
+>
+> 顺带记录一个推论，避免后人"顺手修好"：`dbReady` 没有 `.catch()` 是有意的。响亮失败走的是构造函数的同步抛出，不是 promise reject；而 `initialize()` 在 Task 7 之后只包着 seed 的 try/catch（seed 失败可生存），所以这个 promise 实际上不会 reject，不存在 unhandled rejection 风险。若在此处加 `.catch()`，反而会把模块加载错误重新藏起来。
+
 **Files:**
 - Create: `src/lib/db/migrations-dir.ts`
 - Create: `src/lib/db/migrations-dir.test.ts`
