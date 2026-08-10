@@ -3,15 +3,6 @@ import { config } from '@/lib/config';
 import { dbReady } from '@/lib/db';
 import { userRepository } from '@/lib/db/repositories/user.repository';
 
-export async function getCurrentUserId(): Promise<string | null> {
-  if (config.auth.enabled) {
-    const session = await auth();
-    return session?.user?.id || null;
-  }
-  // In fingerprint mode, userId is resolved from the request header
-  return null;
-}
-
 export async function resolveUser(fingerprint?: string | null) {
   // Ensure DB tables exist before any query
   await dbReady;

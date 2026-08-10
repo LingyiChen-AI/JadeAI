@@ -13,7 +13,7 @@
 | PDF 导出 | 高保真 PDF 生成与下载 |
 | 多简历管理 | 新建、复制、删除、切换多份简历 |
 | 灵活认证 | 可插拔认证：Google 登录 / 浏览器指纹 fallback |
-| 数据库抽象 | 统一接口，支持 PostgreSQL 和 SQLite |
+| 数据存储 | 本地 SQLite，零配置 |
 | 国际化 (i18n) | 支持中文和英文界面切换 |
 
 ### 1.2 技术栈
@@ -179,7 +179,6 @@ jade-ai/
 │   │   │   ├── seed.ts               # 种子数据（可选）
 │   │   │   ├── adapter.ts            # 数据库适配器接口
 │   │   │   ├── adapters/
-│   │   │   │   ├── postgresql.ts     # PostgreSQL 适配器
 │   │   │   │   └── sqlite.ts         # SQLite 适配器
 │   │   │   └── repositories/         # 数据访问仓库
 │   │   │       ├── user.repository.ts
@@ -303,15 +302,15 @@ jade-ai/
 │            │                 │                  │                    │
 │  ┌─────────┴─────────────────┴──────────────────┴───────────┐       │
 │  │              数据库适配器（抽象层）                         │       │
-│  │  ┌─────────────────────┐  ┌─────────────────────┐        │       │
-│  │  │  PostgreSQL 适配器  │  │   SQLite 适配器     │        │       │
-│  │  │  (drizzle-orm/pg)   │  │ (drizzle-orm/sqlite)│        │       │
-│  │  └─────────┬───────────┘  └─────────┬───────────┘        │       │
-│  └────────────┼────────────────────────┼────────────────────┘       │
-│               │                        │                            │
-│        ┌──────┴──────┐          ┌──────┴──────┐                     │
-│        │ PostgreSQL  │          │   SQLite    │                     │
-│        └─────────────┘          └─────────────┘                     │
+│  │              ┌─────────────────────┐                      │       │
+│  │              │   SQLite 适配器     │                      │       │
+│  │              │ (drizzle-orm/sqlite)│                      │       │
+│  │              └─────────┬───────────┘                      │       │
+│  └────────────────────────┼────────────────────────────────┘       │
+│                            │                                        │
+│                     ┌──────┴──────┐                                 │
+│                     │   SQLite    │                                 │
+│                     └─────────────┘                                 │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -486,8 +485,9 @@ export const config = {
     enabled: process.env.AUTH_ENABLED === 'true',
     providers: ['google'],  // 可扩展
   },
-  db: {
-    type: process.env.DB_TYPE as 'postgresql' | 'sqlite',
+  runtime: {
+    // true when running inside the Electron desktop shell
+    desktop: process.env.JADE_RUNTIME === 'desktop',
   },
   ai: {
     provider: process.env.AI_PROVIDER as 'openai' | 'anthropic',
@@ -983,7 +983,7 @@ export function LocaleSwitcher() {
 
 ### 5.1 数据库抽象架构
 
-所有数据库操作通过 **Drizzle ORM** 统一抽象层进行。Schema 在 `src/lib/db/schema.ts` **唯一定义**，所有适配器共享。
+所有数据库操作通过 **Drizzle ORM** 统一抽象层进行。Schema 在 `src/lib/db/schema.ts` **唯一定义**，由 SQLite 适配器使用。数据库只有 SQLite 一条路径——桌面客户端定位下不需要连接远端数据库，适配器接口仍然保留，是为未来可能的存储后端预留扩展点，而非当前有多种实现可选。
 
 ```
 ┌────────────────────────────────────────────────┐
@@ -993,20 +993,16 @@ export function LocaleSwitcher() {
 │  使用 Drizzle 的 Schema API                    │
 └──────────────────────┬─────────────────────────┘
                        │
-            ┌──────────┴──────────┐
-            ▼                     ▼
-┌─────────────────────┐ ┌─────────────────────┐
-│  PostgreSQL 适配器   │ │   SQLite 适配器     │
-│                      │ │                     │
-│  import { drizzle }  │ │  import { drizzle } │
-│  from 'drizzle-orm/  │ │  from 'drizzle-orm/ │
-│  node-postgres'      │ │  better-sqlite3'    │
-│                      │ │                     │
-│  连接方式:           │ │  连接方式:          │
-│  postgres://...      │ │  ./data/jade.db     │
-└──────────┬───────────┘ └──────────┬──────────┘
-           │                        │
-           └───────────┬────────────┘
+                       ▼
+┌────────────────────────────────────────────────┐
+│              SQLite 适配器                       │
+│                                                │
+│  import { drizzle } from 'drizzle-orm/          │
+│  better-sqlite3'                                │
+│                                                │
+│  连接方式: ./data/jade.db（SQLITE_PATH 可覆盖） │
+└──────────────────────┬─────────────────────────┘
+                       │
                        ▼
 ┌────────────────────────────────────────────────┐
 │           数据库适配器接口                       │
@@ -1038,18 +1034,14 @@ export function LocaleSwitcher() {
 // 本文件是数据库适配器的 **唯一** 实例化位置。
 // 所有其他模块统一从此处导入 `db`。
 
-import { config } from '@/lib/config';
-import { PostgreSQLAdapter } from './adapters/postgresql';
 import { SQLiteAdapter } from './adapters/sqlite';
 import type { DatabaseAdapter } from './adapter';
 
-let adapter: DatabaseAdapter;
+const adapter: DatabaseAdapter = new SQLiteAdapter(
+  process.env.SQLITE_PATH || './data/jade.db',
+);
 
-if (config.db.type === 'postgresql') {
-  adapter = new PostgreSQLAdapter(process.env.DATABASE_URL!);
-} else {
-  adapter = new SQLiteAdapter(process.env.SQLITE_PATH || './data/jade.db');
-}
+export const dbReady = adapter.initialize();
 
 export const db = adapter.db;
 export { adapter };
@@ -1388,81 +1380,77 @@ export { adapter };
 
 ### 5.4 Drizzle Schema 定义
 
-Schema 在 `src/lib/db/schema.ts` 中唯一定义，同时服务于 PostgreSQL 和 SQLite。
+Schema 在 `src/lib/db/schema.ts` 中唯一定义，只服务于 SQLite 一个适配器。
 
 ```typescript
-// 伪代码表示 Schema 定义
-
-// --- 枚举 ---
-authTypeEnum = pgEnum('auth_type', ['oauth', 'fingerprint'])
-messageRoleEnum = pgEnum('message_role', ['user', 'assistant', 'system'])
+// 伪代码表示 Schema 定义（字段类型经过简化，完整定义以 schema.ts 为准）
 
 // --- 表定义 ---
-users = pgTable('users', {
-  id:          uuid().primaryKey().defaultRandom(),
-  email:       varchar(255).unique(),
-  name:        varchar(255),
+users = sqliteTable('users', {
+  id:          text().primaryKey().$defaultFn(() => crypto.randomUUID()),
+  email:       text().unique(),
+  name:        text(),
   avatarUrl:   text(),
-  fingerprint: varchar(255).unique(),
-  authType:    authTypeEnum().notNull(),
-  createdAt:   timestamp().notNull().defaultNow(),
-  updatedAt:   timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+  fingerprint: text().unique(),
+  authType:    text({ enum: ['oauth', 'fingerprint', 'local'] }).notNull(),
+  createdAt:   integer({ mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updatedAt:   integer({ mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 })
 
-authAccounts = pgTable('auth_accounts', {
-  id:                uuid().primaryKey().defaultRandom(),
-  userId:            uuid().notNull().references(() => users.id),
-  provider:          varchar(50).notNull(),
-  providerAccountId: varchar(255).notNull(),
+authAccounts = sqliteTable('auth_accounts', {
+  id:                text().primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId:            text().notNull().references(() => users.id),
+  provider:          text().notNull(),
+  providerAccountId: text().notNull(),
   accessToken:       text(),
   refreshToken:      text(),
-  tokenType:         varchar(50),
-  expiresAt:         timestamp(),
+  tokenType:         text(),
+  expiresAt:         integer({ mode: 'timestamp' }),
   scope:             text(),
-  createdAt:         timestamp().notNull().defaultNow(),
+  createdAt:         integer({ mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 }, (table) => ({
   uniqueProvider: uniqueIndex().on(table.provider, table.providerAccountId),
 }))
 
-resumes = pgTable('resumes', {
-  id:          uuid().primaryKey().defaultRandom(),
-  userId:      uuid().notNull().references(() => users.id),
-  title:       varchar(255).notNull().default('未命名简历'),
-  template:    varchar(50).notNull().default('classic'),
-  themeConfig: jsonb().default({}),
-  isDefault:   boolean().notNull().default(false),
-  language:    varchar(10).notNull().default('zh'),
-  createdAt:   timestamp().notNull().defaultNow(),
-  updatedAt:   timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+resumes = sqliteTable('resumes', {
+  id:          text().primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId:      text().notNull().references(() => users.id),
+  title:       text().notNull().default('未命名简历'),
+  template:    text().notNull().default('classic'),
+  themeConfig: text({ mode: 'json' }).default('{}'),
+  isDefault:   integer({ mode: 'boolean' }).notNull().default(false),
+  language:    text().notNull().default('zh'),
+  createdAt:   integer({ mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updatedAt:   integer({ mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 })
 
-resumeSections = pgTable('resume_sections', {
-  id:        uuid().primaryKey().defaultRandom(),
-  resumeId:  uuid().notNull().references(() => resumes.id, { onDelete: 'cascade' }),
-  type:      varchar(50).notNull(),
-  title:     varchar(255).notNull(),
+resumeSections = sqliteTable('resume_sections', {
+  id:        text().primaryKey().$defaultFn(() => crypto.randomUUID()),
+  resumeId:  text().notNull().references(() => resumes.id, { onDelete: 'cascade' }),
+  type:      text().notNull(),
+  title:     text().notNull(),
   sortOrder: integer().notNull().default(0),
-  visible:   boolean().notNull().default(true),
-  content:   jsonb().notNull().default({}),
-  createdAt: timestamp().notNull().defaultNow(),
-  updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+  visible:   integer({ mode: 'boolean' }).notNull().default(true),
+  content:   text({ mode: 'json' }).notNull().default('{}'),
+  createdAt: integer({ mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer({ mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 })
 
-chatSessions = pgTable('chat_sessions', {
-  id:        uuid().primaryKey().defaultRandom(),
-  resumeId:  uuid().notNull().references(() => resumes.id, { onDelete: 'cascade' }),
-  title:     varchar(255).notNull().default('新对话'),
-  createdAt: timestamp().notNull().defaultNow(),
-  updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+chatSessions = sqliteTable('chat_sessions', {
+  id:        text().primaryKey().$defaultFn(() => crypto.randomUUID()),
+  resumeId:  text().notNull().references(() => resumes.id, { onDelete: 'cascade' }),
+  title:     text().notNull().default('新对话'),
+  createdAt: integer({ mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer({ mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 })
 
-chatMessages = pgTable('chat_messages', {
-  id:        uuid().primaryKey().defaultRandom(),
-  sessionId: uuid().notNull().references(() => chatSessions.id, { onDelete: 'cascade' }),
-  role:      messageRoleEnum().notNull(),
+chatMessages = sqliteTable('chat_messages', {
+  id:        text().primaryKey().$defaultFn(() => crypto.randomUUID()),
+  sessionId: text().notNull().references(() => chatSessions.id, { onDelete: 'cascade' }),
+  role:      text({ enum: ['user', 'assistant', 'system'] }).notNull(),
   content:   text().notNull(),
-  metadata:  jsonb().default({}),
-  createdAt: timestamp().notNull().defaultNow(),
+  metadata:  text({ mode: 'json' }).default('{}'),
+  createdAt: integer({ mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 })
 ```
 
@@ -1475,16 +1463,9 @@ chatMessages = pgTable('chat_messages', {
        │
        ▼
 ┌─────────────────────────┐
-│  读取环境变量 DB_TYPE    │
-│  ('postgresql'|'sqlite')│
+│  实例化 SQLite 适配器    │
+│  (SQLITE_PATH 可覆盖路径)│
 └────────────┬────────────┘
-             │
-    ┌────────┴────────┐
-    ▼                 ▼
-PostgreSQL         SQLite
-适配器              适配器
-    │                 │
-    └────────┬────────┘
              │
              ▼
 ┌─────────────────────────┐
@@ -1755,13 +1736,11 @@ GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # ===== 数据库 =====
-DB_TYPE=postgresql                       # 'postgresql' 或 'sqlite'
-
-# PostgreSQL（DB_TYPE=postgresql 时使用）
-DATABASE_URL=postgresql://user:password@localhost:5432/jadeai
-
-# SQLite（DB_TYPE=sqlite 时使用）
 SQLITE_PATH=./data/jade.db
+
+# ===== 运行时 =====
+JADE_RUNTIME=desktop                     # 设为 'desktop' 时切换到单本地用户模式：
+                                          # 跳过浏览器指纹与 NextAuth，数据库只有一个 id 为 'local' 的用户
 
 # ===== AI =====
 AI_PROVIDER=openai                       # 'openai' 或 'anthropic'
@@ -1788,7 +1767,7 @@ DEFAULT_LOCALE=zh            # 默认语言：'zh' 或 'en'
 | 迁移 | 代码优先，生成 SQL 迁移 | 自有迁移引擎 |
 | Edge Runtime | 支持 | 受限 |
 
-Drizzle 允许在 TypeScript 中一次定义 Schema，跨 PostgreSQL 和 SQLite 使用，适配器差异最小。
+Drizzle 允许在 TypeScript 中一次定义 Schema，并保留了未来切换到其它数据库适配器的可能性，同时对当前 SQLite-only 的桌面客户端定位保持轻量。
 
 ### 10.2 为什么选择 Zustand？
 

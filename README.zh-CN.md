@@ -177,7 +177,7 @@
 - **双语界面** — 完整的中文（zh）和英文（en）界面
 - **暗色模式** — 浅色、深色、跟随系统三种主题
 - **灵活认证** — Google OAuth 或浏览器指纹（零配置即用）
-- **双数据库** — SQLite（默认，零配置）或 PostgreSQL
+- **本地 SQLite 存储** — 零配置的文件型数据库
 
 ## 技术栈
 
@@ -187,7 +187,7 @@
 | UI | React 19, Tailwind CSS 4, shadcn/ui, Radix UI |
 | 拖拽 | @dnd-kit |
 | 状态管理 | Zustand |
-| 数据库 | Drizzle ORM (SQLite / PostgreSQL) |
+| 数据库 | Drizzle ORM (SQLite) |
 | 认证 | NextAuth.js v5 + FingerprintJS |
 | AI | Vercel AI SDK v6 + OpenAI / Anthropic |
 | PDF | Puppeteer Core + @sparticuz/chromium |
@@ -213,19 +213,6 @@ docker run -d -p 3000:3000 \
 > **`AUTH_SECRET`** 为必填项，用于会话加密。通过 `openssl rand -base64 32` 生成。
 
 > **AI 配置：** 无需服务端 AI 环境变量。每位用户在应用内的 **设置 > AI** 中自行配置 API Key、Base URL 和模型。
-
-<details>
-<summary>使用 PostgreSQL</summary>
-
-```bash
-docker run -d -p 3000:3000 \
-  -e AUTH_SECRET=<你生成的密钥> \
-  -e DB_TYPE=postgresql \
-  -e DATABASE_URL=postgresql://user:pass@host:5432/jadeai \
-  twwch/jadeai:latest
-```
-
-</details>
 
 <details>
 <summary>使用 Google OAuth 登录</summary>
@@ -264,16 +251,13 @@ cp .env.example .env.local
 编辑 `.env.local`：
 
 ```bash
-# 数据库（默认 SQLite，无需额外配置）
-DB_TYPE=sqlite
-
 # 认证（默认指纹模式，无需额外配置）
 AUTH_ENABLED=false
 ```
 
 > **AI 配置：** 无需服务端环境变量。每位用户在应用内的 **设置 > AI** 中自行配置 API Key、Base URL 和模型。
 
-查看 `.env.example` 了解所有可用选项（Google OAuth、PostgreSQL 等）。
+查看 `.env.example` 了解所有可用选项（Google OAuth、自定义 SQLite 路径等）。
 
 #### 初始化数据库并启动
 
@@ -296,10 +280,9 @@ pnpm dev
 | 变量 | 必填 | 默认值 | 说明 |
 |------|------|--------|------|
 | `AUTH_SECRET` | 是 | — | 会话加密密钥 |
-| `DB_TYPE` | 否 | `sqlite` | 数据库类型：`sqlite` 或 `postgresql` |
-| `DATABASE_URL` | PostgreSQL 时 | — | PostgreSQL 连接字符串 |
 | `SQLITE_PATH` | 否 | `./data/jade.db` | SQLite 数据库文件路径 |
 | `AUTH_ENABLED` | 否 | `false` | 启用 Google OAuth（`true`）或使用指纹模式（`false`） |
+| `JADE_RUNTIME` | 否 | — | 设为 `desktop` 时切换到单本地用户模式（跳过指纹与 NextAuth，数据库只有一个 id 为 `local` 的用户） |
 | `GOOGLE_CLIENT_ID` | OAuth 时 | — | Google OAuth 客户端 ID |
 | `GOOGLE_CLIENT_SECRET` | OAuth 时 | — | Google OAuth 客户端密钥 |
 | `APP_NAME` | 否 | `JadeAI` | 应用显示名称 |
@@ -314,8 +297,7 @@ pnpm dev
 | `pnpm start` | 启动生产服务器 |
 | `pnpm lint` | 运行 ESLint 检查 |
 | `pnpm type-check` | TypeScript 类型检查 |
-| `pnpm db:generate` | 生成 Drizzle 迁移文件（SQLite） |
-| `pnpm db:generate:pg` | 生成 Drizzle 迁移文件（PostgreSQL） |
+| `pnpm db:generate` | 生成 Drizzle 迁移文件 |
 | `pnpm db:migrate` | 执行数据库迁移 |
 | `pnpm db:studio` | 打开 Drizzle Studio（数据库 GUI） |
 | `pnpm db:seed` | 填充示例数据 |
@@ -459,13 +441,6 @@ JadeAI 内置 **50 套专业设计模板**，覆盖多种风格和行业需求�
 <summary><b>AI 配置是如何工作的？</b></summary>
 
 JadeAI 不需要在服务端配置 AI API 密钥。每位用户在应用内的 **设置 > AI** 中自行配置 AI 供应商（OpenAI、Anthropic 或自定义端点）、API Key 和模型。API 密钥仅存储在浏览器的 localStorage 中，不会发送到服务端存储。
-
-</details>
-
-<details>
-<summary><b>可以在 SQLite 和 PostgreSQL 之间切换吗？</b></summary>
-
-可以。通过 `DB_TYPE` 环境变量设置为 `sqlite` 或 `postgresql`。SQLite 是默认选项，零配置即可使用。使用 PostgreSQL 时需额外设置 `DATABASE_URL`。注意：数据不会在两种数据库之间自动迁移。
 
 </details>
 
