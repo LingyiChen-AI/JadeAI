@@ -1110,6 +1110,10 @@ export class SettingsStore {
 > **`sealed` 与 `whenIdle()` 都是补上来的，初版计划两个都没有。** 症状先从测试暴露：`patch()` 的 fire-and-forget 写入活得比用例长，`afterEach` 的 `rmSync` 删目录时它又创建了一个唯一名的 `.tmp`，于是间歇性 ENOTEMPTY（实测连跑 3 次挂 1 次）。
 >
 > 顺着同一个未受管理的生命周期查下去，生产路径上有个更实在的 bug：`patch(A)` → `patch(B)` → `flushSync()` 写入 B → 队列里的 write(A) 落盘把 B 覆盖回 A。用户调完窗口尺寸立刻退出，下次启动拿到的是倒数第二次的值。`sealed` 让 `flushSync()` 之后排队的旧快照直接丢弃。
+>
+> **钉住 `sealed` 的测试必须看调用次数，不能看最终内容。** 我最初写的是 `patch('older')` → `patch('newer')` → `flushSync()` → 断言磁盘上是 `'newer'`——这条**两边都绿**、毫无区分力：`writeChain` 是严格 FIFO，`write(older)` 先跑、`write(newer)` 后跑，而 `newer` 恰好与 `flushSync` 的 payload 相同，所以不管有没有 `sealed`，最后落盘的都是 `newer`。有区分力的写法是对 `writeFileDurable` 做 spy 断言"封印后不再被调用"，变异后会精确报 `expected "writeFileDurable" to not be called at all, but actually been called 2 times`。
+>
+> `sealed` 的能力边界也记一下：它是同步布尔量，只能拦住**尚未进入 `.then()` 回调**的排队写入，无法取消已经派发到 libuv 线程池、真正在飞的那次 I/O。这对唯一调用点是够的——Task 9 的 `will-quit` 里 `setWindowState()` 与 `flushSync()` 在同一个同步 tick 内相继调用，中间没有 await。
 
 - [ ] **Step 4: 运行测试确认通过**
 
