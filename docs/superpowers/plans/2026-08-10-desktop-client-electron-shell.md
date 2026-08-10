@@ -22,6 +22,22 @@ spec 原先写「子进程以 `PORT=0` 启动，通过 `process.send()` 把实�
 
 ---
 
+## 提交信息的写法（每个任务都会踩）
+
+本计划里的提交信息都是**多行中文、含括号与 `|` `^` 等字符**。用 `git commit -m "…"` 直接传会被 shell 解析截断（Task 1 的执行者实测踩到，信息被 eval 掉一段）。一律改用 heredoc：
+
+```bash
+git commit -F - <<'EOF'
+type(scope): 标题
+
+正文
+EOF
+```
+
+`<<'EOF'` 的单引号很关键——它关闭变量展开与命令替换。
+
+---
+
 ## 背景：这个仓库你需要先知道的几件事
 
 - 这是一个 Next.js 16 App Router 项目，`output: 'standalone'` 已在 `next.config.ts` 里配好。
