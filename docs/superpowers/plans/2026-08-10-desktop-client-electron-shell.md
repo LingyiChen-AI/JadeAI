@@ -1974,3 +1974,24 @@ git commit -m "docs(desktop): record phase 2 acceptance results"
 - **阶段五**：打包、自动更新、导入导出、Playwright(Electron) 冒烟
 
 阶段三与阶段四的计划**故意留到阶段二落地之后再写**：它们的 preload 契约形状和 `extraResources` 路径必须与阶段二实际产出的文件布局对齐，现在写只能写成猜测。
+
+## 验收执行记录（2026-08-10）
+
+| 检查项 | 结果 | 证据 |
+|---|---|---|
+| 自动化检查 | ✅ | `pnpm type-check` 无输出（clean）；`pnpm test` → 89 tests / 12 test files 全过 |
+| 冷启动 | ✅ | `build:electron` 产出 `out/main/index.js`(17.6kb) 与 `out/preload/index.js`(1.3kb)；`dev:desktop` 后 `pgrep` 同时看到 `Electron .` 主进程与 `.../next dev --turbopack -H 127.0.0.1 -p <port>` 子进程；日志以 `[next] ✓ Ready in 1357ms` 及 `GET /zh 200` 结束，无 `Cannot find module` |
+| 数据落在 userData | ✅ | `~/Library/Application Support/JadeAI-dev/` 下有 `jade.db`、`jade.db-wal`、`jade.db-shm`；`git status --short data/` 无输出 |
+| 单本地用户 + 示例简历 | ✅（有时序说明） | `sqlite3 ... "SELECT id, auth_type, fingerprint FROM users;"` → `local\|local\|`（空指纹）；`resumes` 计数 `1`。注意：`ensureLocalUser()` 是懒创建（挂在 `resolveUser()` 上，随第一次需要鉴权的请求触发），Electron 主进程冷启动只加载 `/${locale}` 落地页，不会自动访问 dashboard/resume 路由；本记录中的用户与示例简历行是在执行第 6 项（`curl /api/resume`）之后才出现的，属预期的懒加载设计，非缺陷 |
+| 只绑回环 | ✅ | `lsof` 显示 `Electron ... TCP 127.0.0.1:60053 (LISTEN)`，无 `*:` 或 `0.0.0.0:` 条目；`curl http://127.0.0.1:60053/api/health` → `200`；`curl http://192.168.2.22:60053/api/health`（局域网 IP）→ `000`（连接失败，非 200） |
+| 应用真的可用 | ✅ | `curl .../api/resume -H 'x-fingerprint: irrelevant-value'` 返回 JSON，`userId":"local"`，标题为示例简历，证明 fingerprint 头被忽略；`curl .../zh/dashboard` → `200` |
+| 窗口状态持久化 | ✅ | 全量退出（`kill -TERM` 主进程与 watcher）后 `jade-settings.json` 存在，内容含 `"locale":"zh"` 与 `"window":{"width":1280,"height":860,"x":116,"y":61,"maximized":false}`；重新 `pnpm dev:desktop` 后日志干净启动、无读取错误，正常到 `GET /zh 200` |
+| 启动失败进错误页 | ✅（部分间接证据） | 通过轮询立即 `kill -9` 刚 spawn 出的 `next dev` 子进程，日志同时出现 `[next] server exited unexpectedly (code=null signal=SIGKILL)` 与 `[startup] failed to bring up the Next server: Error: Next server did not become healthy within 30000ms`，且各只出现 1 次（无重复/循环）。因无 GUI/CDP 可用，未能直接截屏确认 `startup-error.html` 只被 `loadFile` 一次；`errorShownForGeneration` 的代际去重逻辑经代码走读确认存在（`electron/main/index.ts` 中 `showStartupError` 首行即 `if (errorShownForGeneration === generation) return;`），日志无异常重复与本设计一致 |
+| 退出后无孤儿进程 | ✅ | `pkill -f "build-electron\|Electron\|next dev"` 后 `pgrep -fl` 无匹配输出（排除无关的 Antigravity IDE 自身 Electron 进程） |
+| 裸 `next dev` 仍可用 | ✅ | `curl http://localhost:3000/zh` → `200`；`curl http://localhost:3000/api/health` → `200`；`pkill -f "next dev"` 后无残留 |
+
+偏差与遗留：
+- 第 4 项的执行顺序与文档字面顺序有出入：按文档顺序在第 6 项之前查询 `users`/`resumes` 表会是空的，因为本机用户是懒创建的（见上表说明），需先触发一次鉴权请求（如第 6 项的 `curl /api/resume`）才会出现。这是既有设计（`user.repository.ts` 中 `ensureLocalUser()` 的注释已言明），不是本次验收发现的缺陷，但建议后续把该依赖顺序在文档里显式标注，避免下次验收误判为失败。
+- 第 8 项用 `pkill -f "next dev"` 精确杀掉一次性子进程会有竞态：Next 在本机编译/就绪一般在 1.1～1.4s 内完成，如果杀进程的时机稍晚（如固定 `sleep 1`）会赶不上，导致服务已经健康、错误页路径不会触发。本次改用轮询立即 kill 规避了竞态,但这提示原计划里的固定 `sleep 1` 在更快的机器上可能不可靠。
+- 第 7 项发现一个环境噪音：单独 `pkill -f Electron`（不含 `build-electron`/`next dev`）只会杀死 GPU/utility/renderer 等 Helper 子进程（并触发 `close` 事件写出设置文件），主进程 `Electron .` 本身可能不应声退出，Helper 会被 Chromium 自动重新拉起；同时该模式还会误杀同机运行的其他 Electron 应用（本例中是 Antigravity IDE）的 crashpad 进程。本次改用 `kill -TERM <主进程PID> <watcher PID>` 达成真正的完全退出。这是本次验收操作层面的经验，不是被测代码的缺陷。
+- 冷启动与常规运行日志中持续出现 Chromium 磁盘缓存警告（`Failed to create directory: .../Shared Dictionary/cache`、`Unable to create cache`），不影响功能（后续请求均 200），判断为 Electron/Chromium 网络缓存在此 userData 目录下的已知无害噪音，非应用代码缺陷。
