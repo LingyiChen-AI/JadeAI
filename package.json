@@ -2,6 +2,7 @@
   "name": "jadeai",
   "version": "0.1.0",
   "private": true,
+  "main": "./out/main/index.js",
   "packageManager": "pnpm@10.29.2",
   "scripts": {
     "dev": "next dev --turbopack",
@@ -9,6 +10,8 @@
     "prebuild": "pnpm build:export-css",
     "build": "next build",
     "start": "next start",
+    "dev:desktop": "node scripts/build-electron.mjs --watch",
+    "build:desktop": "pnpm build && pnpm build:electron",
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -16,7 +19,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx src/lib/db/seed.ts"
+    "db:seed": "tsx src/lib/db/seed.ts",
+    "build:electron": "node scripts/build-electron.mjs"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -25,7 +29,8 @@
       "sharp",
       "unrs-resolver",
       "esbuild",
-      "@parcel/watcher"
+      "@parcel/watcher",
+      "electron"
     ]
   },
   "dependencies": {
@@ -45,6 +50,7 @@
     "clsx": "^2.1.1",
     "docx": "^9.0.0",
     "drizzle-orm": "^0.45.1",
+    "electron-updater": "^6.8.9",
     "jsonrepair": "^3.13.2",
     "lucide-react": "^0.563.0",
     "mupdf": "^1.27.0",
@@ -76,6 +82,9 @@
     "@types/uuid": "^11.0.0",
     "@vitejs/plugin-react": "^6.0.2",
     "drizzle-kit": "^0.31.9",
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "shadcn": "^3.8.4",
