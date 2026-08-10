@@ -68,4 +68,22 @@ describe('userRepository.ensureLocalUser', () => {
     const rows = await db.select().from(resumes).where(eq(resumes.userId, LOCAL_USER_ID));
     expect(rows).toHaveLength(1);
   });
+
+  // The sequential test above passes even when concurrent callers each seed a
+  // resume. First launch really does race: settings-store hydrates at module
+  // import while the dashboard effect fetches resumes, and both hit
+  // resolveUser() -> ensureLocalUser() before the row exists.
+  it('does not duplicate the starter resume when called concurrently', async () => {
+    await Promise.all([
+      userRepository.ensureLocalUser(),
+      userRepository.ensureLocalUser(),
+      userRepository.ensureLocalUser(),
+    ]);
+
+    const userRows = await db.select().from(users).where(eq(users.id, LOCAL_USER_ID));
+    expect(userRows).toHaveLength(1);
+
+    const resumeRows = await db.select().from(resumes).where(eq(resumes.userId, LOCAL_USER_ID));
+    expect(resumeRows).toHaveLength(1);
+  });
 });

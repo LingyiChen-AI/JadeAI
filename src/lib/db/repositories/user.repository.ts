@@ -61,22 +61,32 @@ export const userRepository = {
     if (existing) return existing;
 
     // onConflictDoNothing() guards against a concurrent insert racing us between
-    // the findById above and this insert. Nothing in this app writes concurrently
-    // today (better-sqlite3 is synchronous and the app is single-process), so the
-    // `throw` below is currently unreachable — this is forward-looking, for a
-    // future where multiple Electron processes could share the same SQLite file.
-    await db
+    // the findById above and this insert — e.g. settings-store's hydrate() and
+    // the dashboard's fetchResumes() both call resolveUser() -> ensureLocalUser()
+    // in parallel on first launch, before the row exists. `.returning()` tells us
+    // whether *this* call is the one that actually inserted the row: it comes
+    // back empty when a concurrent caller won the race. Only the inserting call
+    // should seed the starter resume below — otherwise every racing caller would
+    // seed its own, leaving the user with several duplicate sample resumes.
+    const inserted = await db
       .insert(users)
       .values({
         id: LOCAL_USER_ID,
         authType: 'local',
         name: LOCAL_USER_NAME,
       })
-      .onConflictDoNothing();
+      .onConflictDoNothing()
+      .returning({ id: users.id });
 
     const created = await this.findById(LOCAL_USER_ID);
     if (!created) {
       throw new Error(`Failed to create the local user (id=${LOCAL_USER_ID})`);
+    }
+
+    if (inserted.length === 0) {
+      // A concurrent caller won the race and inserted the row; that call (not
+      // this one) owns seeding, so just return what's already there.
+      return created;
     }
 
     // First run: give the user something to look at instead of an empty
