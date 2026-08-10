@@ -1045,6 +1045,9 @@ export function normalizeSettings(raw: unknown): JadeSettings {
 export class SettingsStore {
   private settings: JadeSettings;
   private writeChain: Promise<void> = Promise.resolve();
+  // flushSync() publishes the final state on the quit path. Any write still
+  // queued behind it carries an older snapshot and would roll that back.
+  private sealed = false;
 
   constructor(private readonly filePath: string) {
     this.settings = normalizeSettings(readJsonWithBackup<unknown>(filePath, undefined));
@@ -1059,7 +1062,10 @@ export class SettingsStore {
     this.settings = normalizeSettings({ ...this.settings, ...patch });
     const payload = JSON.stringify(this.settings, null, 2);
     this.writeChain = this.writeChain
-      .then(() => writeFileDurable(this.filePath, payload))
+      .then(() => {
+        if (this.sealed) return;
+        return writeFileDurable(this.filePath, payload);
+      })
       .catch((error) => {
         console.error('[settings] durable write failed:', error);
       });
@@ -1070,16 +1076,40 @@ export class SettingsStore {
     this.patch({ window });
   }
 
-  /** Flush synchronously on the quit path, where there is no time to await. */
+  /**
+   * Flush synchronously on the quit path and seal the store.
+   *
+   * Terminal by design: a write still queued behind this carries an older
+   * snapshot, and durable-file-write's last-rename-wins semantics mean it would
+   * roll this final state back. Sealing drops those queued writes instead.
+   * The only caller is the `will-quit` handler in Task 9.
+   */
   flushSync(): void {
+    this.sealed = true;
     try {
       writeFileDurableSync(this.filePath, JSON.stringify(this.settings, null, 2));
     } catch (error) {
       console.error('[settings] synchronous flush failed:', error);
     }
   }
+
+  /**
+   * Resolve once every queued write has settled.
+   *
+   * patch() is deliberately fire-and-forget so callers on the UI path never
+   * await disk. Tests and deterministic teardown need a way to join, though —
+   * without it a write outlives its test and races the fixture cleanup, which
+   * shows up as an intermittent ENOTEMPTY from rmSync.
+   */
+  async whenIdle(): Promise<void> {
+    await this.writeChain;
+  }
 }
 ```
+
+> **`sealed` 与 `whenIdle()` 都是补上来的，初版计划两个都没有。** 症状先从测试暴露：`patch()` 的 fire-and-forget 写入活得比用例长，`afterEach` 的 `rmSync` 删目录时它又创建了一个唯一名的 `.tmp`，于是间歇性 ENOTEMPTY（实测连跑 3 次挂 1 次）。
+>
+> 顺着同一个未受管理的生命周期查下去，生产路径上有个更实在的 bug：`patch(A)` → `patch(B)` → `flushSync()` 写入 B → 队列里的 write(A) 落盘把 B 覆盖回 A。用户调完窗口尺寸立刻退出，下次启动拿到的是倒数第二次的值。`sealed` 让 `flushSync()` 之后排队的旧快照直接丢弃。
 
 - [ ] **Step 4: 运行测试确认通过**
 
