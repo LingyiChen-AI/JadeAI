@@ -648,7 +648,7 @@ git commit -m "feat(desktop): capture userData once, isolate dev into JadeAI-dev
 
 ```ts
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readJsonWithBackup, writeFileDurable, writeFileDurableSync } from './durable-file-write';
@@ -688,6 +688,18 @@ describe('writeFileDurable', () => {
     await expect(writeFileDurable(target, '{"gen":2}')).rejects.toThrow();
     chmodSync(dir, 0o700);
     expect(readFileSync(target, 'utf-8')).toBe('{"gen":1}');
+    expect(existsSync(`${target}.tmp`)).toBe(false);
+  });
+
+  // Induces a failure AFTER the temp file exists — something the chmod fixture
+  // above cannot do, because it blocks creating the temp file at all. Without
+  // this case the catch block's temp-file cleanup is untested: deleting it
+  // changes nothing observable.
+  it('removes the temp file when the rename fails', async () => {
+    // A directory sitting at the target path makes rename() fail with EISDIR
+    // while the temp write itself succeeds.
+    mkdirSync(target);
+    await expect(writeFileDurable(target, '{"gen":2}')).rejects.toThrow();
     expect(existsSync(`${target}.tmp`)).toBe(false);
   });
 });
@@ -864,7 +876,15 @@ pnpm vitest run electron/main/durable-file-write.test.ts
 
 Expected: PASS，8 个用例全绿。
 
-若 “leaves the existing file intact” 这条失败并显示写入居然成功了，检查你是不是以 root 跑测试——root 会绕过目录权限位。
+若 “leaves the existing file intact” 这条失败并显示写入居然成功了，检查你是不是以 root 跑测试——root 会绕过目录权限位。用 `id -u` 确认（非 0 才对）。
+
+> **这个模块有一条不变式测不到，记录在此以免误判覆盖率。** 变异测试实测：删掉 `writeFileDurable` 里的 `await handle.sync()`（即去掉 fsync）后，**9 个用例全绿**。原因是 fsync 的作用只在断电时体现——测试进程正常退出时，页缓存里的数据照样能读回来。所以"fsync 必须在 rename 之前"这条只靠代码注释保护，没有任何测试会在它被删掉时变红。
+>
+> 承认这个缺口比假装覆盖更有用：否则后人看到全绿会以为 fsync 有保护，顺手删掉也不会有人发现，而故障只在真实断电时暴露一次、且极难归因。
+>
+> 另外记两条变异测试纠正的预测偏差：
+> - "leaves the existing file intact" 那条**不能**保护失败清理路径。`chmod 0o500` 阻止了临时文件的**创建**，所以 `open()` 在临时文件存在前就抛错，`rm()` 本就是空操作，`expect(existsSync(tmp)).toBe(false)` 是平凡通过。这正是上面新增 "removes the temp file when the rename fails" 那条的原因。
+> - "falls back to the .bak sidecar" 那条对 `backupExisting` 不敏感——它用 `writeFileSync` 直接写 `.bak` 作为夹具。这是**恰当的**：它测的是 `readJsonWithBackup` 的读取行为，本就不该依赖写入侧是否正确。`backupExisting` 由 "keeps the previous contents in a .bak sidecar" 覆盖。
 
 - [ ] **Step 5: Commit**
 
