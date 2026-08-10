@@ -24,7 +24,7 @@ orca 的客户端骨架里，与本项目直接相关的四条：
 3. **数据路径一次性捕获**：`initDataPath()` 在启动的确定时机捕获一次 `app.getPath('userData')`，之后所有子系统读这个捕获值——避免 `app.setName()` 之后路径解析漂移（在大小写敏感文件系统上会丢数据）。
 4. **打包纪律**：需要 `fork()` 的入口、原生模块、按路径读取的资源目录必须出 asar（`asarUnpack` / `extraResources`）；`npmRebuild: true` 按目标架构重编原生模块；`afterPack` 里跑校验脚本，让"能打包但跑不起来"在打包阶段就失败。
 
-orca 用 `node:sqlite` 而非 `better-sqlite3`（刻意避开原生编译）。本项目**不跟随**：JadeAI 的 Drizzle schema、迁移和全部 repositories 都写在 `drizzle-orm/better-sqlite3` 上，而 drizzle 0.45 没有 `node:sqlite` 驱动。改驱动的收益（免一次 `npmRebuild`）远小于重写数据访问层的代价。
+orca 用 `node:sqlite` 而非 `better-sqlite3`（刻意避开原生编译）。本项目**不跟随**：JadeAI 的 Drizzle schema、迁移和全部 repositories 都写在 `drizzle-orm/better-sqlite3` 上，而 drizzle 0.45 没有 `node:sqlite` 驱动。改驱动的收益远小于重写数据访问层的代价——而且自 `better-sqlite3` 13 起它也不再需要 `npmRebuild`（prebuildify 分发 N-API 产物），当初那条代价论据现在更站不住。
 
 ## 架构决策
 
@@ -197,7 +197,11 @@ key 仍只在渲染进程内存中持有，随请求头发给本地 Next 服务�
 
 `resources/splash.html` 与 `resources/startup-error.html` 也走 `extraResources`，且必须映射到**资源根**（`to: 'splash.html'`），不保留 `resources/` 前缀——主进程的 `resolveResourceFile()` 在打包态是 `join(process.resourcesPath, …)`，多一层前缀就找不到。
 
-**原生模块**：`better-sqlite3` 是唯一原生模块，`npmRebuild: true` 让 electron-builder 按目标架构重编。`mupdf` 是 wasm（`dist/mupdf-wasm.wasm`），无需重编，但必须确认 `.wasm` 进了产物。
+**原生模块**：`better-sqlite3` 是唯一原生模块，但 **13.x 起改用 prebuildify 分发 N-API 预编译产物**，`prebuilds/` 下已覆盖 darwin/linux/linuxmusl/win32 × arm64/x64 八个三元组。N-API 跨 ABI 稳定，所以**不需要 `npmRebuild`**——把它设为 `false`，让 electron-builder 直接带走现成的 `.node`。`mupdf` 是 wasm（`dist/mupdf-wasm.wasm`），同样无需重编，但必须确认 `.wasm` 进了产物。
+
+> **这条是阶段二 Task 9 实测撞出来的，初版设计写错了。** 原来钉的 `better-sqlite3@12.6.2` 在 Electron 里**根本加载不了**：它的产物编译于系统 Node（ABI 137），而 Electron 43.3.0 是 ABI 148。更糟的是针对 Electron 头文件重编会**编译失败**而不只是链接失败——`v8::External::New` 在 Electron 43 所带的 V8 里多了一个必需参数，12.6.2 的 C++ 源码早于这个 API 变更。也就是说 `npmRebuild: true` 这条打包方案在真实构建时必然崩。
+>
+> 升到 13.0.3 后同时在 Electron（ABI 148）与系统 Node（ABI 137）下加载成功，89 个测试不受影响，drizzle 的 peer 范围是 `>=7` 也不冲突。我们用到的 API 只有 `new Database`、`pragma`、`prepare().get()/.all()/.run()`、`close`，逐个实测通过。
 
 **targets**：mac dmg + zip（arm64 / x64）、win nsis、linux AppImage + deb。
 

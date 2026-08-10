@@ -45,7 +45,7 @@
     "@fingerprintjs/fingerprintjs": "^5.0.1",
     "@sparticuz/chromium-min": "^143.0.4",
     "ai": "^6.0.78",
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3": "^13.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "docx": "^9.0.0",
