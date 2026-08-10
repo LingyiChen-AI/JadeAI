@@ -16,6 +16,13 @@ export async function resolveUser(fingerprint?: string | null) {
   // Ensure DB tables exist before any query
   await dbReady;
 
+  // Desktop: one machine, one user. The x-fingerprint header that ~20 client
+  // call sites still send is deliberately ignored here rather than removed
+  // from each of them.
+  if (config.runtime.desktop) {
+    return userRepository.ensureLocalUser();
+  }
+
   if (config.auth.enabled) {
     const session = await auth();
     if (!session?.user?.id) return null;
