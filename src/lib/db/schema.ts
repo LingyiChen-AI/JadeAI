@@ -7,7 +7,7 @@ export const users = sqliteTable('users', {
   name: text('name'),
   avatarUrl: text('avatar_url'),
   fingerprint: text('fingerprint').unique(),
-  authType: text('auth_type', { enum: ['oauth', 'fingerprint'] }).notNull(),
+  authType: text('auth_type', { enum: ['oauth', 'fingerprint', 'local'] }).notNull(),
   settings: text('settings', { mode: 'json' }).default('{}'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),

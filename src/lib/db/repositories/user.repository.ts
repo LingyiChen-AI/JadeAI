@@ -46,7 +46,7 @@ export const userRepository = {
     return this.findById(id);
   },
 
-  async create(data: { id?: string; email?: string; name?: string; avatarUrl?: string; authType: 'oauth' | 'fingerprint'; fingerprint?: string }) {
+  async create(data: { id?: string; email?: string; name?: string; avatarUrl?: string; authType: 'oauth' | 'fingerprint' | 'local'; fingerprint?: string }) {
     const id = data.id || crypto.randomUUID();
     await db.insert(users).values({ ...data, id });
     return this.findById(id);
