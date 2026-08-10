@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // `src/lib/db/index.ts` opens a real SQLite file at import time, so every test
 // that touches a repository must replace it. The factory is async so it can
@@ -28,6 +28,19 @@ vi.mock('../index', async () => {
 // `./user.repository` (which does `import { db } from '../index'`) resolves.
 const { userRepository } = await import('./user.repository');
 const { LOCAL_USER_ID } = await import('../../auth/local-user');
+const { db } = await import('../index');
+const { users, resumes } = await import('../schema');
+const { eq } = await import('drizzle-orm');
+
+// The mocked db above is a module-level singleton: the factory only runs once
+// per file, so all `it` blocks share the same temp SQLite file. Without this
+// reset, only the first test to run would ever see an empty `users` table —
+// every later test would find the local user already present and silently
+// take the early-return branch instead of the one its name describes.
+beforeEach(async () => {
+  await db.delete(resumes);
+  await db.delete(users);
+});
 
 describe('userRepository.ensureLocalUser', () => {
   it('creates the local user on first call', async () => {
@@ -36,19 +49,23 @@ describe('userRepository.ensureLocalUser', () => {
     expect(user.authType).toBe('local');
   });
 
-  it('is idempotent — a second call returns the same row, not a duplicate', async () => {
+  it('is idempotent — a second call reuses the row instead of inserting again', async () => {
     const first = await userRepository.ensureLocalUser();
     const second = await userRepository.ensureLocalUser();
     expect(second.id).toBe(first.id);
     expect(second.createdAt).toEqual(first.createdAt);
+
+    const rows = await db.select().from(users).where(eq(users.id, LOCAL_USER_ID));
+    expect(rows).toHaveLength(1);
   });
 
-  it('gives the freshly created local user a starter resume', async () => {
+  it('gives the local user exactly one starter resume, even across repeated calls', async () => {
     await userRepository.ensureLocalUser();
-    const { db } = await import('../index');
-    const { resumes } = await import('../schema');
-    const { eq } = await import('drizzle-orm');
+    // Mimics resolveUser() calling this on every request in desktop mode —
+    // a later call must not reseed a second sample resume.
+    await userRepository.ensureLocalUser();
+
     const rows = await db.select().from(resumes).where(eq(resumes.userId, LOCAL_USER_ID));
-    expect(rows.length).toBeGreaterThan(0);
+    expect(rows).toHaveLength(1);
   });
 });

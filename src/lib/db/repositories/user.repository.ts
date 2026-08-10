@@ -60,6 +60,11 @@ export const userRepository = {
     const existing = await this.findById(LOCAL_USER_ID);
     if (existing) return existing;
 
+    // onConflictDoNothing() guards against a concurrent insert racing us between
+    // the findById above and this insert. Nothing in this app writes concurrently
+    // today (better-sqlite3 is synchronous and the app is single-process), so the
+    // `throw` below is currently unreachable — this is forward-looking, for a
+    // future where multiple Electron processes could share the same SQLite file.
     await db
       .insert(users)
       .values({
@@ -74,8 +79,16 @@ export const userRepository = {
       throw new Error(`Failed to create the local user (id=${LOCAL_USER_ID})`);
     }
 
-    // First run: give the user something to look at instead of an empty dashboard.
-    await createSampleResume(LOCAL_USER_ID);
+    // First run: give the user something to look at instead of an empty
+    // dashboard. Deliberately non-fatal — resolveUser() calls this on every
+    // desktop request, and an empty dashboard is cosmetic where a failed
+    // request is not. Note the user row is already committed at this point,
+    // so a failure here leaves a usable (if empty) account.
+    try {
+      await createSampleResume(LOCAL_USER_ID);
+    } catch (e) {
+      console.error('[db] failed to create the starter resume for the local user:', e);
+    }
 
     return created;
   },
