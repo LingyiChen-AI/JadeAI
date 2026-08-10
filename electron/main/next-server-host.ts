@@ -138,13 +138,19 @@ export class NextServerHost {
   }
 
   async start(options: StartOptions): Promise<RunningNextServer> {
+    // A previous attempt may still be alive: the retry button fires while the
+    // old child is dying, and on macOS `activate` re-enters after
+    // window-all-closed without quitting. Reap it before spawning, or its
+    // reference is overwritten and it survives as an orphan past quit.
+    this.killOwnedChild();
+
     const port = await this.deps.allocateLoopbackPort();
     const command = resolveNextServerCommand(options.mode, options.paths, port);
 
-    this.stopping = false;
+    this.stopping = false; // must come after killOwnedChild(), which sets it true
     // ELECTRON_RUN_AS_NODE makes Electron's bundled Node run the script as a
     // plain Node process — no Chromium, no Electron APIs in the child.
-    this.child = this.deps.spawn(process.execPath, command.args, {
+    const child = this.deps.spawn(process.execPath, command.args, {
       cwd: command.cwd,
       env: {
         ...process.env,
@@ -158,14 +164,21 @@ export class NextServerHost {
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+    this.child = child;
 
-    this.child.stdout?.on('data', (chunk: Buffer) => {
+    child.stdout?.on('data', (chunk: Buffer) => {
       process.stdout.write(`[next] ${chunk.toString()}`);
     });
-    this.child.stderr?.on('data', (chunk: Buffer) => {
+    child.stderr?.on('data', (chunk: Buffer) => {
       process.stderr.write(`[next] ${chunk.toString()}`);
     });
-    this.child.on('exit', (code, signal) => {
+    child.on('exit', (code, signal) => {
+      // Only act if this child is still the owned one. stop() kills
+      // asynchronously, so a superseded attempt's exit routinely arrives after
+      // a newer start() has already taken over this.child — without the guard
+      // it nulls the *live* child's reference, turning every later stop() into
+      // a no-op and leaving a Next server running past app quit.
+      if (this.child !== child) return;
       this.child = null;
       if (!this.stopping) {
         options.onUnexpectedExit(code, signal);
@@ -196,12 +209,13 @@ export class NextServerHost {
   }
 
   private killOwnedChild(): void {
+    const child = this.child;
+    if (!child) return;
     // Mark as an intentional stop first so the 'exit' handler above does not
     // report this self-inflicted kill as an unexpected exit.
     this.stopping = true;
-    const child = this.child;
     this.child = null;
-    if (!child || child.exitCode !== null) return;
+    if (child.exitCode !== null) return;
     child.kill('SIGTERM');
   }
 

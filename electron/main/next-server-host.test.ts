@@ -161,3 +161,65 @@ describe('NextServerHost start() failure cleanup', () => {
     expect(fakeChild.kill).not.toHaveBeenCalled();
   });
 });
+
+describe('NextServerHost stale exit handling across retries', () => {
+  const makeOptions = (onUnexpectedExit: (code: number | null, signal: NodeJS.Signals | null) => void) => ({
+    mode: 'production' as const,
+    paths: { appRoot: '/repo', assetRoot: '/Resources' },
+    databaseFile: '/data/app.sqlite',
+    migrationsDir: '/Resources/drizzle/migrations',
+    onUnexpectedExit,
+  });
+
+  // Reproduces the cross-start() race: stop() kills the child asynchronously
+  // (SIGTERM delivery + process teardown take real wall-clock time), so a
+  // retried start() routinely installs a new child *before* the old child's
+  // 'exit' event arrives. Without an identity check in the 'exit' handler,
+  // that stale event nulls out the reference to the *live* new child —
+  // silently turning every later stop() into a no-op and leaving the live
+  // Next server running past app quit (an orphan).
+  it('does not let a stale exit from a superseded child clear the live child, so stop() still kills it', async () => {
+    const child1 = makeFakeChild();
+    const child2 = makeFakeChild();
+    const spawnImpl = vi.fn().mockReturnValueOnce(child1).mockReturnValueOnce(child2);
+    const waitForHealthyImpl = vi.fn().mockResolvedValue(undefined);
+    const allocateLoopbackPortImpl = vi
+      .fn()
+      .mockResolvedValueOnce(41001)
+      .mockResolvedValueOnce(41002);
+    const onUnexpectedExit = vi.fn();
+
+    const host = new NextServerHost({
+      spawn: spawnImpl as never,
+      waitForHealthy: waitForHealthyImpl,
+      allocateLoopbackPort: allocateLoopbackPortImpl,
+    });
+
+    await host.start(makeOptions(onUnexpectedExit));
+
+    // Retry: stop() fires kill() on child1, but — matching the real
+    // ChildProcess contract — the 'exit' event has not landed yet.
+    host.stop();
+    expect(child1.kill).toHaveBeenCalledWith('SIGTERM');
+
+    // A second start() happens before that stale exit arrives (this is
+    // exactly what the retry button, and macOS `activate`, do).
+    await host.start(makeOptions(onUnexpectedExit));
+    expect(spawnImpl).toHaveBeenCalledTimes(2);
+
+    // Now child1's exit finally lands, after this.child already points at
+    // child2.
+    child1.exitCode = 0;
+    child1.emit('exit', 0, 'SIGTERM');
+
+    // A superseded attempt dying is not "the current server exited
+    // unexpectedly" — it must not surface as such.
+    expect(onUnexpectedExit).not.toHaveBeenCalled();
+
+    // Quit-time stop() must still kill the live (child2) process, not no-op
+    // because a stale event already cleared the reference.
+    child2.kill.mockClear();
+    host.stop();
+    expect(child2.kill).toHaveBeenCalledWith('SIGTERM');
+  });
+});
