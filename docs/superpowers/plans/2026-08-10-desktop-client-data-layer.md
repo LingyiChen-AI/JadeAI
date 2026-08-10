@@ -292,7 +292,7 @@ export class SQLiteAdapter implements DatabaseAdapter {
 
 - [ ] **Step 6: 验证迁移仍然正常跑**
 
-先建一个一次性的初始化脚本 `/tmp/jade-init.ts`：
+在仓库根创建一次性脚本 `./jade-init.tmp.ts`（必须在仓库内，否则相对 import 解析不到）：
 
 ```ts
 import { dbReady } from './src/lib/db/index.ts';
@@ -302,14 +302,13 @@ console.log('db initialised');
 
 ```bash
 rm -rf /tmp/jade-migrate-check
-cp /tmp/jade-init.ts ./jade-init.tmp.ts
 SQLITE_PATH=/tmp/jade-migrate-check/jade.db pnpm tsx ./jade-init.tmp.ts
 sqlite3 /tmp/jade-migrate-check/jade.db "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
 ```
 
 Expected: `db initialised`，且表清单包含 `users`、`resumes`、`resume_sections`。若报 `no such table` 或迁移目录找不到，说明 Step 5 接错了。
 
-（脚本必须放在仓库内才能解析相对 import，所以先 `cp` 进来；Step 8 之前记得 `rm ./jade-init.tmp.ts`。）
+Step 8 会删掉这个临时脚本，**不要提交它**。
 
 - [ ] **Step 7: 验证迁移目录找不到时会抛出（而不是静默）**
 
@@ -812,8 +811,6 @@ Expected: 输出 `demo-fingerprint`。
 
 ```bash
 rm -f ./jade-seed-check.tmp.ts
-
-```bash
 git add src/lib/db/adapters/sqlite.ts
 git commit -m "feat(db): skip demo seed in desktop mode
 
