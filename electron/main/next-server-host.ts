@@ -1,0 +1,212 @@
+import { spawn as spawnProcess, type ChildProcess } from 'node:child_process';
+import { createServer } from 'node:net';
+import { join } from 'node:path';
+
+export type ServerMode = 'development' | 'production';
+
+export interface ServerPaths {
+  appRoot: string;
+  assetRoot: string;
+}
+
+export interface NextServerCommand {
+  args: string[];
+  cwd: string;
+}
+
+/**
+ * Reserve a free loopback port by binding to 0 and immediately releasing it.
+ *
+ * Next needs PORT handed to it up front: neither `next dev` nor the standalone
+ * server reports back which port it chose. There is a TOCTOU window between
+ * release and the child's bind; on single-instance loopback that is acceptable,
+ * and a lost race surfaces as the readiness timeout rather than silent breakage.
+ */
+export async function allocateLoopbackPort(): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    const server = createServer();
+    server.unref();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (address === null || typeof address === 'string') {
+        server.close(() => reject(new Error('Failed to allocate a loopback port')));
+        return;
+      }
+      const { port } = address;
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+export function resolveNextServerCommand(
+  mode: ServerMode,
+  paths: ServerPaths,
+  port: number,
+): NextServerCommand {
+  if (mode === 'development') {
+    return {
+      args: [
+        join(paths.appRoot, 'node_modules', 'next', 'dist', 'bin', 'next'),
+        'dev',
+        '--turbopack',
+        '-H',
+        '127.0.0.1',
+        '-p',
+        String(port),
+      ],
+      cwd: paths.appRoot,
+    };
+  }
+  const standaloneDir = join(paths.assetRoot, 'standalone');
+  return { args: [join(standaloneDir, 'server.js')], cwd: standaloneDir };
+}
+
+export interface HealthDeps {
+  fetch: typeof fetch;
+  sleep: (ms: number) => Promise<void>;
+  now: () => number;
+}
+
+export interface HealthOptions {
+  timeoutMs: number;
+  intervalMs: number;
+}
+
+export async function waitForHealthy(
+  url: string,
+  deps: HealthDeps,
+  options: HealthOptions,
+): Promise<void> {
+  const deadline = deps.now() + options.timeoutMs;
+  for (;;) {
+    try {
+      const response = await deps.fetch(url);
+      if (response.ok) return;
+    } catch {
+      // Connection refused while the server is still booting — keep polling.
+    }
+    if (deps.now() >= deadline) {
+      throw new Error(`Next server did not become healthy within ${options.timeoutMs}ms`);
+    }
+    await deps.sleep(options.intervalMs);
+  }
+}
+
+export interface StartOptions {
+  mode: ServerMode;
+  paths: ServerPaths;
+  databaseFile: string;
+  migrationsDir: string;
+  /** Called if the child exits before stop() was requested. */
+  onUnexpectedExit: (code: number | null, signal: NodeJS.Signals | null) => void;
+}
+
+export interface RunningNextServer {
+  port: number;
+  origin: string;
+}
+
+const READINESS_TIMEOUT_MS = 30_000;
+const READINESS_INTERVAL_MS = 250;
+
+/**
+ * Collaborators `NextServerHost` calls out to, injectable purely so
+ * `start()`'s failure-cleanup path (see the class doc comment) can be
+ * exercised without spawning a real Next process or waiting out a real
+ * timeout. Production code always uses the defaults.
+ */
+export interface NextServerHostDeps {
+  spawn: typeof spawnProcess;
+  waitForHealthy: typeof waitForHealthy;
+  allocateLoopbackPort: typeof allocateLoopbackPort;
+}
+
+const defaultDeps: NextServerHostDeps = {
+  spawn: spawnProcess,
+  waitForHealthy,
+  allocateLoopbackPort,
+};
+
+export class NextServerHost {
+  private readonly deps: NextServerHostDeps;
+  private child: ChildProcess | null = null;
+  private stopping = false;
+
+  constructor(deps: Partial<NextServerHostDeps> = {}) {
+    this.deps = { ...defaultDeps, ...deps };
+  }
+
+  async start(options: StartOptions): Promise<RunningNextServer> {
+    const port = await this.deps.allocateLoopbackPort();
+    const command = resolveNextServerCommand(options.mode, options.paths, port);
+
+    this.stopping = false;
+    // ELECTRON_RUN_AS_NODE makes Electron's bundled Node run the script as a
+    // plain Node process — no Chromium, no Electron APIs in the child.
+    this.child = this.deps.spawn(process.execPath, command.args, {
+      cwd: command.cwd,
+      env: {
+        ...process.env,
+        ELECTRON_RUN_AS_NODE: '1',
+        NODE_ENV: options.mode,
+        JADE_RUNTIME: 'desktop',
+        SQLITE_PATH: options.databaseFile,
+        JADE_MIGRATIONS_DIR: options.migrationsDir,
+        PORT: String(port),
+        HOSTNAME: '127.0.0.1',
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    this.child.stdout?.on('data', (chunk: Buffer) => {
+      process.stdout.write(`[next] ${chunk.toString()}`);
+    });
+    this.child.stderr?.on('data', (chunk: Buffer) => {
+      process.stderr.write(`[next] ${chunk.toString()}`);
+    });
+    this.child.on('exit', (code, signal) => {
+      this.child = null;
+      if (!this.stopping) {
+        options.onUnexpectedExit(code, signal);
+      }
+    });
+
+    const origin = `http://127.0.0.1:${port}`;
+    try {
+      await this.deps.waitForHealthy(
+        `${origin}/api/health`,
+        {
+          fetch,
+          sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+          now: () => Date.now(),
+        },
+        { timeoutMs: READINESS_TIMEOUT_MS, intervalMs: READINESS_INTERVAL_MS },
+      );
+    } catch (error) {
+      // The child spawned but never became healthy. Without this, `this.child`
+      // keeps pointing at a live, orphaned process: a caller that retries
+      // start() (rather than calling stop() first) would overwrite the
+      // reference and leak it forever, still holding its port.
+      this.killOwnedChild();
+      throw error;
+    }
+
+    return { port, origin };
+  }
+
+  private killOwnedChild(): void {
+    // Mark as an intentional stop first so the 'exit' handler above does not
+    // report this self-inflicted kill as an unexpected exit.
+    this.stopping = true;
+    const child = this.child;
+    this.child = null;
+    if (!child || child.exitCode !== null) return;
+    child.kill('SIGTERM');
+  }
+
+  /** Kill the child. Called on quit so no orphan keeps holding the port. */
+  stop(): void {
+    this.killOwnedChild();
+  }
+}
