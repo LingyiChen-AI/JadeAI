@@ -460,7 +460,7 @@ sqlite-core 的 enum 只是 TS 层联合类型，不生成 CHECK 约束，所以
 创建 `src/lib/db/repositories/user.repository.local-user.test.ts`：
 
 ```ts
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // `src/lib/db/index.ts` opens a real SQLite file at import time, so every test
 // that touches a repository must replace it. The factory is async so it can
@@ -485,6 +485,20 @@ vi.mock('../index', async () => {
 
 const { userRepository } = await import('./user.repository');
 const { LOCAL_USER_ID } = await import('../../auth/local-user');
+const { db } = await import('../index');
+const { users, resumes } = await import('../schema');
+const { eq } = await import('drizzle-orm');
+
+// The mocked db above is a module-level singleton: the factory only runs once
+// per file, so all `it` blocks share the same temp SQLite file. Without this
+// reset, only the first test to run would ever see an empty `users` table —
+// every later test would find the local user already present and silently take
+// the early-return branch instead of the one its name describes.
+// Delete order matters: resumes (child) before users (parent), FK direction.
+beforeEach(async () => {
+  await db.delete(resumes);
+  await db.delete(users);
+});
 
 describe('userRepository.ensureLocalUser', () => {
   it('creates the local user on first call', async () => {
@@ -493,23 +507,29 @@ describe('userRepository.ensureLocalUser', () => {
     expect(user.authType).toBe('local');
   });
 
-  it('is idempotent — a second call returns the same row, not a duplicate', async () => {
+  it('is idempotent — a second call reuses the row instead of inserting again', async () => {
     const first = await userRepository.ensureLocalUser();
     const second = await userRepository.ensureLocalUser();
     expect(second.id).toBe(first.id);
     expect(second.createdAt).toEqual(first.createdAt);
+
+    const rows = await db.select().from(users).where(eq(users.id, LOCAL_USER_ID));
+    expect(rows).toHaveLength(1);
   });
 
-  it('gives the freshly created local user a starter resume', async () => {
+  it('gives the local user exactly one starter resume, even across repeated calls', async () => {
     await userRepository.ensureLocalUser();
-    const { db } = await import('../index');
-    const { resumes } = await import('../schema');
-    const { eq } = await import('drizzle-orm');
+    // Mimics resolveUser() calling this on every request in desktop mode —
+    // a later call must not reseed a second sample resume.
+    await userRepository.ensureLocalUser();
+
     const rows = await db.select().from(resumes).where(eq(resumes.userId, LOCAL_USER_ID));
-    expect(rows.length).toBeGreaterThan(0);
+    expect(rows).toHaveLength(1);
   });
 });
 ```
+
+> **为什么每个用例都要重置表。** 初版这三个用例共享同一个累积状态的库，结果用例 2、3 都只走到提前返回分支——用例 3 里 `ensureLocalUser()` 根本没调用 `createSampleResume`，它能通过只是靠用例 1 留下的行。代码质量审查用变异测试证实了这个盲区：把 `createSampleResume` 挪到提前返回分支之后（即每次调用都种一份简历，正是 `resolveUser()` 每请求调用后最危险的回归），三个用例**全绿**。改成上面这版后同一个变异会让用例 3 变红（`expected length 1 but got 2`）。
 
 - [ ] **Step 2: 运行测试确认失败**
 
@@ -557,12 +577,22 @@ import { LOCAL_USER_ID, LOCAL_USER_NAME } from '../../auth/local-user';
       throw new Error(`Failed to create the local user (id=${LOCAL_USER_ID})`);
     }
 
-    // First run: give the user something to look at instead of an empty dashboard.
-    await createSampleResume(LOCAL_USER_ID);
+    // First run: give the user something to look at instead of an empty
+    // dashboard. Deliberately non-fatal — resolveUser() calls this on every
+    // desktop request, and an empty dashboard is cosmetic where a failed
+    // request is not. The user row is already committed at this point, so a
+    // failure here still leaves a usable (if empty) account.
+    try {
+      await createSampleResume(LOCAL_USER_ID);
+    } catch (e) {
+      console.error('[db] failed to create the starter resume for the local user:', e);
+    }
 
     return created;
   },
 ```
+
+> **为什么这里包 try/catch，而 Task 2 的 `migrate()` 不包。** 缺表是灾难性的、必须响亮失败；缺一份示例简历只是仪表盘空着，是外观问题。而 `ensureLocalUser()` 在 desktop 下位于**每个请求**的路径上——让它因为示例数据失败而整体抛出，等于一次数据问题就让 33 个 API 路由全挂。更糟的是用户行此时已经提交，之后每次请求都走提前返回分支、再也不会重试建简历，于是用户永久停在零简历状态却还收到 500。
 
 `createSampleResume` 已经在这个文件顶部 import 过了（`upsertByFingerprint` 在用），不需要新增。
 
