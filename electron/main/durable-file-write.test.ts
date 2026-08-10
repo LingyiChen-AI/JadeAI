@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readJsonWithBackup, writeFileDurable, writeFileDurableSync } from './durable-file-write';
@@ -39,6 +47,18 @@ describe('writeFileDurable', () => {
     await expect(writeFileDurable(target, '{"gen":2}')).rejects.toThrow();
     chmodSync(dir, 0o700);
     expect(readFileSync(target, 'utf-8')).toBe('{"gen":1}');
+    expect(existsSync(`${target}.tmp`)).toBe(false);
+  });
+
+  // Induces a failure AFTER the temp file exists — something the chmod fixture
+  // above cannot do, because it blocks creating the temp file at all. Without
+  // this case the catch block's temp-file cleanup is untested: deleting it
+  // changes nothing observable.
+  it('removes the temp file when the rename fails', async () => {
+    // A directory sitting at the target path makes rename() fail with EISDIR
+    // while the temp write itself succeeds.
+    mkdirSync(target);
+    await expect(writeFileDurable(target, '{"gen":2}')).rejects.toThrow();
     expect(existsSync(`${target}.tmp`)).toBe(false);
   });
 });
