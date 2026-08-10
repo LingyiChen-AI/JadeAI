@@ -638,6 +638,14 @@ git commit -m "feat(desktop): capture userData once, isolate dev into JadeAI-dev
 
 `jade-settings.json` 每次窗口移动都可能重写。断电或崩溃时，普通的 `writeFileSync` 会留下截断或空文件。抄 orca 的 `durable-file-write.ts`：写临时文件 → fsync → rename → fsync 目录，外加一份 `.bak`。
 
+> **临时文件名必须唯一，这一点初版计划抄漏了。** orca 的 `durableWriteTempPath()` 是带唯一后缀的，而初版计划里简化成了固定的 `${finalPath}.tmp`。质量审查实测复现了后果：两个重叠写入（典型场景是退出时的 `flushSync` 撞上一个进行中的窗口移动保存——sync 变体的存在理由就是这个）在没有 `O_EXCL` 的情况下会 `open()` 到**同一个 inode**，慢的那个把字节写进快的那个已经 rename 走的文件里。`finalPath` 于是被一个从未走过自己原子 rename、且 promise 已 reject 的写入就地改写——正是本模块要防止的撕裂。
+>
+> 用 `${finalPath}.${process.pid}.${randomUUID()}.tmp`。这样最坏情况降级为普通的"最后 rename 者胜"丢更新：`finalPath` 永远是某一次写入的完整内容。**不要**额外加 per-path promise 队列——`writeFileDurableSync` 是同步的、无法 await 进行中的 async 写，队列解决不了这个竞态；而 last-writer-wins 对 `SettingsStore` 是正确语义（它自己串行化 async 写，退出时 `flushSync` 写最新内存状态）。
+>
+> `.bak` 路径仍用固定的 `${finalPath}.bak`——备份必须单一且可读回，只有临时文件需要唯一。
+>
+> **照抄成熟实现时的一条通用教训。** orca 的 `durableWriteTempPath()` 本来就是 `${finalPath}.${process.pid}.${Date.now()}.${random}.tmp`；那串后缀看起来像过度设计，我"简化"掉了，于是把一个承重属性当装饰扔了。后续阶段还要继续借鉴 orca（阶段三的 safeStorage、阶段五的打包纪律），原则是：**看不出用途的复杂度先假定它是承重的**，要么照抄、要么先查清它为什么存在再决定简化。orca 那串后缀里 `pid` 防跨进程、`Date.now()+random` 防同进程并发——三段各有分工。
+
 **Files:**
 - Create: `electron/main/durable-file-write.ts`
 - Create: `electron/main/durable-file-write.test.ts`
