@@ -64,7 +64,9 @@ Electron 主进程 (electron/main/index.ts)
 
 **为什么 fork 而不是在 main 里 require Next 服务**：Next 服务会替换全局 `fetch`/`Request`、装 AsyncLocalStorage、做大量 require。跑在 Electron 主进程里会污染主进程，并让两者的崩溃互相牵连。orca 的 `daemon-entry.js` 用 `fork()` 是同一个理由，也正是它必须进 `asarUnpack` 的原因。
 
-**端口**：子进程以 `PORT=0` 启动，监听 `127.0.0.1` 让 OS 分配端口，再通过 `process.send()` 把实际端口回传 main。不写死端口，不做端口扫描重试。
+**端口**：主进程先预分配一个 loopback 空闲端口（`net.createServer().listen(0, '127.0.0.1')` 拿到端口号后立刻 close），把 `PORT=<port>` 显式传给子进程，再轮询 `/api/health` 判断就绪。不写死端口。
+
+> 初版设计写的是「子进程以 `PORT=0` 启动，通过 `process.send()` 回传实际端口」。那条不成立：Next 的 standalone `server.js` 和 `next dev` 都不会调用 `process.send`——orca 能那么做是因为它 fork 的是自己写的 `daemon-entry.js`，且它靠**解析 stdout** 拿状态。预分配的方案让 dev 与生产走完全相同的代码路径，也不需要解析 stdout。分配与子进程实际 bind 之间理论上有 TOCTOU 窗口，对本机回环上的单实例桌面应用可以忽略，且抢占失败会被就绪轮询的超时捕获、进入错误页。
 
 **只绑 127.0.0.1**，不绑 `0.0.0.0`：这是一个本机私有服务，没有任何认证，绝不能对局域网可见。
 
@@ -188,6 +190,8 @@ key 仍只在渲染进程内存中持有，随请求头发给本地 Next 服务�
 构建管线：`next build`（standalone） → `electron-vite build`（main + preload） → `electron-builder`。
 
 **资源布局**：`.next/standalone`、`.next/static`、`public`、`drizzle/migrations` 走 `extraResources`——Next 服务需要 fork 出来跑并按路径读取这些文件，进了 asar 就读不到。
+
+`resources/splash.html` 与 `resources/startup-error.html` 也走 `extraResources`，且必须映射到**资源根**（`to: 'splash.html'`），不保留 `resources/` 前缀——主进程的 `resolveResourceFile()` 在打包态是 `join(process.resourcesPath, …)`，多一层前缀就找不到。
 
 **原生模块**：`better-sqlite3` 是唯一原生模块，`npmRebuild: true` 让 electron-builder 按目标架构重编。`mupdf` 是 wasm（`dist/mupdf-wasm.wasm`），无需重编，但必须确认 `.wasm` 进了产物。
 
