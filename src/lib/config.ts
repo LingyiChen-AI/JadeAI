@@ -3,8 +3,9 @@ export const config = {
     enabled: process.env.AUTH_ENABLED === 'true',
     providers: ['google'] as const,
   },
-  db: {
-    type: (process.env.DB_TYPE || 'sqlite') as 'postgresql' | 'sqlite',
+  runtime: {
+    /** True when running inside the Electron desktop shell. */
+    desktop: process.env.JADE_RUNTIME === 'desktop',
   },
   i18n: {
     defaultLocale: 'zh' as const,

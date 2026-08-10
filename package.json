@@ -14,7 +14,6 @@
     "test:watch": "vitest",
     "type-check": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:generate:pg": "drizzle-kit generate --config drizzle-pg.config.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/lib/db/seed.ts"
@@ -53,7 +52,6 @@
     "next-auth": "5.0.0-beta.30",
     "next-intl": "^4.8.2",
     "next-themes": "^0.4.6",
-    "postgres": "^3.4.8",
     "puppeteer-core": "^24.37.2",
     "qrcode": "^1.5.4",
     "radix-ui": "^1.4.3",
