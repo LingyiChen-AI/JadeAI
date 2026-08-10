@@ -6,7 +6,7 @@
 
 **Architecture:** 主进程做四件事：把 userData 路径一次性捕获下来（dev 重定向到 `JadeAI-dev`）；用原子写维护 `jade-settings.json`；预分配一个 loopback 端口后把 Next 作为子进程拉起（dev 跑 `next dev`，生产跑 standalone `server.js`），轮询 `/api/health` 等就绪；就绪后 `loadURL` 到带 locale 前缀的地址。渲染层就是 Next 本身，preload 只暴露一个很小的设置/外壳契约。
 
-**Tech Stack:** Electron 43、electron-vite 5、TypeScript、vitest 4
+**Tech Stack:** Electron 43、esbuild、TypeScript、vitest 4
 
 **前置条件：** 阶段一（`docs/superpowers/plans/2026-08-10-desktop-client-data-layer.md`）已全部完成并通过验收。本阶段依赖它引入的 `JADE_RUNTIME=desktop` 与 `JADE_MIGRATIONS_DIR`。
 
@@ -35,7 +35,7 @@ spec 原先写「子进程以 `PORT=0` 启动，通过 `process.send()` 把实�
 
 | 文件 | 动作 | 职责 |
 |---|---|---|
-| `electron.vite.config.ts` | 新建 | 只构建 main + preload 两个目标（renderer 就是 Next，不由它管） |
+| `scripts/build-electron.mjs` | 新建 | esbuild 打 main + preload 两个 CJS bundle；`--watch` 时兼做重启 electron 的 dev 循环 |
 | `electron/main/index.ts` | 新建 | 应用生命周期、窗口、splash/错误页、启动与退出时序 |
 | `electron/main/app-paths.ts` | 新建 | 打包/开发两种布局下解析资源路径 |
 | `electron/main/app-paths.test.ts` | 新建 | 上者单测 |
@@ -58,50 +58,37 @@ spec 原先写「子进程以 `PORT=0` 启动，通过 `process.send()` 把实�
 
 ---
 
-### Task 1: 装依赖、配 electron-vite、跑通一个空窗口
+### Task 1: 装依赖、写 esbuild 构建脚本、跑通一个空窗口
 
 先把工具链跑通再写业务代码——否则后面每个任务都要在"是我的代码错了还是构建配置错了"之间猜。
+
+> **为什么不是 electron-vite（初版计划选的是它）。** `electron-vite@5` 已是最新版，peer 要求 `vite ^5 || ^6 || ^7`；本项目通过 `vitest@4.1.8` 已带 **vite 8**，硬不兼容。实测症状有两个：`tsc` 报 `outDir` 不存在于 `MainBuildOptions`（因为该接口 extends 自 vite 的 `BuildEnvironmentOptions`，版本不匹配），以及 `vitest` 自己报 `Cannot find package 'vite'`（peer 解析被冲突破坏）。
+>
+> 注意排查时的一个陷阱：`outDir` 报错**看起来**像配置写错了，容易让人去改一个本来正确的配置。真正的原因在 peer 版本。
+>
+> electron-vite 的核心价值（renderer HMR）在这里用不上——renderer 就是主进程拉起的 Next 服务。改用 esbuild：已在依赖树内，零新增 peer 约束，`electron-builder` 只读 `out/`，打包环节不受影响。
 
 **Files:**
 - Modify: `package.json`
 - Modify: `vitest.config.ts`
-- Create: `electron.vite.config.ts`
+- Create: `scripts/build-electron.mjs`
 - Create: `electron/main/index.ts`（本任务里只是最小可启动版本，Task 9 会重写）
+- Create: `electron/preload/index.ts`（占位，Task 8 会重写）
 
 - [ ] **Step 1: 安装依赖**
 
-版本对齐 orca 已验证过的组合（electron 43 / electron-vite 5 / electron-builder 26），避免自己去踩版本兼容。
-
 ```bash
-pnpm add -D electron@^43.3.0 electron-vite@^5.0.0 electron-builder@^26.15.3 @electron-toolkit/utils@^4.0.0
+pnpm add -D electron@^43.3.0 electron-builder@^26.15.3 esbuild
 pnpm add electron-updater@^6.8.9
 ```
 
-`electron-updater` 是运行时依赖（主进程要 require 它），其余都是构建期依赖。
+`electron-updater` 是运行时依赖（主进程要 require 它），其余是构建期依赖。**不要**装 electron-vite。
+
+electron 的二进制约 300MB，在慢网络下可能要十几分钟；若 `pnpm add` 卡住，可单独跑 `node node_modules/electron/install.js`（幂等，已装则秒退）。装好后 `node_modules/electron/path.txt` 应存在。
 
 - [ ] **Step 2: 允许 electron 跑安装脚本**
 
-在 `package.json` 的 `pnpm.onlyBuiltDependencies` 数组里加上 `"electron"`：
-
-```json
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3",
-      "@swc/core",
-      "sharp",
-      "unrs-resolver",
-      "esbuild",
-      "@parcel/watcher",
-      "electron"
-    ]
-  },
-```
-
-然后重新安装以触发 electron 的二进制下载：
-
-```bash
-pnpm install
-```
+在 `package.json` 的 `pnpm.onlyBuiltDependencies` 数组里加上 `"electron"`。
 
 - [ ] **Step 3: 加 `main` 字段与 scripts**
 
@@ -114,9 +101,9 @@ pnpm install
 并在 `scripts` 里加三行：
 
 ```json
-    "dev:desktop": "electron-vite dev",
-    "start:desktop": "electron-vite preview",
-    "build:desktop": "pnpm build && electron-vite build",
+    "build:electron": "node scripts/build-electron.mjs",
+    "dev:desktop": "node scripts/build-electron.mjs --watch",
+    "build:desktop": "pnpm build && pnpm build:electron",
 ```
 
 Next 自己不读顶层 `main` 字段，加上它不影响 `pnpm dev` / `pnpm build`。
@@ -129,39 +116,90 @@ Next 自己不读顶层 `main` 字段，加上它不影响 `pnpm dev` / `pnpm bu
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'electron/**/*.test.ts'],
 ```
 
-- [ ] **Step 5: 写 electron-vite 配置**
+- [ ] **Step 5: 写 esbuild 构建脚本**
 
-创建 `electron.vite.config.ts`：
+创建 `scripts/build-electron.mjs`：
 
-```ts
-import { resolve } from 'node:path';
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
+```js
+// Builds the Electron main and preload bundles. With --watch it also runs the
+// dev loop: rebuild on change, then restart Electron.
+//
+// esbuild rather than electron-vite: electron-vite@5 peers on vite ^5|^6|^7 and
+// this repo already carries vite 8 via vitest 4. See the plan for the full story.
+import { spawn } from 'node:child_process';
+import { context } from 'esbuild';
 
-// Only two targets. The "renderer" is the Next.js server the main process
-// starts, so electron-vite has nothing to build for it.
-export default defineConfig({
-  main: {
-    plugins: [externalizeDepsPlugin()],
-    build: {
-      outDir: 'out/main',
-      lib: { entry: resolve(__dirname, 'electron/main/index.ts') },
-      rollupOptions: { output: { format: 'cjs', entryFileNames: 'index.js' } },
-    },
-  },
-  preload: {
-    plugins: [externalizeDepsPlugin()],
-    build: {
-      outDir: 'out/preload',
-      lib: { entry: resolve(__dirname, 'electron/preload/index.ts') },
-      rollupOptions: { output: { format: 'cjs', entryFileNames: 'index.js' } },
-    },
-  },
+const watch = process.argv.includes('--watch');
+
+/** Electron 43.3.0 ships Node 24, so nothing needs downleveling. */
+const shared = {
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  target: 'node24',
+  sourcemap: true,
+  logLevel: 'info',
+  // `electron` is injected by the runtime and must never be bundled.
+  // electron-updater pulls in native/dynamic requires that break when inlined.
+  external: ['electron', 'electron-updater'],
+};
+
+const targets = [
+  { ...shared, entryPoints: ['electron/main/index.ts'], outfile: 'out/main/index.js' },
+  { ...shared, entryPoints: ['electron/preload/index.ts'], outfile: 'out/preload/index.js' },
+];
+
+const contexts = await Promise.all(targets.map((options) => context(options)));
+
+if (!watch) {
+  await Promise.all(contexts.map((ctx) => ctx.rebuild()));
+  await Promise.all(contexts.map((ctx) => ctx.dispose()));
+  process.exit(0);
+}
+
+await Promise.all(contexts.map((ctx) => ctx.watch()));
+
+let child = null;
+let restarting = false;
+
+function launch() {
+  // Resolved lazily: `electron` exports the absolute path to its binary.
+  const electronPath = require('electron');
+  child = spawn(electronPath, ['.'], { stdio: 'inherit' });
+  child.on('exit', (code) => {
+    child = null;
+    // A restart kills the child on purpose; only a real exit should end the loop.
+    if (!restarting) process.exit(code ?? 0);
+  });
+}
+
+async function restart() {
+  restarting = true;
+  if (child) {
+    child.kill();
+    // Give Electron a moment to release its singleton lock before relaunching.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+  restarting = false;
+  launch();
+}
+
+launch();
+
+process.on('SIGINT', () => {
+  restarting = true;
+  child?.kill();
+  process.exit(0);
 });
 ```
 
+注意 `require('electron')` 在 ESM 的 `.mjs` 里不可直接用——实现时改用 `createRequire(import.meta.url)`，或用 `await import('electron')` 取 `default`。执行者应自行确认哪种在本环境可行，并说明选了哪种、为什么。
+
+`--watch` 模式下 esbuild 的 watch 是异步回调，重建后需要触发 `restart()`。esbuild 的 `context.watch()` 本身不提供"重建完成"钩子，需要用 `plugins: [{ name: 'restart', setup(build) { build.onEnd(() => …) } }]`。实现时把这个 plugin 加进 `shared`（仅 watch 模式），并注意**首次构建也会触发 onEnd**，不要在首次就重启。
+
 - [ ] **Step 6: 写一个最小可启动的 main**
 
-创建 `electron/main/index.ts`（Task 9 会替换为完整版）：
+创建 `electron/main/index.ts`：
 
 ```ts
 import { app, BrowserWindow } from 'electron';
@@ -180,50 +218,71 @@ app.on('window-all-closed', () => {
 
 - [ ] **Step 7: 写一个占位 preload**
 
-创建 `electron/preload/index.ts`（Task 8 会替换为完整版）：
+创建 `electron/preload/index.ts`：
 
 ```ts
 // Placeholder — the real contract lands in Task 8.
 export {};
 ```
 
-- [ ] **Step 8: 跑起来**
+- [ ] **Step 8: 验证一次性构建**
 
 ```bash
-pnpm dev:desktop
+pnpm build:electron
+ls -la out/main/index.js out/preload/index.js
+node -e "const s=require('fs').readFileSync('out/main/index.js','utf8'); console.log('bundled electron?', s.includes('require(\"electron\")')||s.includes("require('electron')"))"
 ```
 
-Expected: 弹出一个 Electron 窗口，显示 “JadeAI shell alive”。终端里 electron-vite 报告 main 和 preload 两个 bundle 构建成功。
+Expected: 两个产物存在；第二条命令输出 `true`（证明 `electron` 是外部 require，没被打进 bundle）。
 
-如果窗口没出来：先看终端有没有 `Cannot find module './out/main/index.js'`——那说明 `main` 字段或 `outDir` 写错了。
+- [ ] **Step 9: 验证窗口能起来**
 
-关掉窗口结束进程。
+没有图形界面可点，所以用后台启动 + 程序化取证：
 
-- [ ] **Step 9: 类型检查与测试**
+```bash
+pnpm dev:desktop > /tmp/p2t1-dev.log 2>&1 &
+sleep 20
+pgrep -fl "Electron" | head -3
+cat /tmp/p2t1-dev.log
+```
+
+Expected: 有 Electron 进程；日志里 esbuild 报告两个 bundle 构建成功，无 `Cannot find module`。
+
+清理：
+
+```bash
+pkill -f "Electron|build-electron" || true
+sleep 2
+pgrep -fl Electron | head -3   # 应无输出
+```
+
+- [ ] **Step 10: 类型检查与测试**
 
 ```bash
 pnpm type-check && pnpm test
 ```
 
-Expected: 都通过。
+Expected: 都通过（当前 40 个测试）。
 
-- [ ] **Step 10: 加 gitignore 条目**
+`scripts/build-electron.mjs` 是 `.mjs`，根 tsconfig 的 `include` 含 `**/*.mts` 但不含 `.mjs`，所以它不进类型检查——这是刻意的，构建脚本不值得为它引入类型体操。
 
-确认 `.gitignore` 里有 `out/`（electron-vite 的产物目录）。若没有，追加一行：
+- [ ] **Step 11: 确认 gitignore**
 
-```
-out/
-```
+确认 `.gitignore` 里有 `out/`。若没有，追加一行 `out/`。
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 12: Commit**
 
 ```bash
 git add -A
-git commit -m "build(desktop): add electron-vite toolchain with a bootable empty shell
+git commit -m "build(desktop): add esbuild-based electron toolchain with a bootable shell
 
-版本对齐 orca 已验证的 electron 43 / electron-vite 5 / electron-builder 26。
-只配 main + preload 两个目标——renderer 就是主进程拉起的 Next 服务。"
+不用 electron-vite：它 peer 要求 vite ^5|^6|^7，而本仓库通过 vitest 4 已带
+vite 8，硬不兼容（tsc 报 outDir 不存在于 MainBuildOptions，vitest 报找不到
+vite）。它的核心价值 renderer HMR 在这里也用不上——renderer 就是主进程拉起
+的 Next 服务。esbuild 已在依赖树内，零新增 peer 约束。"
 ```
+
+IMPORTANT: 提交信息里**不要**加任何 `Co-Authored-By:` 后缀。确认 `out/` 与 electron 二进制没被提交。
 
 ---
 

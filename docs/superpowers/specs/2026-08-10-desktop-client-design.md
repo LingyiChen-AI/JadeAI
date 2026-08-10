@@ -2,7 +2,7 @@
 
 日期：2026-08-10
 分支：`feat/desktop-client`
-参考实现：`/Users/chenhao/codes/orca`（Electron + electron-vite + electron-builder）
+参考实现：`/Users/chenhao/codes/orca`（Electron + electron-vite + electron-builder）。本项目沿用它的进程模型与数据存储纪律，但**构建工具改用 esbuild** —— 原因见「打包」一节。
 
 ## 目标
 
@@ -187,7 +187,11 @@ key 仍只在渲染进程内存中持有，随请求头发给本地 Next 服务�
 
 ## 打包
 
-构建管线：`next build`（standalone） → `electron-vite build`（main + preload） → `electron-builder`。
+构建管线：`next build`（standalone） → `node scripts/build-electron.mjs`（esbuild 打 main + preload） → `electron-builder`。
+
+> **为什么不用 electron-vite（初版设计选的是它）。** `electron-vite@5` 已是最新版，peer 要求 `vite ^5 || ^6 || ^7`；而本项目通过 `vitest@4.1.8` 已经带了 **vite 8**，硬不兼容——症状是 `MainBuildOptions` 解析不出 `outDir`，同时 vitest 自己也找不到 `vite`。可选的补救是用 pnpm overrides 把 vite 钉到 7 并删掉未使用的 `@vitejs/plugin-react`（它要求 vite ^8），但那等于把测试工具链的版本反向锁死在一个 Electron 构建工具的约束上，日后升级 vitest 或引入任何 vite 8 插件都会再撞一次。
+>
+> electron-vite 在本项目的核心价值（renderer HMR）本来就用不上——renderer 就是主进程拉起的 Next 服务。改用 esbuild 直接打两个 CJS bundle：esbuild 已在依赖树内，零新增 peer 约束，且 `electron-builder` 只读 `out/` 目录，打包环节完全不受影响。
 
 **资源布局**：`.next/standalone`、`.next/static`、`public`、`drizzle/migrations` 走 `extraResources`——Next 服务需要 fork 出来跑并按路径读取这些文件，进了 asar 就读不到。
 
@@ -232,7 +236,7 @@ electron/
     ipc/                     settings / secrets / pdf / data-io / shell
   preload/
     index.ts                 唯一 IPC 契约，contextBridge
-electron.vite.config.ts
+scripts/build-electron.mjs
 config/electron-builder.config.cjs
 resources/splash.html
 ```
@@ -256,7 +260,7 @@ resources/splash.html
 排序原则：先让"能启动、数据不丢"成立，再逐个替换依赖外部环境的能力。每一阶段结束时应用都是可运行的。
 
 1. **数据层先行**（不碰 Electron）：移除 PostgreSQL；修迁移目录解析与 seed 缺陷；`config.runtime.desktop`；`resolveUser()` 的 local 分支；`authType` 加 `'local'` 的迁移。此阶段结束后 `pnpm dev` 仍正常，只是认证走本地用户。
-2. **Electron 壳**：`electron/` 骨架、`electron.vite.config.ts`、`data-path.ts`、`durable-file-write.ts`、`settings-store.ts`、`next-server-host.ts`（dev 模式先跑通）、splash 与错误页。此阶段结束后 `pnpm dev:desktop` 能开出窗口并正常用全部现有功能（PDF 导出仍走 puppeteer）。
+2. **Electron 壳**：`electron/` 骨架、`scripts/build-electron.mjs`、`data-path.ts`、`durable-file-write.ts`、`settings-store.ts`、`next-server-host.ts`（dev 模式先跑通）、splash 与错误页。此阶段结束后 `pnpm dev:desktop` 能开出窗口并正常用全部现有功能（PDF 导出仍走 puppeteer）。
 3. **密钥**：`secret-store.ts` + preload 契约 + `settings-store` 接入 + 降级路径。
 4. **PDF**：`pdf/render.ts` + 请求响应式 IPC + 迭代逻辑移植 + 拔依赖 + 页数一致性验收。
 5. **打包**：`electron-builder.config.cjs`、`extraResources` 布局、`npmRebuild`、`afterPack` 四项校验、三平台产物。
