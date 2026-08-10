@@ -8,7 +8,7 @@ import { join } from 'node:path';
  * process.resourcesPath. Everywhere else we fall back to the repo layout.
  */
 export function resolveMigrationsDir(
-  env: { JADE_MIGRATIONS_DIR?: string; [key: string]: string | undefined },
+  env: Record<string, string | undefined>,
   cwd: string,
 ): string {
   const override = env.JADE_MIGRATIONS_DIR;
