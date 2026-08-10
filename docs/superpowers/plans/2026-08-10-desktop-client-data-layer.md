@@ -182,6 +182,7 @@ git commit -m "refactor(db): drop PostgreSQL adapter and DB_TYPE switch
 创建 `src/lib/db/migrations-dir.test.ts`：
 
 ```ts
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { resolveMigrationsDir } from './migrations-dir';
 
@@ -195,19 +196,25 @@ describe('resolveMigrationsDir', () => {
     ).toBe('/Applications/JadeAI.app/Contents/Resources/drizzle/migrations');
   });
 
+  // Expected value goes through join() too: this app packages for win/linux/mac,
+  // and a hardcoded POSIX literal would fail on Windows where join() yields
+  // backslashes. The behaviour under test is "falls back to a cwd-relative
+  // subpath", not "uses forward slashes".
   it('falls back to <cwd>/drizzle/migrations when unset', () => {
-    expect(resolveMigrationsDir({}, '/repo')).toBe('/repo/drizzle/migrations');
+    expect(resolveMigrationsDir({}, '/repo')).toBe(join('/repo', 'drizzle', 'migrations'));
   });
 
   // An empty string is what you get from `JADE_MIGRATIONS_DIR=` in a shell or a
   // misconfigured launcher. Treating it as "set" would point migrate() at cwd.
   it('ignores an empty JADE_MIGRATIONS_DIR', () => {
     expect(resolveMigrationsDir({ JADE_MIGRATIONS_DIR: '' }, '/repo')).toBe(
-      '/repo/drizzle/migrations',
+      join('/repo', 'drizzle', 'migrations'),
     );
   });
 });
 ```
+
+第一个用例不需要 `join`：override 生效时返回的是原样传入的字符串，不经过路径拼接。
 
 - [ ] **Step 2: 运行测试确认失败**
 
@@ -232,7 +239,9 @@ import { join } from 'node:path';
  * process.resourcesPath. Everywhere else we fall back to the repo layout.
  */
 export function resolveMigrationsDir(
-  env: { JADE_MIGRATIONS_DIR?: string },
+  // Record<> rather than `{ JADE_MIGRATIONS_DIR?: string }`: the latter is a TS
+  // "weak type" and rejects process.env with TS2559 (no properties in common).
+  env: Record<string, string | undefined>,
   cwd: string,
 ): string {
   const override = env.JADE_MIGRATIONS_DIR;

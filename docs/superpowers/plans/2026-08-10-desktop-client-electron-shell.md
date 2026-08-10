@@ -404,27 +404,29 @@ git commit -m "feat(desktop): resolve asset paths across packaged and dev layout
 创建 `electron/main/data-path.test.ts`：
 
 ```ts
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { resolveUserDataDir } from './data-path';
 
+// Built with join() so the expectations hold on Windows too, where join()
+// yields backslashes. A hardcoded POSIX literal would fail there, and this app
+// packages for win/linux/mac.
+const SUPPORT_DIR = join('/Users/me/Library/Application Support');
+const PROD_DIR = join(SUPPORT_DIR, 'JadeAI');
+const DEV_DIR = join(SUPPORT_DIR, 'JadeAI-dev');
+
 describe('resolveUserDataDir', () => {
   it('returns the platform directory unchanged in production', () => {
-    expect(
-      resolveUserDataDir('/Users/me/Library/Application Support/JadeAI', false),
-    ).toBe('/Users/me/Library/Application Support/JadeAI');
+    expect(resolveUserDataDir(PROD_DIR, false)).toBe(PROD_DIR);
   });
 
   // A dev session must never write into the directory a released build owns.
   it('appends -dev as a sibling directory in development', () => {
-    expect(
-      resolveUserDataDir('/Users/me/Library/Application Support/JadeAI', true),
-    ).toBe('/Users/me/Library/Application Support/JadeAI-dev');
+    expect(resolveUserDataDir(PROD_DIR, true)).toBe(DEV_DIR);
   });
 
   it('does not double-suffix a directory that is already -dev', () => {
-    expect(
-      resolveUserDataDir('/Users/me/Library/Application Support/JadeAI-dev', true),
-    ).toBe('/Users/me/Library/Application Support/JadeAI-dev');
+    expect(resolveUserDataDir(DEV_DIR, true)).toBe(DEV_DIR);
   });
 });
 ```
@@ -965,6 +967,7 @@ normalizeSettings 永不抛出：从磁盘读到的任何东西都被强制成�
 创建 `electron/main/next-server-host.test.ts`：
 
 ```ts
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { allocateLoopbackPort, resolveNextServerCommand, waitForHealthy } from './next-server-host';
 
@@ -984,10 +987,12 @@ describe('allocateLoopbackPort', () => {
 describe('resolveNextServerCommand', () => {
   const paths = { appRoot: '/repo', assetRoot: '/Resources' };
 
+  // Path expectations go through join() for the same cross-platform reason as
+  // data-path.test.ts — the flags and port are plain strings and stay literal.
   it('runs next dev bound to loopback in development', () => {
     const command = resolveNextServerCommand('development', paths, 41234);
     expect(command.args).toEqual([
-      '/repo/node_modules/next/dist/bin/next',
+      join('/repo', 'node_modules', 'next', 'dist', 'bin', 'next'),
       'dev',
       '--turbopack',
       '-H',
@@ -1000,8 +1005,8 @@ describe('resolveNextServerCommand', () => {
 
   it('runs the standalone server in production', () => {
     const command = resolveNextServerCommand('production', paths, 41234);
-    expect(command.args).toEqual(['/Resources/standalone/server.js']);
-    expect(command.cwd).toBe('/Resources/standalone');
+    expect(command.args).toEqual([join('/Resources', 'standalone', 'server.js')]);
+    expect(command.cwd).toBe(join('/Resources', 'standalone'));
   });
 });
 
