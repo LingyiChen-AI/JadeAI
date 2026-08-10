@@ -1,7 +1,8 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as durableFileWrite from './durable-file-write';
 import { DEFAULT_SETTINGS, normalizeSettings, SettingsStore } from './settings-store';
 
 describe('normalizeSettings', () => {
@@ -68,24 +69,40 @@ async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void
 describe('SettingsStore', () => {
   let dir: string;
   let file: string;
+  // patch() is fire-and-forget: its durable write can still be in flight
+  // when a test ends. Track every store a test constructs and join all of
+  // them before afterEach removes `dir` — otherwise a write still queued
+  // behind flushSync() can create a fresh uniquely-named .tmp file inside a
+  // directory that's mid-rmSync, which throws ENOTEMPTY intermittently
+  // (this is exactly the same "outlives its caller" hazard mutation C's
+  // dropped .catch() exposed as an unhandled rejection).
+  let stores: SettingsStore[];
+
+  function createStore(path: string): SettingsStore {
+    const store = new SettingsStore(path);
+    stores.push(store);
+    return store;
+  }
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), 'jade-settings-'));
     file = join(dir, 'jade-settings.json');
+    stores = [];
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await Promise.all(stores.map((store) => store.whenIdle()));
     rmSync(dir, { recursive: true, force: true });
   });
 
   it('starts from defaults when the file does not exist', () => {
-    expect(new SettingsStore(file).get()).toEqual(DEFAULT_SETTINGS);
+    expect(createStore(file).get()).toEqual(DEFAULT_SETTINGS);
   });
 
   it('recovers to defaults from a corrupt file instead of throwing', () => {
     writeFileSync(file, '{ not json');
-    expect(() => new SettingsStore(file)).not.toThrow();
-    expect(new SettingsStore(file).get()).toEqual(DEFAULT_SETTINGS);
+    expect(() => createStore(file)).not.toThrow();
+    expect(createStore(file).get()).toEqual(DEFAULT_SETTINGS);
   });
 
   it('clamps a well-formed but out-of-range file at construction time', () => {
@@ -94,20 +111,20 @@ describe('SettingsStore', () => {
     // constructor's own normalizeSettings() call catches an invalid shape
     // like this, so this has to go through a real file, not a raw object.
     writeFileSync(file, JSON.stringify({ locale: 'fr', window: { width: 10 } }));
-    const settings = new SettingsStore(file).get();
+    const settings = createStore(file).get();
     expect(settings.locale).toBe(DEFAULT_SETTINGS.locale);
     expect(settings.window.width).toBe(940);
   });
 
   it('normalizes a patch rather than trusting it', () => {
-    const store = new SettingsStore(file);
+    const store = createStore(file);
     // A renderer could send anything across IPC; patch() must not store it raw.
     const result = store.patch({ locale: 'fr' } as never);
     expect(result.locale).toBe(DEFAULT_SETTINGS.locale);
   });
 
   it('persists a patch to disk', async () => {
-    const store = new SettingsStore(file);
+    const store = createStore(file);
     store.patch({ lastResumeId: 'resume-1' });
     // patch() is fire-and-forget; poll for the async durable write to land
     // rather than betting on a fixed delay being long enough.
@@ -122,16 +139,71 @@ describe('SettingsStore', () => {
   });
 
   it('flushSync writes the current state immediately', () => {
-    const store = new SettingsStore(file);
+    const store = createStore(file);
     store.patch({ locale: 'en' });
     store.flushSync();
     expect(JSON.parse(readFileSync(file, 'utf-8')).locale).toBe('en');
   });
 
   it('round-trips through a fresh store', async () => {
-    const first = new SettingsStore(file);
+    const first = createStore(file);
     first.patch({ locale: 'en', lastResumeId: 'r-9' });
     first.flushSync();
-    expect(new SettingsStore(file).get()).toMatchObject({ locale: 'en', lastResumeId: 'r-9' });
+    await first.whenIdle();
+    expect(createStore(file).get()).toMatchObject({ locale: 'en', lastResumeId: 'r-9' });
+  });
+
+  it('does not let a queued write roll back the final flush', async () => {
+    const store = createStore(file);
+    store.patch({ lastResumeId: 'older' }); // queued, not yet on disk
+    store.patch({ lastResumeId: 'newer' }); // queued behind it
+    store.flushSync(); // publishes 'newer' synchronously, seals the store
+    await store.whenIdle(); // let the queued writes drain (and be skipped)
+    expect(JSON.parse(readFileSync(file, 'utf-8')).lastResumeId).toBe('newer');
+  });
+
+  // Content alone can't prove the guard fired: writeChain is strictly FIFO,
+  // so even with the seal check removed, write('older') then write('newer')
+  // still run in that order and 'newer' — the same value flushSync() already
+  // wrote — lands last. Final content converges either way. What actually
+  // distinguishes "queued writes are skipped after sealing" from "they still
+  // run and happen to agree with the flush" is whether writeFileDurable gets
+  // invoked again at all once sealed — so assert on the call count, not the
+  // resulting bytes.
+  it('never calls the durable writer again once flushSync has sealed the store', async () => {
+    const store = createStore(file);
+    const writeSpy = vi.spyOn(durableFileWrite, 'writeFileDurable');
+
+    store.patch({ lastResumeId: 'older' }); // queued, not yet started
+    store.patch({ lastResumeId: 'newer' }); // queued behind it, not yet started
+    store.flushSync(); // seals before either queued write's .then() runs
+    await store.whenIdle();
+
+    expect(writeSpy).not.toHaveBeenCalled();
+    writeSpy.mockRestore();
+  });
+
+  // whenIdle() makes this cheap to cover now: if patch()'s .catch() were
+  // dropped, writeChain would become a rejected promise and this await would
+  // throw, failing the test — which is exactly how mutation C (dropping the
+  // .catch) was previously observed to surface only as a Vitest "Unhandled
+  // Rejection" warning rather than a failing assertion.
+  it('does not produce an unhandled rejection when a durable write fails', async () => {
+    const store = createStore(file);
+    const writeSpy = vi
+      .spyOn(durableFileWrite, 'writeFileDurable')
+      .mockRejectedValueOnce(new Error('disk full'));
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    store.patch({ lastResumeId: 'x' });
+    await expect(store.whenIdle()).resolves.toBeUndefined();
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      '[settings] durable write failed:',
+      expect.any(Error),
+    );
+
+    writeSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 });

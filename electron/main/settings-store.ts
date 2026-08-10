@@ -69,6 +69,10 @@ export function normalizeSettings(raw: unknown): JadeSettings {
 export class SettingsStore {
   private settings: JadeSettings;
   private writeChain: Promise<void> = Promise.resolve();
+  // flushSync() publishes the final state on the quit path. Any write still
+  // queued behind it carries an older snapshot, and durable-file-write's
+  // last-rename-wins semantics mean it would roll that final state back.
+  private sealed = false;
 
   constructor(private readonly filePath: string) {
     this.settings = normalizeSettings(readJsonWithBackup<unknown>(filePath, undefined));
@@ -83,7 +87,13 @@ export class SettingsStore {
     this.settings = normalizeSettings({ ...this.settings, ...patch });
     const payload = JSON.stringify(this.settings, null, 2);
     this.writeChain = this.writeChain
-      .then(() => writeFileDurable(this.filePath, payload))
+      .then(() => {
+        // Sealed after flushSync(): this payload is an older snapshot than
+        // what's already on disk, so writing it now would roll the quit-time
+        // state backward.
+        if (this.sealed) return;
+        return writeFileDurable(this.filePath, payload);
+      })
       .catch((error) => {
         console.error('[settings] durable write failed:', error);
       });
@@ -94,12 +104,33 @@ export class SettingsStore {
     this.patch({ window });
   }
 
-  /** Flush synchronously on the quit path, where there is no time to await. */
+  /**
+   * Flush synchronously on the quit path, where there is no time to await,
+   * and seal the store.
+   *
+   * This is terminal: it is the only call site (Task 9's `will-quit`
+   * handler), and any queued write still in flight carries an older snapshot
+   * than what this writes. Sealing drops those queued writes so they can't
+   * land after this and roll the final state back — do not call this
+   * mid-session and expect subsequent patch()es to keep persisting.
+   */
   flushSync(): void {
+    this.sealed = true;
     try {
       writeFileDurableSync(this.filePath, JSON.stringify(this.settings, null, 2));
     } catch (error) {
       console.error('[settings] synchronous flush failed:', error);
     }
+  }
+
+  /**
+   * Resolve once every queued write has settled.
+   *
+   * patch() is deliberately fire-and-forget so callers on the UI path never
+   * await disk. Tests and deterministic teardown need a way to join, though —
+   * without it a write can outlive its test and race the fixture cleanup.
+   */
+  async whenIdle(): Promise<void> {
+    await this.writeChain;
   }
 }
