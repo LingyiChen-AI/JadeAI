@@ -2,9 +2,10 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import * as schema from '../schema';
+import { resolveMigrationsDir } from '../migrations-dir';
 import type { DatabaseAdapter } from '../adapter';
-import { mkdirSync } from 'fs';
-import { dirname, resolve } from 'path';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 export class SQLiteAdapter implements DatabaseAdapter {
   db;
@@ -17,25 +18,16 @@ export class SQLiteAdapter implements DatabaseAdapter {
     this.sqlite.pragma('foreign_keys = ON');
     this.db = drizzle(this.sqlite, { schema });
 
-    // Auto-run migrations (synchronous for SQLite)
-    try {
-      migrate(this.db, { migrationsFolder: resolve(process.cwd(), 'drizzle/migrations') });
-    } catch (e) {
-      console.error('[DB] SQLite migration failed:', e);
-    }
+    // Deliberately NOT wrapped in try/catch. A database with no tables is
+    // harder to diagnose than an app that refuses to start: the old code
+    // swallowed this and the symptom surfaced later as "no such table".
+    migrate(this.db, {
+      migrationsFolder: resolveMigrationsDir(process.env, process.cwd()),
+    });
   }
 
   async initialize(): Promise<void> {
-    try {
-      const row = this.sqlite.prepare('SELECT count(*) as count FROM users').get() as any;
-      if (row?.count === 0) {
-        const { seedDemoUser } = await import('../seed-demo');
-        await seedDemoUser(this.db);
-        console.log('[DB] SQLite auto-seed complete');
-      }
-    } catch (e) {
-      console.error('[DB] SQLite auto-seed failed:', e);
-    }
+    // Nothing to do yet — first-run data is handled per-mode in a later task.
   }
 
   async close(): Promise<void> {
