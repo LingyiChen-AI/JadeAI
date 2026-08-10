@@ -159,38 +159,80 @@ if (!watch) {
 
 await Promise.all(contexts.map((ctx) => ctx.watch()));
 
-let child = null;
+let electronChild = null;
+let restartTimer = null;
+// Distinguishes an intentional kill (restart) from the developer closing the
+// window. Cannot be inferred from `electronChild === null`: killElectron()
+// clears that reference before the process has actually exited.
 let restarting = false;
 
-function launch() {
-  // Resolved lazily: `electron` exports the absolute path to its binary.
-  const electronPath = require('electron');
-  child = spawn(electronPath, ['.'], { stdio: 'inherit' });
+function launchElectron() {
+  console.log('[dev] launching electron');
+  const child = spawn(electronPath, ['.'], { stdio: 'inherit' });
+  electronChild = child;
+
   child.on('exit', (code) => {
-    child = null;
-    // A restart kills the child on purpose; only a real exit should end the loop.
-    if (!restarting) process.exit(code ?? 0);
+    if (child === electronChild) electronChild = null;
+    // Only a real exit ends the dev loop; a restart kills the child on purpose.
+    if (!restarting) {
+      console.log('[dev] electron exited — stopping the watch loop');
+      void shutdown(code ?? 0);
+    }
   });
 }
 
-async function restart() {
-  restarting = true;
-  if (child) {
+/**
+ * Resolve once the child has actually exited, not merely been signalled.
+ *
+ * Waiting on the real `exit` event rather than a fixed delay: kill() only sends
+ * SIGTERM, and spawning the replacement while the old process is still alive
+ * leaves two instances briefly coexisting. Harmless while main is a stub, but a
+ * real bug once it takes a single-instance lock or binds the Next server's port.
+ */
+function killElectron() {
+  const child = electronChild;
+  electronChild = null;
+  // exitCode, not `killed`: the latter only records that kill() was called.
+  if (!child || child.exitCode !== null) return Promise.resolve();
+  return new Promise((resolve) => {
+    child.once('exit', resolve);
     child.kill();
-    // Give Electron a moment to release its singleton lock before relaunching.
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  }
-  restarting = false;
-  launch();
+  });
 }
 
-launch();
+function scheduleRestart() {
+  clearTimeout(restartTimer);
+  restartTimer = setTimeout(async () => {
+    restarting = true;
+    await killElectron();
+    restarting = false;
+    launchElectron();
+  }, 50);
+}
 
-process.on('SIGINT', () => {
-  restarting = true;
-  child?.kill();
-  process.exit(0);
-});
+async function shutdown(code = 0) {
+  restarting = true; // suppress the child exit handler
+  await killElectron();
+  await Promise.all(contexts.map((ctx) => ctx.dispose()));
+  process.exit(code);
+}
+
+process.on('SIGINT', () => void shutdown(0));
+process.on('SIGTERM', () => void shutdown(0));
+```
+
+`onEnd` 的错误分支要给开发者一句解释，否则首次构建失败时只有 esbuild 的报错块、没有窗口，很难把两件事联系起来：
+
+```js
+      build.onEnd((result) => {
+        if (result.errors.length > 0) {
+          if (!firstBuildDone.has(name)) {
+            console.warn(`[dev] ${name} failed to build — electron will not launch until this is fixed`);
+          }
+          return;
+        }
+        // ... first-build guard, then scheduleRestart()
+      });
 ```
 
 注意 `require('electron')` 在 ESM 的 `.mjs` 里不可直接用——实现时改用 `createRequire(import.meta.url)`，或用 `await import('electron')` 取 `default`。执行者应自行确认哪种在本环境可行，并说明选了哪种、为什么。
