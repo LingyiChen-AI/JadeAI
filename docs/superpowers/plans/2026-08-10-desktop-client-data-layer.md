@@ -1074,6 +1074,10 @@ git commit -m "docs: drop PostgreSQL references, document JADE_RUNTIME"
 
 ---
 
+## 已知遗留（不在阶段一范围，记录以免丢失）
+
+- **`createSampleResume` 不是事务性的**（`src/lib/db/sample-resume.ts`）：简历行与各 section 是分开的多条 insert，没有包 `db.transaction`。若中途失败（比如第 4 个 section 出错），一份残缺简历会被提交下来；而 Task 5 之后 `ensureLocalUser()` 会吞掉这个错误并走提前返回，**再也不会重试**，于是那份残缺简历永久存在。这个风险在本阶段之前就有，但 Task 5 把 `ensureLocalUser()` 放到了每请求路径上、又刻意容忍了 seed 失败，使它的后果从"一次性报错"变成"静默的永久脏数据"。建议在阶段五（导入导出）一并处理：把 `createSampleResume` 包进事务。
+
 ## 阶段一验收
 
 全部任务完成后，逐条确认：
