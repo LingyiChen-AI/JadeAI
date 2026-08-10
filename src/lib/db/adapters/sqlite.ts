@@ -6,6 +6,7 @@ import { resolveMigrationsDir } from '../migrations-dir';
 import type { DatabaseAdapter } from '../adapter';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { config } from '../../config';
 
 export class SQLiteAdapter implements DatabaseAdapter {
   db;
@@ -27,7 +28,25 @@ export class SQLiteAdapter implements DatabaseAdapter {
   }
 
   async initialize(): Promise<void> {
-    // Nothing to do yet — first-run data is handled per-mode in a later task.
+    // Desktop has exactly one user, created lazily by resolveUser() →
+    // userRepository.ensureLocalUser(). Seeding a demo-fingerprint user here
+    // would leave a second, unreachable user row in every install.
+    if (config.runtime.desktop) {
+      return;
+    }
+
+    try {
+      const row = this.sqlite.prepare('SELECT count(*) as count FROM users').get() as
+        | { count: number }
+        | undefined;
+      if (row?.count === 0) {
+        const { seedDemoUser } = await import('../seed-demo');
+        await seedDemoUser(this.db);
+        console.log('[DB] SQLite auto-seed complete');
+      }
+    } catch (e) {
+      console.error('[DB] SQLite auto-seed failed:', e);
+    }
   }
 
   async close(): Promise<void> {
