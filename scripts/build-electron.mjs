@@ -63,6 +63,11 @@ if (!isWatch) {
 
 let electronChild = null;
 let restartTimer = null;
+// Distinguishes an intentional kill (restart) from the developer closing the
+// window / the process dying on its own. Cannot be inferred from
+// `electronChild === null`: killElectron() clears that reference before the
+// process has actually exited, so the exit handler needs its own signal.
+let restarting = false;
 
 // esbuild's `context().watch()` has no "rebuild finished" callback of its own,
 // so completion is observed via a plugin's `onEnd` hook instead. Each of the
@@ -74,14 +79,42 @@ const firstBuildDone = new Set();
 
 function launchElectron() {
   console.log('[dev] launching electron');
-  electronChild = spawn(electronPath, ['.'], { stdio: 'inherit' });
+  const child = spawn(electronPath, ['.'], { stdio: 'inherit' });
+  electronChild = child;
+
+  // If Electron exits on its own — the developer closed the last window,
+  // which triggers `app.quit()` in electron/main/index.ts — the watch loop
+  // has nothing left to serve and must stop, rather than sit there silently
+  // holding a dead child reference until the next rebuild "resurrects" it.
+  // A restart-triggered kill sets `restarting` first, so that path is a
+  // no-op here.
+  child.on('exit', (code) => {
+    if (child === electronChild) electronChild = null;
+    if (!restarting) {
+      console.log('[dev] electron exited — stopping the watch loop');
+      void shutdown(code ?? 0);
+    }
+  });
 }
 
+/**
+ * Kill the current Electron child and resolve only once it has actually
+ * exited (not merely been signalled) — `child.kill()` sends SIGTERM
+ * asynchronously, so returning immediately would let scheduleRestart() spawn
+ * a replacement while the old process is still alive. That window matters
+ * once the main process holds resources a new instance also needs (single-
+ * instance lock, the Next server's port — both land in later tasks).
+ */
 function killElectron() {
-  if (electronChild && !electronChild.killed) {
-    electronChild.kill();
-    electronChild = null;
-  }
+  const child = electronChild;
+  electronChild = null;
+  // `child.exitCode !== null` reflects a confirmed exit; `child.killed` only
+  // means `.kill()` was called, which is not the same thing.
+  if (!child || child.exitCode !== null) return Promise.resolve();
+  return new Promise((resolve) => {
+    child.once('exit', resolve);
+    child.kill();
+  });
 }
 
 function scheduleRestart() {
@@ -89,8 +122,10 @@ function scheduleRestart() {
   // rebuild, but coalescing guards against both settling in the same tick
   // (e.g. touching both entry files at once) causing a double restart.
   clearTimeout(restartTimer);
-  restartTimer = setTimeout(() => {
-    killElectron();
+  restartTimer = setTimeout(async () => {
+    restarting = true;
+    await killElectron();
+    restarting = false;
     launchElectron();
   }, 50);
 }
@@ -100,7 +135,19 @@ function onEndPlugin(name) {
     name: `dev-restart-${name}`,
     setup(build) {
       build.onEnd((result) => {
-        if (result.errors.length > 0) return; // don't restart on a broken build
+        if (result.errors.length > 0) {
+          // Without this the developer sees no window and no explanation —
+          // just esbuild's error block, which is easy to not connect to the
+          // missing app. Only worth calling out on the *first* build, since
+          // a broken rebuild after Electron is already running just leaves
+          // the last-good instance in place.
+          if (!firstBuildDone.has(name)) {
+            console.warn(
+              `[dev] ${name} failed to build — electron will not launch until this is fixed`
+            );
+          }
+          return; // don't restart on a broken build
+        }
 
         if (!firstBuildDone.has(name)) {
           firstBuildDone.add(name);
@@ -131,10 +178,12 @@ const contexts = await Promise.all(
 
 await Promise.all(contexts.map((ctx) => ctx.watch()));
 
-function shutdown() {
-  killElectron();
-  Promise.all(contexts.map((ctx) => ctx.dispose())).finally(() => process.exit(0));
+async function shutdown(code = 0) {
+  restarting = true; // suppress the child exit handler on the SIGINT/SIGTERM path
+  await killElectron();
+  await Promise.all(contexts.map((ctx) => ctx.dispose()));
+  process.exit(code);
 }
 
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+process.on('SIGINT', () => void shutdown(0));
+process.on('SIGTERM', () => void shutdown(0));
