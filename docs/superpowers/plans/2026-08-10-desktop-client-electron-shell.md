@@ -1955,6 +1955,20 @@ git commit -m "docs(desktop): record phase 2 acceptance results"
 
 ---
 
+## 收尾时修的一个 Critical（最终整体审查发现）
+
+`NextServerHost` 的 `this.child` 字段**没有身份归属**：子进程的 `'exit'` 处理器无条件 `this.child = null`，`killOwnedChild()` 也直接操作裸字段。
+
+`stop()` 的 kill 是异步的，所以旧子进程的 `'exit'` 事件常常在新的 `start()` 已经把 `this.child` 指向新进程**之后**才到达。陈旧处理器于是清空引用，丢掉活着的新子进程——此后每次 `stop()` 都是空操作，Next 服务**活过 Electron 自己的退出**，成为孤儿。
+
+触发条件是**点一次重试按钮**，而重试是 `jade:startup:retry` 唯一的 UI 入口，所以这是主路径。macOS 的 `app.on('activate')` 在旧服务仍活着时再次 `start()` 是同一根因的第二处。
+
+修法：spawn 时捕获 `const child = ...`，在 exit 处理器与 `killOwnedChild()` 里都比对 `this.child === child` 再动手；`start()` 开头先 `killOwnedChild()` 回收上一个。陈旧子进程的退出也不再触发 `onUnexpectedExit`——一个已被取代的尝试死掉不是"当前服务意外退出"，报出去只会显示误导性的错误页。
+
+> **这条最值得记住的不是 bug 本身，而是验收为什么放它过去。** Task 10 的验收**确实有**"退出后无孤儿进程"这一项，而且通过了——因为它只在**正常退出**之后检查，从未走过重试路径。验收项存在、也执行了，却测了错误的路径。
+>
+> 逐任务审查同样看不见它：单看 `NextServerHost` 一次 `start()` 的生命周期完全正确，缺陷只在**两次 `start()` 交叠**时显现，而那需要把 `index.ts` 的重试接线和 `next-server-host.ts` 的内部状态放在一起看。阶段五写打包验收时要记住这一点：**"检查了 X"不等于"在会产生 X 的路径上检查了 X"**。
+
 ## 阶段二验收
 
 - [ ] `pnpm type-check` 与 `pnpm test` 通过
