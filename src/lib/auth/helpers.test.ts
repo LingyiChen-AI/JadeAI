@@ -45,4 +45,16 @@ describe('resolveUser in desktop mode', () => {
     expect(await resolveUser('abc123')).toEqual({ id: 'fp-user', authType: 'fingerprint' });
     expect(ensureLocalUser).not.toHaveBeenCalled();
   });
+
+  // Pins the branch ORDER, not just the branch: the desktop check sits ahead of
+  // config.auth.enabled on purpose, so "desktop has exactly one user" cannot be
+  // defeated by an env-var combination. Without this case, moving the desktop
+  // branch below the auth branch passes the whole suite.
+  it('desktop still wins even if auth is (misconfigured to be) enabled', async () => {
+    vi.doMock('@/lib/config', () => ({
+      config: { auth: { enabled: true }, runtime: { desktop: true }, i18n: { defaultLocale: 'zh', locales: ['zh', 'en'] } },
+    }));
+    const { resolveUser } = await import('./helpers');
+    expect(await resolveUser('whatever-fingerprint')).toEqual(LOCAL_USER);
+  });
 });
