@@ -305,7 +305,9 @@ export class SQLiteAdapter implements DatabaseAdapter {
 
 - [ ] **Step 6: 验证迁移仍然正常跑**
 
-在仓库根创建一次性脚本 `./jade-init.tmp.ts`（必须在仓库内，否则相对 import 解析不到）：
+在仓库根创建一次性脚本 `./jade-init.tmp.ts`（必须在仓库内，否则相对 import 解析不到）。
+
+> **顺序陷阱：跑全量 `pnpm type-check` 之前必须先删掉这个脚本。** 它用 `.ts` 后缀的动态 import 来绕开 tsx 的 CJS 限制，但根 `tsconfig.json` 的 `include` 是 `**/*.ts`，会把仓库根的临时脚本一并纳入，于是 `tsc` 在 `moduleResolution: "bundler"` 下报 TS5097（import 路径不允许带 `.ts` 扩展名）。这与被测代码无关，纯属临时脚本自身的产物。
 
 ```ts
 // 用 async IIFE 而非 top-level await：tsx 在本仓库把 .ts 入口按 CJS 转换，
@@ -836,7 +838,9 @@ import { config } from '../../config';
 
 - [ ] **Step 2: 建一个一次性验证脚本**
 
-创建 `./jade-seed-check.tmp.ts`（放在仓库内以便解析相对 import）：
+创建 `./jade-seed-check.tmp.ts`（放在仓库内以便解析相对 import）。
+
+> **顺序陷阱：跑 `pnpm type-check` 之前必须先删掉这个脚本。** 它用 `.ts` 后缀的动态 import 绕开 tsx 的 CJS 限制，而根 `tsconfig.json` 的 `include` 是 `**/*.ts`，会把仓库根的临时脚本纳入编译，于是 `tsc` 在 `moduleResolution: "bundler"` 下报 TS5097（import 路径不得带 `.ts` 扩展名）。这与被测代码无关。Step 5 已按正确顺序编排。
 
 ```ts
 // async IIFE 而非 top-level await——见 Task 2 Step 6 的同一个 tsx 限制。
@@ -871,10 +875,20 @@ sqlite3 /tmp/jade-seed-web/jade.db "SELECT fingerprint FROM users;"
 
 Expected: 输出 `demo-fingerprint`。
 
-- [ ] **Step 5: 清理临时脚本并 Commit**
+- [ ] **Step 5: 先删临时脚本，再跑全量检查**
+
+删除必须排在检查**之前**，否则 `tsc` 会因临时脚本自身报 TS5097——见 Step 2 的顺序陷阱说明。
 
 ```bash
 rm -f ./jade-seed-check.tmp.ts
+pnpm test && pnpm type-check
+```
+
+Expected: 都通过。
+
+- [ ] **Step 6: Commit**
+
+```bash
 git add src/lib/db/adapters/sqlite.ts
 git commit -m "feat(db): skip demo seed in desktop mode
 
