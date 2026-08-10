@@ -299,9 +299,13 @@ export class SQLiteAdapter implements DatabaseAdapter {
 在仓库根创建一次性脚本 `./jade-init.tmp.ts`（必须在仓库内，否则相对 import 解析不到）：
 
 ```ts
-import { dbReady } from './src/lib/db/index.ts';
-await dbReady;
-console.log('db initialised');
+// 用 async IIFE 而非 top-level await：tsx 在本仓库把 .ts 入口按 CJS 转换，
+// 会直接拒绝 top-level await。
+void (async () => {
+  const { dbReady } = await import('./src/lib/db/index.ts');
+  await dbReady;
+  console.log('db initialised');
+})();
 ```
 
 ```bash
@@ -781,14 +785,16 @@ import { config } from '../../config';
 创建 `./jade-seed-check.tmp.ts`（放在仓库内以便解析相对 import）：
 
 ```ts
-import { dbReady } from './src/lib/db/index.ts';
-import { userRepository } from './src/lib/db/repositories/user.repository.ts';
-
-await dbReady;
-if (process.env.JADE_RUNTIME === 'desktop') {
-  await userRepository.ensureLocalUser();
-}
-console.log('done');
+// async IIFE 而非 top-level await——见 Task 2 Step 6 的同一个 tsx 限制。
+void (async () => {
+  const { dbReady } = await import('./src/lib/db/index.ts');
+  await dbReady;
+  if (process.env.JADE_RUNTIME === 'desktop') {
+    const { userRepository } = await import('./src/lib/db/repositories/user.repository.ts');
+    await userRepository.ensureLocalUser();
+  }
+  console.log('done');
+})();
 ```
 
 - [ ] **Step 3: 验证 desktop 模式只有一个用户**
