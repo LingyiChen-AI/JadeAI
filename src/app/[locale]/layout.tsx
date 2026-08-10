@@ -17,6 +17,7 @@ export default async function LocaleLayout({
 }) {
   const { locale } = await params;
   const authEnabled = process.env.AUTH_ENABLED === 'true';
+  const desktop = process.env.JADE_RUNTIME === 'desktop';
 
   if (!routing.locales.includes(locale as any)) {
     notFound();
@@ -26,7 +27,7 @@ export default async function LocaleLayout({
 
   return (
     <SessionProvider>
-      <RuntimeConfigProvider authEnabled={authEnabled}>
+      <RuntimeConfigProvider authEnabled={authEnabled} desktop={desktop}>
       <NextIntlClientProvider locale={locale} messages={messages}>
         <ThemeProvider
           attribute="class"

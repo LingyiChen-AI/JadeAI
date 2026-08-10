@@ -4,14 +4,23 @@ import { useEffect, useState } from 'react';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import { useRuntimeConfig } from '@/components/providers/runtime-config-provider';
 import { generateId } from '@/lib/utils';
+import { LOCAL_USER_ID } from '@/lib/auth/local-user';
 
 export function useFingerprint() {
   const [fingerprint, setFingerprint] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { authEnabled } = useRuntimeConfig();
+  const { authEnabled, desktop } = useRuntimeConfig();
 
   useEffect(() => {
     if (authEnabled) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Desktop ignores the fingerprint server-side (resolveUser always returns
+    // the single local user), so computing one would burn CPU for nothing.
+    if (desktop) {
+      setFingerprint(LOCAL_USER_ID);
       setIsLoading(false);
       return;
     }
@@ -43,7 +52,7 @@ export function useFingerprint() {
     }
 
     getFingerprint();
-  }, [authEnabled]);
+  }, [authEnabled, desktop]);
 
   return { fingerprint, isLoading };
 }
