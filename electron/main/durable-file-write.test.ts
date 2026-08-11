@@ -1,16 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { readJsonWithBackup, writeFileDurable, writeFileDurableSync } from './durable-file-write';
+import {
+  readJsonWithBackup,
+  sweepStaleDurableWriteTemps,
+  TEMP_SWEEP_STALE_MS,
+  writeFileDurable,
+  writeFileDurableSync,
+} from './durable-file-write';
 
 let dir: string;
 let target: string;
@@ -89,6 +97,59 @@ describe('writeFileDurableSync', () => {
     writeFileDurableSync(target, '{"sync":true}');
     expect(readFileSync(target, 'utf-8')).toBe('{"sync":true}');
     expect(tmpFilesRemaining()).toHaveLength(0);
+  });
+});
+
+describe('sweepStaleDurableWriteTemps', () => {
+  // Ages a file by rewriting its mtime, so the cutoff can be exercised without
+  // the test sleeping for five minutes.
+  function makeTemp(name: string, ageMs: number): string {
+    const path = join(dir, name);
+    writeFileSync(path, 'partial payload');
+    const when = new Date(Date.now() - ageMs);
+    utimesSync(path, when, when);
+    return path;
+  }
+
+  it('deletes an abandoned temp older than the cutoff', () => {
+    const orphan = makeTemp('state.json.999.abc.tmp', TEMP_SWEEP_STALE_MS + 60_000);
+    sweepStaleDurableWriteTemps(target);
+    expect(existsSync(orphan)).toBe(false);
+  });
+
+  // The cutoff is the entire safety argument: a fresh temp may belong to a live
+  // writer (another app instance, or an in-flight async write here), and
+  // deleting it mid-write would corrupt exactly what this module protects.
+  it('leaves a fresh temp alone, because a live writer may own it', () => {
+    const inFlight = makeTemp('state.json.999.abc.tmp', 1_000);
+    sweepStaleDurableWriteTemps(target);
+    expect(existsSync(inFlight)).toBe(true);
+  });
+
+  it('never touches the real file or its .bak sidecar', () => {
+    writeFileSync(target, '{"real":true}');
+    writeFileSync(`${target}.bak`, '{"backup":true}');
+    const old = new Date(Date.now() - TEMP_SWEEP_STALE_MS * 10);
+    utimesSync(target, old, old);
+    utimesSync(`${target}.bak`, old, old);
+
+    sweepStaleDurableWriteTemps(target);
+
+    expect(existsSync(target)).toBe(true);
+    expect(existsSync(`${target}.bak`)).toBe(true);
+  });
+
+  // The prefix is anchored on the target's basename, so a sweep for one file
+  // cannot reap another's temps — this directory is the Electron userData dir,
+  // shared with Chromium's own files and (soon) the secrets store.
+  it('ignores stale temps belonging to a different target', () => {
+    const other = makeTemp('secrets.bin.999.abc.tmp', TEMP_SWEEP_STALE_MS * 10);
+    sweepStaleDurableWriteTemps(target);
+    expect(existsSync(other)).toBe(true);
+  });
+
+  it('does not throw when the directory does not exist', () => {
+    expect(() => sweepStaleDurableWriteTemps(join(dir, 'nope', 'state.json'))).not.toThrow();
   });
 });
 

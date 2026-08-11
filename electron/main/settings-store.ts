@@ -1,4 +1,9 @@
-import { readJsonWithBackup, writeFileDurable, writeFileDurableSync } from './durable-file-write';
+import {
+  readJsonWithBackup,
+  sweepStaleDurableWriteTemps,
+  writeFileDurable,
+  writeFileDurableSync,
+} from './durable-file-write';
 
 export const LOCALES = ['zh', 'en'] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -20,6 +25,19 @@ export interface JadeSettings {
   locale: Locale;
   window: WindowState;
   lastResumeId: string | null;
+  /**
+   * Loopback port the Next server was last reached on, reused across launches.
+   *
+   * Not a performance tweak: the port is part of the page's origin, and
+   * Chromium partitions localStorage, IndexedDB and cookies by origin. A fresh
+   * port each launch therefore handed the renderer a brand-new, empty storage
+   * area every time — silently discarding the saved AI API keys, the dashboard
+   * view preference, and the "onboarding tour already seen" flag.
+   *
+   * null when nothing has been persisted yet, or when the stored value was
+   * unusable. See resolveServerPort for the reuse rules.
+   */
+  serverPort: number | null;
 }
 
 export const DEFAULT_SETTINGS: JadeSettings = {
@@ -27,6 +45,7 @@ export const DEFAULT_SETTINGS: JadeSettings = {
   locale: 'zh',
   window: { width: 1280, height: 860, maximized: false },
   lastResumeId: null,
+  serverPort: null,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -41,6 +60,21 @@ function clamp(value: unknown, min: number, fallback: number): number {
 function optionalCoordinate(value: unknown): number | undefined {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
   return Math.round(value);
+}
+
+/** Lowest port a normal user process may bind without privileges. */
+const MIN_UNPRIVILEGED_PORT = 1024;
+const MAX_PORT = 65535;
+
+/**
+ * A port read off disk is untrusted input that gets handed to the OS. Anything
+ * out of range, fractional, or non-numeric becomes null so the caller allocates
+ * a fresh one instead of failing to bind.
+ */
+function optionalPort(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isInteger(value)) return null;
+  if (value < MIN_UNPRIVILEGED_PORT || value > MAX_PORT) return null;
+  return value;
 }
 
 /** Coerce anything read off disk into a usable JadeSettings. Never throws. */
@@ -63,6 +97,7 @@ export function normalizeSettings(raw: unknown): JadeSettings {
       maximized: rawWindow.maximized === true,
     },
     lastResumeId: typeof raw.lastResumeId === 'string' ? raw.lastResumeId : null,
+    serverPort: optionalPort(raw.serverPort),
   };
 }
 
@@ -76,6 +111,11 @@ export class SettingsStore {
 
   constructor(private readonly filePath: string) {
     this.settings = normalizeSettings(readJsonWithBackup<unknown>(filePath, undefined));
+    // Once per launch, before this store starts producing temps of its own.
+    // Orphans only appear when a process dies mid-write, so startup is the
+    // right cadence — sweeping per write would scan the directory on every
+    // window move for nothing.
+    sweepStaleDurableWriteTemps(filePath);
   }
 
   get(): JadeSettings {

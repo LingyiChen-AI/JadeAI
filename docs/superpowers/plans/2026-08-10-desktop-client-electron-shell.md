@@ -1999,6 +1999,54 @@ export async function removeStaleDurableWriteTempFiles(finalPath, { minimumAgeMs
 >
 > 另外这个 bug **永远不会让任何测试变红**：测试用临时目录、跑完就删，孤儿只在长期使用的真实 userData 里堆积。它只能靠真的把应用跑起来、去看那个目录才发现。
 
+## 打包后修的四个问题（2026-08-11）
+
+装出 dmg 实际使用后暴露的，四个都是**测试永远不会红**的类型。
+
+### 1. Next 子进程自带一个 dock 图标（写着 "exec"）
+
+Next 执行 `process.title = 'next-server (vX.Y.Z)'`（`start-server.js:182`）。macOS 上 libuv 是**通过 LaunchServices 实现这次赋值**的，而当前可执行文件位于 .app bundle 内时，这次调用会把进程注册成前台应用。打包后子进程跑的是 Electron 自己的二进制（在 JadeAI.app 里），于是它拿到独立的 dock tile。`ELECTRON_RUN_AS_NODE` 挡不住——它抑制的是 Chromium 启动，不是 libuv 这次调用。
+
+用打包后的二进制直接验证：只 `setTimeout` 空转的脚本无 LaunchServices 记录；只加一行 `process.title = ...` 就产生一条 `bundle path=/Applications/JadeAI.app`。修法是预加载 `resources/next-title-guard.js` 把 `process.title` 换成普通 accessor。
+
+**这解释了为什么 dev 那次"修好了"却没暴露这条**：dev 走真 node，不在 bundle 里，libuv 那条分支根本不走。同一个 bug 的两种表现，当时只治了一头。
+
+> **`--require=<path>` 必须是单个 argv 元素，不能写 `-r <path>`。** `next dev` 会 re-exec node 并把这些 flag 透过 `NODE_OPTIONS` 传下去，短横线形式到那边变成 `--r=<path>`，node 直接拒绝（`--r= is not allowed in NODE_OPTIONS`），dev 服务当场起不来。长形式在 NODE_OPTIONS 白名单里，能活过这次往返——顺带也就到达了 dev 模式下真正设置 title 的 next-server 孙进程。
+>
+> 生产环境用 `-r` 是好的（standalone `server.js` 不 re-exec），所以这条**只在 dev 暴露**。先打包验证再跑 dev，才撞上。
+
+### 2. 关窗不退出
+
+macOS "关窗保持常驻"的惯例适合常驻成本低的应用；这个应用会为一个已经不存在的窗口留着一个 Next 服务和一个打开的 SQLite 句柄。`window-all-closed` 改为无条件 `app.quit()`，并删掉 `activate` 重开窗口的处理——留着它就等于宣称存在"活着但没窗口"的状态。
+
+### 3. 信号绕过 `will-quit`
+
+信号终止主进程时**根本不会触发 `will-quit`**，于是 `kill`、系统关机、dev 终端里的 Ctrl+C、以及 dev loop 自己的重启，全都跳过了设置落盘并留下 Next 服务。改为在 `SIGINT`/`SIGTERM`/`SIGHUP` 上走 `app.quit()`，配一个 3s 强制退出看门狗（装了 handler 就压掉了默认的"直接死"，卡住的退出会永久挂着，看门狗是装 handler 的代价）。
+
+**这才是之前观察到残留 next-server 的真正原因**，见下条更正。
+
+### 4. 端口每次启动都变 → 渲染进程的 localStorage 每次都是新的
+
+用户报"新手引导第二次进入还在提示"。根因不在引导代码：
+
+`allocateLoopbackPort()` 每次启动 `listen(0)` 拿一个新端口，而端口是页面 origin 的一部分，Chromium 按 origin 分区 localStorage / IndexedDB / cookie。所以每次启动渲染进程都拿到一块**全新的空存储**。丢掉的不只是 `jade_tour_dashboard_completed`，还有 `jade_dashboard_view` 和 **`settings-store` 里存的 AI API key**——后者用户还没注意到，但比引导重提示严重得多。
+
+修法是把端口持久化进设置文件、下次启动仍可 bind 就复用（`resolveServerPort`）。存的端口被别人占了就换新的并覆盖掉：**起不来比丢一次 web 存储更糟**。
+
+> 这条的教训是**症状和病因隔了很远**。"引导重复出现"看起来百分之百是引导代码的状态管理问题；真正的原因在 Electron 主进程分配端口的那一行，中间隔着 Chromium 的 origin 分区规则。先去读引导代码只会看到一段完全正确的实现。
+
+### 5. 孤儿临时文件清理（补上前面记的遗留）
+
+`sweepStaleDurableWriteTemps` 落地，用 orca 的形状：`opendirSync` + 有界游标（不是 `readdirSync`——它会把整个目录列表物化，而这在"目录里堆了几千个孤儿"这个正要清理的场景下恰好最糟）、1024 条硬上限、年龄门槛。
+
+**一处刻意偏离 orca：没有抄"跳过本进程自己的临时文件"。** 年龄门槛已经覆盖了它想防的事（本模块的写入是毫秒级，5 分钟外的必然已被放弃），而 pid 会被 OS 复用——上一次运行留下的 `.1234.` 孤儿会因为本次运行恰好也是 1234 而被永久跳过，把可回收的孤儿变成永久泄漏。这是权衡后的取舍，不是又一次抄漏。
+
+### 更正一条之前的报告
+
+我之前把"杀 `next dev` 会留下 next-server 孙进程占着端口"报成独立缺陷。实测**不成立**：SIGTERM 给 `next dev`，它会转发给 next-server，两个都干净退出，端口释放。只有 SIGKILL（父进程来不及转发）才真的留下孙进程占着端口——已实测确认。
+
+所以进程组 kill（`detached: true` + `kill(-pid)`）不是那个残留的解药，它是**冗余防线**：让拆除不再依赖 Next 自己的信号处理（父进程卡死或被硬杀时仍然有效）。当时真正看到的残留几乎肯定是第 3 条——那条路径下根本没人给子进程发过信号。
+
 ## 阶段二验收
 
 - [ ] `pnpm type-check` 与 `pnpm test` 通过

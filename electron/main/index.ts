@@ -134,6 +134,7 @@ async function bootServerInto(window: BrowserWindow): Promise<void> {
       },
       databaseFile: getDatabaseFile(),
       migrationsDir: resolveMigrationsDirectory(),
+      preferredPort: settings.get().serverPort,
       onUnexpectedExit: (code, signal) => {
         if (generation !== bootGeneration) return;
         console.error(`[next] server exited unexpectedly (code=${code} signal=${signal})`);
@@ -147,6 +148,12 @@ async function bootServerInto(window: BrowserWindow): Promise<void> {
       },
     });
     if (generation !== bootGeneration) return;
+    // Remember the port BEFORE loading the page. It is part of the origin the
+    // renderer's localStorage is keyed on, so persisting it is what lets the
+    // next launch land on the same storage area.
+    if (running.port !== settings.get().serverPort) {
+      settings.patch({ serverPort: running.port });
+    }
     const { locale } = settings.get();
     await window.loadURL(`${running.origin}/${locale}`);
   } catch (error) {
@@ -196,3 +203,31 @@ app.on('will-quit', () => {
   settings?.flushSync();
   serverHost.stop();
 });
+
+// A signal terminates the main process without ever emitting 'will-quit', so
+// without these handlers `kill`, a system shutdown, Ctrl+C in the dev terminal,
+// and the dev loop's own restart all skipped the flush above AND left the Next
+// server behind. Routing them through app.quit() gives every exit path one
+// teardown. Signals only — an uncaught exception is not a shutdown request.
+const TERMINATION_SIGNALS: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'SIGHUP'];
+const FORCED_EXIT_GRACE_MS = 3_000;
+let shuttingDown = false;
+
+for (const signal of TERMINATION_SIGNALS) {
+  process.on(signal, () => {
+    // A second Ctrl+C must not restart the sequence — and installing a handler
+    // at all suppresses the default "just die", so a wedged quit would hang
+    // forever. The watchdog is the price of handling the signal.
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`[shutdown] received ${signal}, quitting`);
+    const watchdog = setTimeout(() => {
+      console.error('[shutdown] quit did not finish in time, forcing exit');
+      // will-quit has already flushed settings and signalled the child by now;
+      // what remains is Chromium teardown, which is safe to cut short.
+      process.exit(0);
+    }, FORCED_EXIT_GRACE_MS);
+    watchdog.unref();
+    app.quit();
+  });
+}

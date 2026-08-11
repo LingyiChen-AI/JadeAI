@@ -1,11 +1,15 @@
 import { EventEmitter } from 'node:events';
+import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   allocateLoopbackPort,
+  isLoopbackPortBindable,
+  killProcessTree,
   NextServerHost,
   resolveNextServerCommand,
   resolveNodeExecutable,
+  resolveServerPort,
   waitForHealthy,
 } from './next-server-host';
 
@@ -24,6 +28,7 @@ describe('allocateLoopbackPort', () => {
 
 describe('resolveNextServerCommand', () => {
   const GUARD = join('/Resources', 'next-title-guard.js');
+  const PRELOAD = `--require=${GUARD}`;
   const paths = { appRoot: '/repo', assetRoot: '/Resources', titleGuardScript: GUARD };
 
   // Path expectations go through join() for the same cross-platform reason as
@@ -31,8 +36,7 @@ describe('resolveNextServerCommand', () => {
   it('runs next dev bound to loopback in development', () => {
     const command = resolveNextServerCommand('development', paths, 41234);
     expect(command.args).toEqual([
-      '-r',
-      GUARD,
+      PRELOAD,
       join('/repo', 'node_modules', 'next', 'dist', 'bin', 'next'),
       'dev',
       '--turbopack',
@@ -46,21 +50,34 @@ describe('resolveNextServerCommand', () => {
 
   it('runs the standalone server in production', () => {
     const command = resolveNextServerCommand('production', paths, 41234);
-    expect(command.args).toEqual(['-r', GUARD, join('/Resources', 'standalone', 'server.js')]);
+    expect(command.args).toEqual([PRELOAD, join('/Resources', 'standalone', 'server.js')]);
     expect(command.cwd).toBe(join('/Resources', 'standalone'));
   });
 
-  // Ordering is the whole point of the guard: Next assigns process.title while
-  // its own entry script runs, so a `-r` that landed after the script would
-  // preload too late and the child would still register a dock icon. Pin the
-  // position, not just the presence.
+  // Ordering is the point of the guard: Next assigns process.title while its own
+  // entry script runs, so a preload landing after the script is too late and the
+  // child still registers a dock icon.
   it.each(['development', 'production'] as const)(
     'preloads the title guard before the entry script in %s',
     (mode) => {
       const { args } = resolveNextServerCommand(mode, paths, 41234);
-      expect(args[0]).toBe('-r');
-      expect(args[1]).toBe(GUARD);
-      expect(args.indexOf(GUARD)).toBeLessThan(args.length - 1);
+      expect(args[0]).toBe(PRELOAD);
+      expect(args.length).toBeGreaterThan(1);
+    },
+  );
+
+  // Regression: the short `-r <path>` form killed `next dev` outright. Next
+  // re-execs node and forwards these flags through NODE_OPTIONS, which receives
+  // the short form as `--r=<path>` and refuses it ("--r= is not allowed in
+  // NODE_OPTIONS"). Only the single-element long form survives that round-trip.
+  it.each(['development', 'production'] as const)(
+    'uses the NODE_OPTIONS-safe --require= form in %s, never -r',
+    (mode) => {
+      const { args } = resolveNextServerCommand(mode, paths, 41234);
+      expect(args).not.toContain('-r');
+      expect(args.filter((arg) => arg.includes('next-title-guard.js'))).toEqual([
+        `--require=${GUARD}`,
+      ]);
     },
   );
 });
@@ -124,17 +141,24 @@ describe('waitForHealthy', () => {
 });
 
 // Minimal ChildProcess stand-in: just enough surface (stdout/stderr streams,
-// 'exit' event, kill(), exitCode) for NextServerHost to drive.
-function makeFakeChild() {
+// 'exit' event, kill(), exitCode, pid) for NextServerHost to drive.
+//
+// `pid` matters: killOwnedChild() falls back to child.kill() when it is
+// undefined (the spawn-failed path). A fake without one would keep the old
+// child.kill() assertions green while never exercising the process-tree kill
+// that teardown actually uses now.
+function makeFakeChild(pid = 4242) {
   const child = new EventEmitter() as EventEmitter & {
     stdout: EventEmitter;
     stderr: EventEmitter;
     exitCode: number | null;
+    pid: number | undefined;
     kill: ReturnType<typeof vi.fn>;
   };
   child.stdout = new EventEmitter();
   child.stderr = new EventEmitter();
   child.exitCode = null;
+  child.pid = pid;
   child.kill = vi.fn();
   return child;
 }
@@ -145,6 +169,7 @@ describe('NextServerHost start() failure cleanup', () => {
     paths: { appRoot: '/repo', assetRoot: '/Resources', titleGuardScript: '/Resources/next-title-guard.js' },
     databaseFile: '/data/app.sqlite',
     migrationsDir: '/Resources/drizzle/migrations',
+    preferredPort: null,
     onUnexpectedExit: vi.fn(),
   };
 
@@ -154,29 +179,167 @@ describe('NextServerHost start() failure cleanup', () => {
   // instance's only reference to it and it leaks forever, still holding its
   // port. See the "killOwnedChild" call in the catch branch of start().
   it('kills the spawned child when the health probe times out, so it is not orphaned', async () => {
-    const fakeChild = makeFakeChild();
+    const fakeChild = makeFakeChild(4242);
     const spawnImpl = vi.fn().mockReturnValue(fakeChild);
     const waitForHealthyImpl = vi.fn().mockRejectedValue(new Error('did not become healthy'));
     const allocateLoopbackPortImpl = vi.fn().mockResolvedValue(41234);
+    const killProcessTreeImpl = vi.fn();
 
     const host = new NextServerHost({
       spawn: spawnImpl as never,
       waitForHealthy: waitForHealthyImpl,
       allocateLoopbackPort: allocateLoopbackPortImpl,
+      killProcessTree: killProcessTreeImpl,
     });
 
     await expect(host.start(options)).rejects.toThrow(/did not become healthy/);
 
-    expect(fakeChild.kill).toHaveBeenCalledWith('SIGTERM');
+    expect(killProcessTreeImpl).toHaveBeenCalledWith(4242);
     // The self-inflicted kill must not be reported as an unexpected exit.
     fakeChild.emit('exit', null, 'SIGTERM');
     expect(options.onUnexpectedExit).not.toHaveBeenCalled();
 
     // A follow-up stop() must be a safe no-op — the failed attempt already
     // cleaned up its own child, so there is nothing left to kill again.
-    fakeChild.kill.mockClear();
+    killProcessTreeImpl.mockClear();
     host.stop();
-    expect(fakeChild.kill).not.toHaveBeenCalled();
+    expect(killProcessTreeImpl).not.toHaveBeenCalled();
+  });
+
+  // Guards the negation in killProcessTree: process.kill(-pid) with no pid to
+  // negate would signal an arbitrary group, so the spawn-failed case must stay
+  // on the plain child.kill() path.
+  it('falls back to child.kill when the spawn produced no pid', async () => {
+    const fakeChild = makeFakeChild(4242);
+    fakeChild.pid = undefined;
+    const killProcessTreeImpl = vi.fn();
+
+    const host = new NextServerHost({
+      spawn: vi.fn().mockReturnValue(fakeChild) as never,
+      waitForHealthy: vi.fn().mockRejectedValue(new Error('did not become healthy')),
+      allocateLoopbackPort: vi.fn().mockResolvedValue(41234),
+      killProcessTree: killProcessTreeImpl,
+    });
+
+    await expect(host.start(options)).rejects.toThrow(/did not become healthy/);
+
+    expect(killProcessTreeImpl).not.toHaveBeenCalled();
+    expect(fakeChild.kill).toHaveBeenCalledWith('SIGTERM');
+  });
+
+  // `next dev` serves from a forked next-server grandchild. Signalling only the
+  // direct child left it alive holding the port, so the child must be spawned
+  // into its own process group for a group kill to be possible at all.
+  it('spawns the child detached on posix so its whole group can be signalled', async () => {
+    const spawnImpl = vi.fn().mockReturnValue(makeFakeChild());
+
+    const host = new NextServerHost({
+      spawn: spawnImpl as never,
+      waitForHealthy: vi.fn().mockResolvedValue(undefined),
+      allocateLoopbackPort: vi.fn().mockResolvedValue(41234),
+      killProcessTree: vi.fn(),
+    });
+    await host.start(options);
+
+    expect(spawnImpl.mock.calls[0][2]).toMatchObject({
+      detached: process.platform !== 'win32',
+    });
+  });
+});
+
+describe('killProcessTree', () => {
+  const posix = { platform: 'darwin' as NodeJS.Platform };
+
+  it('signals the negated pid so the whole process group dies', () => {
+    const kill = vi.fn();
+    killProcessTree(4242, { ...posix, kill, spawn: vi.fn() as never });
+    expect(kill).toHaveBeenCalledWith(-4242, 'SIGTERM');
+  });
+
+  // ESRCH means the group is gone or `detached` never took effect. Killing the
+  // one process we know about beats killing nothing.
+  it('falls back to the single pid when the group does not exist', () => {
+    const kill = vi.fn().mockImplementationOnce(() => {
+      throw Object.assign(new Error('kill ESRCH'), { code: 'ESRCH' });
+    });
+    killProcessTree(4242, { ...posix, kill, spawn: vi.fn() as never });
+    expect(kill).toHaveBeenNthCalledWith(1, -4242, 'SIGTERM');
+    expect(kill).toHaveBeenNthCalledWith(2, 4242, 'SIGTERM');
+  });
+
+  // Any other errno is a real fault (EPERM, for instance) and must not be
+  // quietly downgraded into a single-process kill that also fails.
+  it('rethrows errors other than ESRCH', () => {
+    const kill = vi.fn().mockImplementation(() => {
+      throw Object.assign(new Error('kill EPERM'), { code: 'EPERM' });
+    });
+    expect(() => killProcessTree(4242, { ...posix, kill, spawn: vi.fn() as never })).toThrow(
+      /EPERM/,
+    );
+    expect(kill).toHaveBeenCalledTimes(1);
+  });
+
+  // Windows has no process group to signal and child.kill() documentedly
+  // leaves descendants running; /T is what reaches them.
+  it('uses taskkill /T on windows', () => {
+    const spawn = vi.fn();
+    const kill = vi.fn();
+    killProcessTree(4242, { platform: 'win32', kill, spawn: spawn as never });
+    expect(kill).not.toHaveBeenCalled();
+    expect(spawn).toHaveBeenCalledWith(
+      'taskkill',
+      ['/pid', '4242', '/T', '/F'],
+      expect.objectContaining({ stdio: 'ignore' }),
+    );
+  });
+});
+
+describe('resolveServerPort', () => {
+  // The point of the whole mechanism: the port is part of the page origin, and
+  // Chromium keys localStorage on the origin. Reusing it is what keeps the
+  // renderer's saved API keys and "tour seen" flag alive across launches.
+  it('reuses the stored port when it is still bindable', async () => {
+    const allocate = vi.fn();
+    const port = await resolveServerPort(41234, {
+      isLoopbackPortBindable: vi.fn().mockResolvedValue(true),
+      allocateLoopbackPort: allocate,
+    });
+    expect(port).toBe(41234);
+    expect(allocate).not.toHaveBeenCalled();
+  });
+
+  // Failing to start is worse than losing web storage for one session.
+  it('allocates a fresh port when the stored one is taken', async () => {
+    const port = await resolveServerPort(41234, {
+      isLoopbackPortBindable: vi.fn().mockResolvedValue(false),
+      allocateLoopbackPort: vi.fn().mockResolvedValue(51000),
+    });
+    expect(port).toBe(51000);
+  });
+
+  it('allocates on a first launch, without probing', async () => {
+    const probe = vi.fn();
+    const port = await resolveServerPort(null, {
+      isLoopbackPortBindable: probe,
+      allocateLoopbackPort: vi.fn().mockResolvedValue(51000),
+    });
+    expect(port).toBe(51000);
+    expect(probe).not.toHaveBeenCalled();
+  });
+});
+
+describe('isLoopbackPortBindable', () => {
+  it('reports true for a free port and false while it is held', async () => {
+    const free = await allocateLoopbackPort();
+    expect(await isLoopbackPortBindable(free)).toBe(true);
+
+    const holder = createServer();
+    await new Promise<void>((resolve) => holder.listen(free, '127.0.0.1', resolve));
+    try {
+      expect(await isLoopbackPortBindable(free)).toBe(false);
+    } finally {
+      await new Promise<void>((resolve) => holder.close(() => resolve()));
+    }
   });
 });
 
@@ -186,6 +349,7 @@ describe('NextServerHost stale exit handling across retries', () => {
     paths: { appRoot: '/repo', assetRoot: '/Resources', titleGuardScript: '/Resources/next-title-guard.js' },
     databaseFile: '/data/app.sqlite',
     migrationsDir: '/Resources/drizzle/migrations',
+    preferredPort: null,
     onUnexpectedExit,
   });
 
@@ -197,8 +361,8 @@ describe('NextServerHost stale exit handling across retries', () => {
   // silently turning every later stop() into a no-op and leaving the live
   // Next server running past app quit (an orphan).
   it('does not let a stale exit from a superseded child clear the live child, so stop() still kills it', async () => {
-    const child1 = makeFakeChild();
-    const child2 = makeFakeChild();
+    const child1 = makeFakeChild(4001);
+    const child2 = makeFakeChild(4002);
     const spawnImpl = vi.fn().mockReturnValueOnce(child1).mockReturnValueOnce(child2);
     const waitForHealthyImpl = vi.fn().mockResolvedValue(undefined);
     const allocateLoopbackPortImpl = vi
@@ -206,19 +370,21 @@ describe('NextServerHost stale exit handling across retries', () => {
       .mockResolvedValueOnce(41001)
       .mockResolvedValueOnce(41002);
     const onUnexpectedExit = vi.fn();
+    const killProcessTreeImpl = vi.fn();
 
     const host = new NextServerHost({
       spawn: spawnImpl as never,
       waitForHealthy: waitForHealthyImpl,
       allocateLoopbackPort: allocateLoopbackPortImpl,
+      killProcessTree: killProcessTreeImpl,
     });
 
     await host.start(makeOptions(onUnexpectedExit));
 
-    // Retry: stop() fires kill() on child1, but — matching the real
+    // Retry: stop() signals child1's group, but — matching the real
     // ChildProcess contract — the 'exit' event has not landed yet.
     host.stop();
-    expect(child1.kill).toHaveBeenCalledWith('SIGTERM');
+    expect(killProcessTreeImpl).toHaveBeenCalledWith(4001);
 
     // A second start() happens before that stale exit arrives (this is
     // exactly what the retry button, and macOS `activate`, do).
@@ -236,9 +402,9 @@ describe('NextServerHost stale exit handling across retries', () => {
 
     // Quit-time stop() must still kill the live (child2) process, not no-op
     // because a stale event already cleared the reference.
-    child2.kill.mockClear();
+    killProcessTreeImpl.mockClear();
     host.stop();
-    expect(child2.kill).toHaveBeenCalledWith('SIGTERM');
+    expect(killProcessTreeImpl).toHaveBeenCalledWith(4002);
   });
 });
 

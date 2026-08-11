@@ -46,14 +46,62 @@ export async function allocateLoopbackPort(): Promise<number> {
   });
 }
 
+/** Resolves true if this process can bind `port` on loopback right now. */
+export async function isLoopbackPortBindable(port: number): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const server = createServer();
+    server.unref();
+    server.once('error', () => resolve(false));
+    server.listen(port, '127.0.0.1', () => {
+      server.close(() => resolve(true));
+    });
+  });
+}
+
+export interface ServerPortDeps {
+  isLoopbackPortBindable: (port: number) => Promise<boolean>;
+  allocateLoopbackPort: () => Promise<number>;
+}
+
+/**
+ * Pick the port to serve on, preferring the one from last launch.
+ *
+ * The port is part of the page's origin, and Chromium partitions localStorage,
+ * IndexedDB and cookies by origin — so a fresh port every launch handed the
+ * renderer an empty storage area each time, silently discarding the saved API
+ * keys and the "tour already seen" flag. Reusing the port keeps the origin, and
+ * with it the storage, stable across launches.
+ *
+ * A stored port that will not bind (another process took it, or a second app
+ * instance is already serving on it) is abandoned rather than retried: failing
+ * to start is worse than losing web storage for that session. Callers persist
+ * whatever comes back, so the app converges on a stable port again afterwards.
+ */
+export async function resolveServerPort(
+  storedPort: number | null,
+  deps: ServerPortDeps,
+): Promise<number> {
+  if (storedPort !== null && (await deps.isLoopbackPortBindable(storedPort))) {
+    return storedPort;
+  }
+  return deps.allocateLoopbackPort();
+}
+
 export function resolveNextServerCommand(
   mode: ServerMode,
   paths: ServerPaths,
   port: number,
 ): NextServerCommand {
-  // `-r` first: the guard has to neutralise process.title before Next's own code
-  // runs and assigns it. See resources/next-title-guard.js for why that matters.
-  const preload = ['-r', paths.titleGuardScript];
+  // Preload first: the guard has to neutralise process.title before Next's own
+  // code runs and assigns it. See resources/next-title-guard.js for why.
+  //
+  // `--require=x` as ONE argv element, not `-r x`. `next dev` re-execs node and
+  // forwards these flags through NODE_OPTIONS, where the short form arrives as
+  // `--r=x` and node rejects it outright ("--r= is not allowed in NODE_OPTIONS"),
+  // killing the dev server on startup. The long form is on NODE_OPTIONS'
+  // allowlist, so it survives the round-trip — and reaches next dev's
+  // next-server grandchild, which is the process that sets the title in dev.
+  const preload = [`--require=${paths.titleGuardScript}`];
   if (mode === 'development') {
     return {
       args: [
@@ -109,6 +157,12 @@ export interface StartOptions {
   paths: ServerPaths;
   databaseFile: string;
   migrationsDir: string;
+  /**
+   * Port from the previous launch, reused when still bindable to keep the page
+   * origin — and therefore the renderer's localStorage — stable. null on a
+   * first launch. See resolveServerPort.
+   */
+  preferredPort: number | null;
   /** Called if the child exits before stop() was requested. */
   onUnexpectedExit: (code: number | null, signal: NodeJS.Signals | null) => void;
 }
@@ -146,22 +200,76 @@ export function resolveNodeExecutable(
   return electronExecPath;
 }
 
+export interface KillTreeDeps {
+  platform: NodeJS.Platform;
+  kill: (pid: number, signal: NodeJS.Signals) => void;
+  spawn: typeof spawnProcess;
+}
+
+/**
+ * Terminate `pid` AND its descendants.
+ *
+ * `next dev` does not serve requests itself — it forks `next-server` as a
+ * grandchild. Signalling only the direct child left that grandchild alive,
+ * still holding the port, and nothing ever reaped it.
+ *
+ * POSIX: the child is spawned `detached: true`, which makes it the leader of a
+ * new process group, so a negative pid signals the whole group in one call.
+ * That is also why `detached` is not optional — without it the child shares
+ * OUR group and a negative pid would signal the main process too.
+ *
+ * Windows has no process groups to signal; `process.kill` with a negative pid
+ * throws there, and a plain `child.kill()` documentedly leaves descendants
+ * running. `taskkill /T` is the platform's equivalent.
+ */
+export function killProcessTree(pid: number, deps: KillTreeDeps): void {
+  if (deps.platform === 'win32') {
+    deps.spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' });
+    return;
+  }
+  try {
+    deps.kill(-pid, 'SIGTERM');
+  } catch (error) {
+    // ESRCH means no such process group: `detached` did not take effect, or the
+    // group is already gone. Fall back to the single pid — killing one process
+    // beats killing none. Any other error is real and should surface.
+    if ((error as NodeJS.ErrnoException)?.code !== 'ESRCH') throw error;
+    try {
+      deps.kill(pid, 'SIGTERM');
+    } catch {
+      // Already dead. Nothing left to reap.
+    }
+  }
+}
+
 /**
  * Collaborators `NextServerHost` calls out to, injectable purely so
- * `start()`'s failure-cleanup path (see the class doc comment) can be
- * exercised without spawning a real Next process or waiting out a real
- * timeout. Production code always uses the defaults.
+ * `start()`'s failure-cleanup path (see the class doc comment) and the
+ * process-tree teardown can be exercised without spawning a real Next
+ * process or waiting out a real timeout. Production code always uses the
+ * defaults.
  */
 export interface NextServerHostDeps {
   spawn: typeof spawnProcess;
   waitForHealthy: typeof waitForHealthy;
   allocateLoopbackPort: typeof allocateLoopbackPort;
+  isLoopbackPortBindable: typeof isLoopbackPortBindable;
+  killProcessTree: (pid: number) => void;
 }
 
 const defaultDeps: NextServerHostDeps = {
   spawn: spawnProcess,
   waitForHealthy,
   allocateLoopbackPort,
+  isLoopbackPortBindable,
+  killProcessTree: (pid) =>
+    killProcessTree(pid, {
+      platform: process.platform,
+      kill: (target, signal) => {
+        process.kill(target, signal);
+      },
+      spawn: spawnProcess,
+    }),
 };
 
 export class NextServerHost {
@@ -180,7 +288,10 @@ export class NextServerHost {
     // reference is overwritten and it survives as an orphan past quit.
     this.killOwnedChild();
 
-    const port = await this.deps.allocateLoopbackPort();
+    const port = await resolveServerPort(options.preferredPort, {
+      isLoopbackPortBindable: this.deps.isLoopbackPortBindable,
+      allocateLoopbackPort: this.deps.allocateLoopbackPort,
+    });
     const command = resolveNextServerCommand(options.mode, options.paths, port);
 
     this.stopping = false; // must come after killOwnedChild(), which sets it true
@@ -207,6 +318,10 @@ export class NextServerHost {
         HOSTNAME: '127.0.0.1',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
+      // Own process group, so killOwnedChild() can signal the whole tree —
+      // `next dev`'s next-server grandchild included. See killProcessTree.
+      // Deliberately NOT followed by child.unref(): we still want to track it.
+      detached: process.platform !== 'win32',
     });
     this.child = child;
 
@@ -260,7 +375,13 @@ export class NextServerHost {
     this.stopping = true;
     this.child = null;
     if (child.exitCode !== null) return;
-    child.kill('SIGTERM');
+    if (child.pid === undefined) {
+      // Spawn failed outright, so there is no group to signal — and no pid to
+      // negate, which would make killProcessTree signal something arbitrary.
+      child.kill('SIGTERM');
+      return;
+    }
+    this.deps.killProcessTree(child.pid);
   }
 
   /** Kill the child. Called on quit so no orphan keeps holding the port. */

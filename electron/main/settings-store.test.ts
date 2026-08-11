@@ -44,6 +44,19 @@ describe('normalizeSettings', () => {
     expect(normalizeSettings({ lastResumeId: 7 }).lastResumeId).toBeNull();
   });
 
+  // serverPort is read off disk and handed straight to the OS to bind, so
+  // anything unusable has to become null and let the caller allocate afresh —
+  // a bad value here would surface as a startup failure, not a bad preference.
+  it('keeps a usable serverPort and rejects anything unbindable', () => {
+    expect(normalizeSettings({ serverPort: 41234 }).serverPort).toBe(41234);
+    expect(normalizeSettings({}).serverPort).toBeNull();
+    expect(normalizeSettings({ serverPort: 80 }).serverPort).toBeNull(); // privileged
+    expect(normalizeSettings({ serverPort: 70000 }).serverPort).toBeNull(); // out of range
+    expect(normalizeSettings({ serverPort: 41234.5 }).serverPort).toBeNull(); // fractional
+    expect(normalizeSettings({ serverPort: '41234' }).serverPort).toBeNull(); // string
+    expect(normalizeSettings({ serverPort: Number.NaN }).serverPort).toBeNull();
+  });
+
   it('clamps a legal-JSON-but-invalid-shape file read at construction time', () => {
     // readJsonWithBackup() only falls back on a parse failure; a well-formed
     // JSON document with out-of-range fields sails through it unchanged, so

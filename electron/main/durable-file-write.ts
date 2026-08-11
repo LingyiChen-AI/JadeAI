@@ -3,15 +3,17 @@ import {
   copyFileSync,
   existsSync,
   fsyncSync,
+  opendirSync,
   openSync,
   readFileSync,
   renameSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { open, rename, rm } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { dirname } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 
 /**
  * Concurrency contract: this module does NOT serialize overlapping writes to
@@ -198,4 +200,70 @@ function tryParse<T>(path: string): T | null {
 /** Read JSON, falling back to the `.bak` sidecar and then to `fallback`. */
 export function readJsonWithBackup<T>(finalPath: string, fallback: T): T {
   return tryParse<T>(finalPath) ?? tryParse<T>(`${finalPath}.bak`) ?? fallback;
+}
+
+/**
+ * Hard cap on entries examined per sweep. The directory being scanned is the
+ * Electron userData dir, which Chromium also fills with its own caches, and a
+ * sweep must never turn into an unbounded stall at startup.
+ */
+export const TEMP_SWEEP_MAX_ENTRIES = 1024;
+
+/**
+ * Only reap temp files older than this. The cutoff is the whole reason this is
+ * safe: a temp file belonging to a LIVE writer — another app instance, or an
+ * in-flight async write in this one — is indistinguishable from an orphan by
+ * name alone, and deleting it would corrupt exactly the write this module
+ * exists to protect. Real writes here take single-digit milliseconds, so
+ * anything this old is genuinely abandoned.
+ */
+export const TEMP_SWEEP_STALE_MS = 5 * 60 * 1000;
+
+/**
+ * Delete abandoned `tempPathFor()` files left beside `finalPath`.
+ *
+ * `writeFileDurable` removes its own temp on failure, so orphans come from the
+ * one path it cannot cover: the process dying between `open` and `rename`
+ * (SIGKILL, a crash, a power cut). Nothing else ever cleans them up, so they
+ * accumulate for the life of the installation.
+ *
+ * Streams the directory with a bounded cursor rather than `readdirSync`, which
+ * would materialise the entire listing — worst in precisely the situation this
+ * cleans up, a directory that has accumulated thousands of orphans.
+ *
+ * Best-effort throughout: this runs to tidy up, and must never be the reason a
+ * launch fails.
+ */
+export function sweepStaleDurableWriteTemps(finalPath: string, now: number = Date.now()): void {
+  const directory = dirname(finalPath);
+  // Anchored on the target's own basename so a sweep for one file can never
+  // reach another's temps. `.bak` does not match: it lacks the `.tmp` suffix.
+  const prefix = `${basename(finalPath)}.`;
+  const cutoff = now - TEMP_SWEEP_STALE_MS;
+
+  let cursor: ReturnType<typeof opendirSync> | undefined;
+  try {
+    cursor = opendirSync(directory, { bufferSize: 32 });
+    for (let scanned = 0; scanned < TEMP_SWEEP_MAX_ENTRIES; scanned += 1) {
+      const entry = cursor.readSync();
+      if (entry === null) break;
+      if (!entry.name.startsWith(prefix) || !entry.name.endsWith('.tmp')) continue;
+      const entryPath = join(directory, entry.name);
+      try {
+        if (statSync(entryPath).mtimeMs < cutoff) {
+          unlinkSync(entryPath);
+        }
+      } catch {
+        // Raced with another sweep, or not ours to delete. Skip it.
+      }
+    }
+  } catch {
+    // Unreadable directory, or a filesystem without opendir. Nothing to do.
+  } finally {
+    try {
+      cursor?.closeSync();
+    } catch {
+      // Already closed by the failing readSync.
+    }
+  }
 }
