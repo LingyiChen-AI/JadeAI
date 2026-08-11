@@ -5,6 +5,7 @@ import {
   allocateLoopbackPort,
   NextServerHost,
   resolveNextServerCommand,
+  resolveNodeExecutable,
   waitForHealthy,
 } from './next-server-host';
 
@@ -221,5 +222,31 @@ describe('NextServerHost stale exit handling across retries', () => {
     child2.kill.mockClear();
     host.stop();
     expect(child2.kill).toHaveBeenCalledWith('SIGTERM');
+  });
+});
+
+describe('resolveNodeExecutable', () => {
+  const ELECTRON = '/Apps/JadeAI.app/Contents/MacOS/JadeAI';
+  const REAL_NODE = '/Users/me/.nvm/versions/node/v24.12.0/bin/node';
+
+  // `next dev` forks next-server as a grandchild WITHOUT propagating
+  // ELECTRON_RUN_AS_NODE. Under Electron's binary that grandchild starts as a
+  // full GUI app and macOS gives it a second dock icon. Real Node avoids it.
+  it('uses the real node handed down by the dev loop in development', () => {
+    expect(
+      resolveNodeExecutable('development', { JADE_DEV_NODE_PATH: REAL_NODE }, ELECTRON),
+    ).toBe(REAL_NODE);
+  });
+
+  // A packaged app has no Node other than Electron's own binary.
+  it('always uses the electron binary in production', () => {
+    expect(
+      resolveNodeExecutable('production', { JADE_DEV_NODE_PATH: REAL_NODE }, ELECTRON),
+    ).toBe(ELECTRON);
+  });
+
+  // `electron .` run by hand has no dev loop to hand the path down.
+  it('falls back to the electron binary when the dev path is absent', () => {
+    expect(resolveNodeExecutable('development', {}, ELECTRON)).toBe(ELECTRON);
   });
 });

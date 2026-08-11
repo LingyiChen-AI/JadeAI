@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeImage, shell } from 'electron';
 import {
   getAppRoot,
   getAssetRoot,
@@ -39,6 +39,9 @@ function createWindow(): BrowserWindow {
     minHeight: 600,
     show: false,
     title: 'JadeAI',
+    // Window/taskbar icon. On macOS the dock icon comes from the bundle instead,
+    // which in development is Electron's own — app.dock.setIcon() below fixes that.
+    icon: resolveResourceFile('build', 'icon.png'),
     webPreferences: {
       // main bundles to out/main/index.js, so this lands on out/preload/index.js.
       // NOT resolveResourceFile(): the preload is build output, not a resource.
@@ -151,6 +154,16 @@ async function bootServerInto(window: BrowserWindow): Promise<void> {
 
 app.whenReady().then(async () => {
   initDataPath(isDevelopment);
+
+  // In development the dock icon comes from Electron's own bundle, so the app
+  // shows Electron's atom until we override it at runtime. A packaged build gets
+  // the icon from electron-builder's `icon` config instead and needs no override.
+  if (isDevelopment && process.platform === 'darwin') {
+    const dockIcon = nativeImage.createFromPath(resolveResourceFile('build', 'icon.png'));
+    if (!dockIcon.isEmpty()) {
+      app.dock?.setIcon(dockIcon);
+    }
+  }
   settings = new SettingsStore(getSettingsFile());
   registerSettingsIpc(settings);
 

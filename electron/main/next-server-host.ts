@@ -111,6 +111,31 @@ const READINESS_TIMEOUT_MS = 30_000;
 const READINESS_INTERVAL_MS = 250;
 
 /**
+ * Executable to run the Next server with.
+ *
+ * `ELECTRON_RUN_AS_NODE` makes Electron's own binary behave as plain Node, which
+ * is what production must use — a packaged app has no other Node available. But
+ * `next dev` forks its actual server (`next-server`) as a grandchild and does
+ * NOT propagate that variable, so the grandchild launches the Electron binary in
+ * full GUI mode and macOS gives it a second dock icon (labelled `exec`).
+ *
+ * In development we therefore run the child under the real Node that started the
+ * dev loop, handed down by scripts/build-electron.mjs as JADE_DEV_NODE_PATH.
+ * Its grandchildren are then plain Node too. Falls back to process.execPath when
+ * the variable is absent, which keeps `electron .` usable on its own.
+ */
+export function resolveNodeExecutable(
+  mode: ServerMode,
+  env: Record<string, string | undefined>,
+  electronExecPath: string,
+): string {
+  if (mode === 'development' && env.JADE_DEV_NODE_PATH) {
+    return env.JADE_DEV_NODE_PATH;
+  }
+  return electronExecPath;
+}
+
+/**
  * Collaborators `NextServerHost` calls out to, injectable purely so
  * `start()`'s failure-cleanup path (see the class doc comment) can be
  * exercised without spawning a real Next process or waiting out a real
@@ -149,8 +174,10 @@ export class NextServerHost {
 
     this.stopping = false; // must come after killOwnedChild(), which sets it true
     // ELECTRON_RUN_AS_NODE makes Electron's bundled Node run the script as a
-    // plain Node process — no Chromium, no Electron APIs in the child.
-    const child = this.deps.spawn(process.execPath, command.args, {
+    // plain Node process — no Chromium, no Electron APIs in the child. In dev we
+    // prefer the real Node instead; see resolveNodeExecutable for why.
+    const executable = resolveNodeExecutable(options.mode, process.env, process.execPath);
+    const child = this.deps.spawn(executable, command.args, {
       cwd: command.cwd,
       env: {
         ...process.env,

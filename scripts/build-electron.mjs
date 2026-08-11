@@ -9,8 +9,10 @@
 // server the main process spawns. esbuild is already in the tree and adds no
 // new peer constraints.
 
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { spawn } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { execFileSync, spawn } from 'node:child_process';
 import * as esbuild from 'esbuild';
 
 // This file is ESM (.mjs), so top-level `require` isn't available — but CJS
@@ -22,6 +24,47 @@ import * as esbuild from 'esbuild';
 // an Electron-launched process.
 const require = createRequire(import.meta.url);
 const electronPath = require('electron');
+
+const APP_NAME = 'JadeAI';
+// A dev-only bundle id. Without changing it from Electron's own, LaunchServices
+// keeps serving the name it cached for `com.github.Electron` and the dock still
+// hovers as "Electron" even with CFBundleName patched.
+const DEV_BUNDLE_ID = 'com.jadeai.desktop.dev';
+
+/**
+ * Give the dev app its own name in the dock and menu bar.
+ *
+ * `app.setName()` only changes what Electron itself reports (and where userData
+ * lands) — macOS reads the dock tooltip and menu-bar title from the *bundle's*
+ * Info.plist, which in development is Electron's own. Without this the app
+ * hovers as "Electron".
+ *
+ * Patched in place rather than by copying the bundle (which is what a fuller
+ * setup does when it also needs a distinct bundle id): we only need the display
+ * name. Verified the plist is not hardlinked into the pnpm store, so this cannot
+ * leak into other projects; a `pnpm install` resets it and the next launch
+ * re-applies it. Packaged builds get the name from electron-builder instead.
+ */
+function nameDevBundle() {
+  if (process.platform !== 'darwin') return;
+  const plist = join(dirname(dirname(electronPath)), 'Info.plist');
+  if (!existsSync(plist)) return;
+  try {
+    for (const key of ['CFBundleName', 'CFBundleDisplayName']) {
+      execFileSync('/usr/bin/plutil', ['-replace', key, '-string', APP_NAME, plist]);
+    }
+    execFileSync('/usr/bin/plutil', ['-replace', 'CFBundleIdentifier', '-string', DEV_BUNDLE_ID, plist]);
+    // Re-register so LaunchServices picks the new identity up instead of serving
+    // whatever it cached for the previous bundle id.
+    execFileSync(
+      '/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister',
+      ['-f', dirname(dirname(plist))],
+    );
+  } catch (error) {
+    // Cosmetic only — a wrong dock tooltip must never block the dev loop.
+    console.warn(`[dev] could not rename the electron bundle: ${error.message}`);
+  }
+}
 
 const isWatch = process.argv.includes('--watch');
 
@@ -78,8 +121,17 @@ let restarting = false;
 const firstBuildDone = new Set();
 
 function launchElectron() {
+  nameDevBundle();
   console.log('[dev] launching electron');
-  const child = spawn(electronPath, ['.'], { stdio: 'inherit' });
+  const child = spawn(electronPath, ['.'], {
+    stdio: 'inherit',
+    // `next dev` forks its real server as a grandchild without propagating
+    // ELECTRON_RUN_AS_NODE, so if the child ran under Electron's binary that
+    // grandchild would start as a full GUI app and take a second dock icon.
+    // Hand down the real Node that is running this script so the whole subtree
+    // stays plain Node in development.
+    env: { ...process.env, JADE_DEV_NODE_PATH: process.execPath },
+  });
   electronChild = child;
 
   // If Electron exits on its own — the developer closed the last window,
