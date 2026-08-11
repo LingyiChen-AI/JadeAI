@@ -20,7 +20,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/lib/db/seed.ts",
-    "build:electron": "node scripts/build-electron.mjs"
+    "build:electron": "node scripts/build-electron.mjs",
+    "dist:mac": "pnpm build && pnpm build:electron && electron-builder --config config/electron-builder.config.cjs --mac"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

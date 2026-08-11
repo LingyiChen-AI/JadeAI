@@ -1,4 +1,5 @@
 import { spawn as spawnProcess, type ChildProcess } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 
@@ -184,6 +185,12 @@ export class NextServerHost {
         ELECTRON_RUN_AS_NODE: '1',
         NODE_ENV: options.mode,
         JADE_RUNTIME: 'desktop',
+        // NextAuth throws MissingSecret on every /api/auth/session call without
+        // one, and SessionProvider in the layout calls it on every page load.
+        // Desktop never issues a NextAuth session (resolveUser returns the single
+        // local user), so the value is irrelevant — it only has to exist. Per
+        // launch is therefore fine: there is no session to keep valid across runs.
+        AUTH_SECRET: process.env.AUTH_SECRET ?? randomUUID(),
         SQLITE_PATH: options.databaseFile,
         JADE_MIGRATIONS_DIR: options.migrationsDir,
         PORT: String(port),
