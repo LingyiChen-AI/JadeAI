@@ -44,4 +44,5 @@ jadeai-data/*
 
 .superpowers
 
-testrelease/
+test
+release/

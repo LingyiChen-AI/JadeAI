@@ -127,7 +127,11 @@ async function bootServerInto(window: BrowserWindow): Promise<void> {
   try {
     const running = await serverHost.start({
       mode: serverMode,
-      paths: { appRoot: getAppRoot(), assetRoot: getAssetRoot() },
+      paths: {
+        appRoot: getAppRoot(),
+        assetRoot: getAssetRoot(),
+        titleGuardScript: resolveResourceFile('next-title-guard.js'),
+      },
       databaseFile: getDatabaseFile(),
       migrationsDir: resolveMigrationsDirectory(),
       onUnexpectedExit: (code, signal) => {
@@ -175,17 +179,15 @@ app.whenReady().then(async () => {
 
   mainWindow = createWindow();
   await bootServerInto(mainWindow);
-
-  // macOS: re-open a window when the dock icon is clicked with none open.
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length > 0) return;
-    mainWindow = createWindow();
-    void bootServerInto(mainWindow);
-  });
 });
 
+// Quit with the last window on every platform, macOS included. The usual macOS
+// convention (stay resident, re-open from the dock) exists for apps that are
+// cheap to keep around; this one holds a Next server and an open SQLite handle
+// for a window that is no longer there. There is deliberately no `activate`
+// handler to re-open one: closing the window is the way to quit.
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  app.quit();
 });
 
 app.on('will-quit', () => {

@@ -8,6 +8,12 @@ export type ServerMode = 'development' | 'production';
 export interface ServerPaths {
   appRoot: string;
   assetRoot: string;
+  /**
+   * Absolute path to resources/next-title-guard.js, preloaded into the child.
+   * Passed in rather than derived: only the caller knows whether resources live
+   * in the repo or in Contents/Resources (see app-paths.resolveResourceFile).
+   */
+  titleGuardScript: string;
 }
 
 export interface NextServerCommand {
@@ -45,9 +51,13 @@ export function resolveNextServerCommand(
   paths: ServerPaths,
   port: number,
 ): NextServerCommand {
+  // `-r` first: the guard has to neutralise process.title before Next's own code
+  // runs and assigns it. See resources/next-title-guard.js for why that matters.
+  const preload = ['-r', paths.titleGuardScript];
   if (mode === 'development') {
     return {
       args: [
+        ...preload,
         join(paths.appRoot, 'node_modules', 'next', 'dist', 'bin', 'next'),
         'dev',
         '--turbopack',
@@ -60,7 +70,7 @@ export function resolveNextServerCommand(
     };
   }
   const standaloneDir = join(paths.assetRoot, 'standalone');
-  return { args: [join(standaloneDir, 'server.js')], cwd: standaloneDir };
+  return { args: [...preload, join(standaloneDir, 'server.js')], cwd: standaloneDir };
 }
 
 export interface HealthDeps {

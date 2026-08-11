@@ -23,29 +23,46 @@ describe('allocateLoopbackPort', () => {
 });
 
 describe('resolveNextServerCommand', () => {
-  const paths = { appRoot: '/repo', assetRoot: '/Resources' };
+  const GUARD = join('/Resources', 'next-title-guard.js');
+  const paths = { appRoot: '/repo', assetRoot: '/Resources', titleGuardScript: GUARD };
 
   // Path expectations go through join() for the same cross-platform reason as
   // data-path.test.ts — the flags and port are plain strings and stay literal.
   it('runs next dev bound to loopback in development', () => {
     const command = resolveNextServerCommand('development', paths, 41234);
     expect(command.args).toEqual([
+      '-r',
+      GUARD,
       join('/repo', 'node_modules', 'next', 'dist', 'bin', 'next'),
       'dev',
       '--turbopack',
       '-H',
       '127.0.0.1',
       '-p',
-      '41234',
+      String(41234),
     ]);
     expect(command.cwd).toBe('/repo');
   });
 
   it('runs the standalone server in production', () => {
     const command = resolveNextServerCommand('production', paths, 41234);
-    expect(command.args).toEqual([join('/Resources', 'standalone', 'server.js')]);
+    expect(command.args).toEqual(['-r', GUARD, join('/Resources', 'standalone', 'server.js')]);
     expect(command.cwd).toBe(join('/Resources', 'standalone'));
   });
+
+  // Ordering is the whole point of the guard: Next assigns process.title while
+  // its own entry script runs, so a `-r` that landed after the script would
+  // preload too late and the child would still register a dock icon. Pin the
+  // position, not just the presence.
+  it.each(['development', 'production'] as const)(
+    'preloads the title guard before the entry script in %s',
+    (mode) => {
+      const { args } = resolveNextServerCommand(mode, paths, 41234);
+      expect(args[0]).toBe('-r');
+      expect(args[1]).toBe(GUARD);
+      expect(args.indexOf(GUARD)).toBeLessThan(args.length - 1);
+    },
+  );
 });
 
 describe('waitForHealthy', () => {
@@ -125,7 +142,7 @@ function makeFakeChild() {
 describe('NextServerHost start() failure cleanup', () => {
   const options = {
     mode: 'production' as const,
-    paths: { appRoot: '/repo', assetRoot: '/Resources' },
+    paths: { appRoot: '/repo', assetRoot: '/Resources', titleGuardScript: '/Resources/next-title-guard.js' },
     databaseFile: '/data/app.sqlite',
     migrationsDir: '/Resources/drizzle/migrations',
     onUnexpectedExit: vi.fn(),
@@ -166,7 +183,7 @@ describe('NextServerHost start() failure cleanup', () => {
 describe('NextServerHost stale exit handling across retries', () => {
   const makeOptions = (onUnexpectedExit: (code: number | null, signal: NodeJS.Signals | null) => void) => ({
     mode: 'production' as const,
-    paths: { appRoot: '/repo', assetRoot: '/Resources' },
+    paths: { appRoot: '/repo', assetRoot: '/Resources', titleGuardScript: '/Resources/next-title-guard.js' },
     databaseFile: '/data/app.sqlite',
     migrationsDir: '/Resources/drizzle/migrations',
     onUnexpectedExit,

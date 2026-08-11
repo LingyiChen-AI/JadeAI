@@ -45,6 +45,9 @@ function verifyPackagedLayout(resourcesDir) {
     'drizzle/migrations',
     'splash.html',
     'startup-error.html',
+    // `node -r <missing>` aborts before the entry script, so omitting this would
+    // stop the server from ever starting. Catch it at build time instead.
+    'next-title-guard.js',
   ];
   const missing = required.filter((entry) => !existsSync(join(resourcesDir, entry)));
   if (missing.length > 0) {
@@ -138,6 +141,8 @@ module.exports = {
     // process.resourcesPath.
     { from: 'resources/splash.html', to: 'splash.html' },
     { from: 'resources/startup-error.html', to: 'startup-error.html' },
+    // Preloaded into the Next child via `node -r`; see the file for why.
+    { from: 'resources/next-title-guard.js', to: 'next-title-guard.js' },
     { from: 'resources/build/icon.png', to: 'build/icon.png' },
   ],
 
