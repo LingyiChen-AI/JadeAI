@@ -1969,6 +1969,36 @@ git commit -m "docs(desktop): record phase 2 acceptance results"
 >
 > 逐任务审查同样看不见它：单看 `NextServerHost` 一次 `start()` 的生命周期完全正确，缺陷只在**两次 `start()` 交叠**时显现，而那需要把 `index.ts` 的重试接线和 `next-server-host.ts` 的内部状态放在一起看。阶段五写打包验收时要记住这一点：**"检查了 X"不等于"在会产生 X 的路径上检查了 X"**。
 
+## 运行时发现的遗留：孤儿临时文件无人清理
+
+实际跑 `pnpm dev:desktop` 后检查 userData 目录，发现一个昨天验收时留下的孤儿：
+
+```
+jade-settings.json.85978.5a26c012-ff1f-474a-9461-14ffd68954de.tmp
+```
+
+**唯一临时文件名与陈旧临时文件清理是一对。** 固定名的时候，下一次写入会覆盖掉上次的残留；改成唯一名之后（Task 5 修 Critical 时的必要改动），进程被硬杀（SIGKILL）在"写完临时文件"与"rename"之间时，那个文件就永久留下了，且每次硬杀累积一个。
+
+orca 有配套机制，注释写得很直白：
+
+```ts
+/** Temp path for a durable write. Shared shape so `removeStaleDurableWriteTempFiles` can reclaim orphans. */
+export function durableWriteTempPath(finalPath: string): string { … }
+
+/**
+ * Sweep temp files orphaned by a death between write and rename — for multi-MB payloads they would
+ * otherwise accumulate forever. Callers can require a minimum age to spare another live instance's
+ * write. This process's own temps are always skipped because deleting one would fail its rename.
+ */
+export async function removeStaleDurableWriteTempFiles(finalPath, { minimumAgeMs }) { … }
+```
+
+它在 `persistence.ts` 启动时调用。两个设计细节值得照抄：**跳过本进程自己的临时文件**（删掉会让自己的 rename 失败），以及**可选的最小年龄门槛**（避免误删另一个活着的实例正在写的文件）。
+
+> **这是同一个错误的第二次。** 第一次是抄漏了 `durableWriteTempPath` 的唯一后缀（审查抓到并修了）；这次是抄漏了它的**配套清理**。"看不出用途的复杂度先假定它是承重的"这条教训，我当时只应用到了被指出的那一处，没有回头看它还牵着什么。
+>
+> 另外这个 bug **永远不会让任何测试变红**：测试用临时目录、跑完就删，孤儿只在长期使用的真实 userData 里堆积。它只能靠真的把应用跑起来、去看那个目录才发现。
+
 ## 阶段二验收
 
 - [ ] `pnpm type-check` 与 `pnpm test` 通过
