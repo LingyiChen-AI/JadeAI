@@ -38,6 +38,17 @@ export interface JadeSettings {
    * unusable. See resolveServerPort for the reuse rules.
    */
   serverPort: number | null;
+  /**
+   * Whether to ask GitHub about newer releases on launch.
+   *
+   * Opt-out rather than opt-in, but worth its own flag: this is the only
+   * outbound request the app makes. Everything else it does is local, and
+   * someone who chose a local-only resume editor should be able to keep it that
+   * way without a firewall rule.
+   */
+  updateCheckEnabled: boolean;
+  /** Version the user dismissed with "skip", so it is not offered again. */
+  skippedUpdateVersion: string | null;
 }
 
 export const DEFAULT_SETTINGS: JadeSettings = {
@@ -46,6 +57,8 @@ export const DEFAULT_SETTINGS: JadeSettings = {
   window: { width: 1280, height: 860, maximized: false },
   lastResumeId: null,
   serverPort: null,
+  updateCheckEnabled: true,
+  skippedUpdateVersion: null,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -98,6 +111,10 @@ export function normalizeSettings(raw: unknown): JadeSettings {
     },
     lastResumeId: typeof raw.lastResumeId === 'string' ? raw.lastResumeId : null,
     serverPort: optionalPort(raw.serverPort),
+    // Defaults to on, so only an explicit `false` on disk turns it off.
+    updateCheckEnabled: raw.updateCheckEnabled !== false,
+    skippedUpdateVersion:
+      typeof raw.skippedUpdateVersion === 'string' ? raw.skippedUpdateVersion : null,
   };
 }
 

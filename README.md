@@ -185,6 +185,65 @@ The following resume sections support Markdown syntax:
 | i18n | next-intl |
 | Validation | Zod v4 |
 
+## Desktop Client
+
+A standalone desktop build runs the whole app locally — no server, no account, no
+network. Data lives in a SQLite file on your machine.
+
+Download from the [latest `ds-*` release](https://github.com/LingyiChen-AI/JadeAI/releases?q=ds-v&expanded=true):
+
+| Platform | File |
+|---|---|
+| macOS (Apple Silicon) | `JadeAI-*-mac-arm64.dmg` |
+| macOS (Intel) | `JadeAI-*-mac-x64.dmg` |
+| Windows (x64) | `JadeAI-*-win-x64-setup.exe` |
+
+### First launch
+
+The installers carry an **ad-hoc signature** — valid, but anonymous. There is no
+Apple Developer ID and no notarization, so the OS blocks the first launch. This
+is expected.
+
+**macOS.** Run this once, then open the app normally:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/JadeAI.app
+```
+
+Or via the GUI: after the launch is blocked, open **System Settings → Privacy &
+Security** and click **Open Anyway** near the bottom.
+
+> Do not rely on right-click → Open. macOS 15 removed that bypass for
+> un-notarized apps; it no longer does anything.
+
+If you see **"JadeAI is damaged and can't be opened"** rather than "cannot be
+verified", the download is incomplete or was tampered with — re-download it.
+A correctly built release reports "cannot be verified", which is clearable.
+
+**Windows.** On the SmartScreen prompt, click **More info → Run anyway**.
+
+### Where your data lives
+
+| Platform | Path |
+|---|---|
+| macOS | `~/Library/Application Support/JadeAI/` |
+| Windows | `%APPDATA%\JadeAI\` |
+
+`jade.db` is the SQLite database; `jade-settings.json` holds window state and
+preferences. Uninstalling the app does not delete either — remove the folder to
+erase your data.
+
+### Updates
+
+On launch the app asks GitHub once whether a newer `ds-*` release exists, and
+tells you if so. It does not download or install anything by itself: updating
+means downloading the new installer and installing over the old one. Your data
+is untouched.
+
+**This is the only outbound request the app makes.** To turn it off, set
+`"updateCheckEnabled": false` in `jade-settings.json` (see the paths above) and
+restart.
+
 ## Getting Started
 
 ### Docker (Recommended)

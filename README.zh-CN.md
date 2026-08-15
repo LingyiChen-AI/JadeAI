@@ -194,6 +194,57 @@
 | 国际化 | next-intl |
 | 数据校验 | Zod v4 |
 
+## 桌面客户端
+
+独立的桌面版本在本机跑完整应用——不需要服务器、不需要账号、不联网，数据存在本机的
+SQLite 文件里。
+
+从[最新的 `ds-*` release](https://github.com/LingyiChen-AI/JadeAI/releases?q=ds-v&expanded=true) 下载：
+
+| 平台 | 文件 |
+|---|---|
+| macOS（Apple Silicon） | `JadeAI-*-mac-arm64.dmg` |
+| macOS（Intel） | `JadeAI-*-mac-x64.dmg` |
+| Windows（x64） | `JadeAI-*-win-x64-setup.exe` |
+
+### 首次打开
+
+安装包带的是 **ad-hoc 签名**——有效，但匿名。没有 Apple Developer ID，也没有公证，
+所以系统会拦下第一次启动。这是预期行为。
+
+**macOS。** 在终端跑一次这条，然后正常双击打开：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/JadeAI.app
+```
+
+也可以走图形界面：被拦下后打开 **系统设置 → 隐私与安全性**，拉到底点**仍要打开**。
+
+> 不要依赖"右键 → 打开"。macOS 15 起 Apple 移除了这个绕过方式，对未公证的应用不再生效。
+
+如果提示的是 **"JadeAI 已损坏，无法打开"** 而不是"无法验证"，说明下载不完整或文件被
+改动过，重新下载即可。正常构建的版本提示的是"无法验证"，那个是可以放行的。
+
+**Windows。** SmartScreen 提示时点**更多信息 → 仍要运行**。
+
+### 数据存在哪
+
+| 平台 | 路径 |
+|---|---|
+| macOS | `~/Library/Application Support/JadeAI/` |
+| Windows | `%APPDATA%\JadeAI\` |
+
+`jade.db` 是 SQLite 数据库，`jade-settings.json` 存窗口状态和偏好。**卸载应用不会删除
+它们**，要清空数据请手动删除该目录。
+
+### 更新
+
+启动时应用会向 GitHub 查一次有没有更新的 `ds-*` release，有就提示你。它不会自己下载或
+安装：更新的方式是下载新安装包覆盖安装，本机数据不受影响。
+
+**这是本应用唯一的对外网络请求。** 想关掉的话，在上面那个目录的 `jade-settings.json`
+里设 `"updateCheckEnabled": false`，然后重启。
+
 ## 快速开始
 
 ### Docker 部署（推荐）

@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, ipcMain, nativeImage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from 'electron';
 import {
   getAppRoot,
   getAssetRoot,
@@ -10,6 +10,12 @@ import { getDatabaseFile, getSettingsFile, initDataPath } from './data-path';
 import { registerSettingsIpc } from './ipc/settings';
 import { NextServerHost, type ServerMode } from './next-server-host';
 import { SettingsStore } from './settings-store';
+import {
+  fetchDesktopReleases,
+  resolveUpdatePromptAction,
+  selectAvailableUpdate,
+  UPDATE_PROMPT_BUTTONS,
+} from './update-check';
 
 // Must run before any path is resolved: app.setName() changes how
 // app.getPath('userData') resolves, and data-path.ts captures that value once.
@@ -163,6 +169,51 @@ async function bootServerInto(window: BrowserWindow): Promise<void> {
   }
 }
 
+/** Where releases are published. The `ds-v*` filtering lives in update-check. */
+const RELEASE_REPOSITORY = 'LingyiChen-AI/JadeAI';
+
+/**
+ * Tell the user about a newer release, if there is one.
+ *
+ * Notifies rather than installs — see the note at the top of update-check.ts for
+ * why silent updates are not possible with an ad-hoc signature and a releases
+ * list shared with the web app.
+ *
+ * Never awaited by startup and never surfaces an error: a machine with no
+ * network must launch exactly as fast as one with it.
+ */
+async function checkForUpdates(window: BrowserWindow): Promise<void> {
+  if (!settings.get().updateCheckEnabled) return;
+
+  const releases = await fetchDesktopReleases({ fetch, repository: RELEASE_REPOSITORY });
+  const update = selectAvailableUpdate(
+    releases,
+    app.getVersion(),
+    settings.get().skippedUpdateVersion,
+  );
+  if (update === null || window.isDestroyed()) return;
+
+  const { response } = await dialog.showMessageBox(window, {
+    type: 'info',
+    message: `JadeAI ${update.version} 可以下载了`,
+    detail: `当前版本 ${app.getVersion()}。下载后覆盖安装即可，本机数据不受影响。`,
+    buttons: [...UPDATE_PROMPT_BUTTONS],
+    defaultId: UPDATE_PROMPT_BUTTONS.indexOf('前往下载'),
+    cancelId: UPDATE_PROMPT_BUTTONS.indexOf('稍后再说'),
+  });
+
+  switch (resolveUpdatePromptAction(response)) {
+    case 'open':
+      void shell.openExternal(update.url);
+      break;
+    case 'skip':
+      settings.patch({ skippedUpdateVersion: update.version });
+      break;
+    case 'dismiss':
+      break;
+  }
+}
+
 app.whenReady().then(async () => {
   initDataPath(isDevelopment);
 
@@ -186,6 +237,15 @@ app.whenReady().then(async () => {
 
   mainWindow = createWindow();
   await bootServerInto(mainWindow);
+
+  // After the app is up, and deliberately not awaited: a slow or unreachable
+  // GitHub must not hold the window. The catch covers the part fetch's own
+  // error handling does not — a dialog that fails to open would otherwise
+  // surface as an unhandled rejection, which is a poor way to learn that an
+  // optional feature broke.
+  void checkForUpdates(mainWindow).catch((error) => {
+    console.error('[update] check failed:', error);
+  });
 });
 
 // Quit with the last window on every platform, macOS included. The usual macOS
