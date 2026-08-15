@@ -24,6 +24,9 @@ jobs:
   build:
     name: Build ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
+    # 一次完整构建约 10 分钟。设上限是为了让"卡住"变成"失败"：macOS runner 计费
+    # 是 Linux 的 10 倍，一个默认 6 小时超时的僵住 job 很贵。
+    timeout-minutes: 45
     strategy:
       # 一个平台挂了也要看到其他平台的结果，否则每次只能修一个。
       fail-fast: false
@@ -33,10 +36,16 @@ jobs:
             label: macOS arm64
             flags: --mac --arm64
             artifact: macos-arm64
-          # macos-13 是 Intel runner。必须在真 x64 机器上构建：原生模块
-          # (better-sqlite3 / sharp / @next/swc) 不能跨架构打包，在 arm64 机器上
-          # 打 x64 会把 arm64 的二进制塞进去，构建全绿、装上去启动即崩。
-          - os: macos-13
+          # 必须在真 x64 机器上构建：原生模块不能跨架构打包。Next 的文件追踪只
+          # 会把构建机器那一个 better-sqlite3 prebuild 打进去，所以在 arm64 上打
+          # x64 得到的是塞了 arm64 二进制的包，构建全绿、装上去启动即崩
+          # （已在本地实测，现在 afterPack 会直接让这种构建失败）。
+          #
+          # 标签是 macos-15-intel，不是 macos-13——后者已被 GitHub 下线，排队等
+          # 一个永远不会出现的 runner，表现为 job 一直卡在 "Waiting for a runner"
+          # 而不是报错。GitHub 已宣布 macOS 15 是最后一版 Intel 镜像，这条线以后
+          # 会消失，届时要么改自托管 runner，要么放弃 Intel 包。
+          - os: macos-15-intel
             label: macOS x64
             flags: --mac --x64
             artifact: macos-x64

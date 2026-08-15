@@ -56,14 +56,25 @@ describe('writeFileDurable', () => {
 
   // The failure mode this whole module exists to prevent: a write that dies
   // partway must not damage what was already on disk.
-  it('leaves the existing file intact when the write cannot start', async () => {
-    writeFileSync(target, '{"gen":1}');
-    chmodSync(dir, 0o500); // read + execute only: no new files may be created
-    await expect(writeFileDurable(target, '{"gen":2}')).rejects.toThrow();
-    chmodSync(dir, 0o700);
-    expect(readFileSync(target, 'utf-8')).toBe('{"gen":1}');
-    expect(tmpFilesRemaining()).toHaveLength(0);
-  });
+  //
+  // POSIX only. Windows does not enforce POSIX mode bits — chmod there toggles
+  // the read-only attribute on files and does nothing for a directory — so this
+  // fixture cannot make the write fail at all, and the assertion sees a write
+  // that simply succeeded. Inducing the same failure on Windows would need a
+  // different mechanism entirely (an exclusive lock on a temp path whose name
+  // is a uuid we cannot predict), so the guarantee is genuinely unverified
+  // there rather than merely unasserted.
+  it.skipIf(process.platform === 'win32')(
+    'leaves the existing file intact when the write cannot start',
+    async () => {
+      writeFileSync(target, '{"gen":1}');
+      chmodSync(dir, 0o500); // read + execute only: no new files may be created
+      await expect(writeFileDurable(target, '{"gen":2}')).rejects.toThrow();
+      chmodSync(dir, 0o700);
+      expect(readFileSync(target, 'utf-8')).toBe('{"gen":1}');
+      expect(tmpFilesRemaining()).toHaveLength(0);
+    },
+  );
 
   // Induces a failure AFTER the temp file exists — something the chmod fixture
   // above cannot do, because it blocks creating the temp file at all. Without
