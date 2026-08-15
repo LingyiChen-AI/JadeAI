@@ -1,7 +1,10 @@
 name: Build & Push Docker Image
 
-# 这是 Web 版的镜像流水线。桌面客户端走 desktop-release.yml，用 `ds-*` tag。
-# 下面的 `v*` 不匹配 `ds-v0.0.1`（它以 d 开头），所以客户端发版不会打 Web 镜像。
+# Web 版的镜像流水线。桌面客户端的安装包由 desktop-release.yml 产出，同一个
+# `v*` tag 会分别触发这两个 workflow —— 各自独立跑，一边失败不影响另一边的产物。
+#
+# release 只由 desktop-release.yml 创建。这里不再建，否则两个 workflow 会同时
+# 对同一个 tag 调 create-release，谁先谁后不确定。
 
 on:
   push:
@@ -10,8 +13,8 @@ on:
 
 jobs:
   build:
-    # 上面的 tag 过滤已经排除了 `ds-*`，这里是第二道闸：将来若有人把过滤放宽成
-    # `*`，也不会让一次客户端发版悄悄推出一个 Web 镜像并覆盖 latest。
+    # `ds-*` 是客户端曾经独有的 tag 线，那种 tag 不该推 Web 镜像、更不该覆盖
+    # latest。上面的 `v*` 过滤已经排除了它（以 d 开头），这里是第二道闸。
     if: ${{ !startsWith(github.ref_name, 'ds-') }}
     runs-on: ubuntu-latest
     permissions:
@@ -55,11 +58,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Create Release (tag only)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ github.ref_name }}
-          body: ${{ github.event.head_commit.message }}
-          generate_release_notes: false

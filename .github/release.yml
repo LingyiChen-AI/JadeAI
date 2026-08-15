@@ -1,0 +1,57 @@
+# Shapes the notes GitHub generates for a release (the desktop-release workflow
+# passes generate_release_notes: true, and GitHub appends the result under the
+# hand-written body).
+#
+# Categories are driven by the labels on merged PRs, so a PR with no label lands
+# in 其他变更 rather than disappearing — an uncategorised change is still a
+# change someone needs to read about.
+#
+# Closed issues appear on their own: a PR whose body says "Fixes #123" links the
+# issue from the PR line, and GitHub closes it when the PR merges.
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+      - duplicate
+      - invalid
+    authors:
+      - dependabot
+      - github-actions
+
+  categories:
+    - title: 新功能
+      labels:
+        - feature
+        - feat
+        - enhancement
+
+    - title: 修复
+      labels:
+        - bug
+        - fix
+        - bugfix
+
+    - title: 桌面客户端
+      labels:
+        - desktop
+        - electron
+
+    - title: 性能与重构
+      labels:
+        - performance
+        - refactor
+
+    - title: 文档
+      labels:
+        - documentation
+        - docs
+
+    - title: 依赖更新
+      labels:
+        - dependencies
+
+    # Catch-all. Must come last: GitHub assigns each PR to the first category
+    # whose labels match, so a "*" placed earlier would swallow everything.
+    - title: 其他变更
+      labels:
+        - "*"

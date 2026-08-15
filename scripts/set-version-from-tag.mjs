@@ -1,4 +1,4 @@
-// CI only: make package.json's version match the ds-* tag being released.
+// CI only: make package.json's version match the tag being released.
 //
 // electron-builder puts package.json's version into every installer filename, so
 // without this a release tagged ds-v0.0.1 ships files called JadeAI-0.1.0-*.dmg
@@ -13,10 +13,13 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const PACKAGE_JSON = 'package.json';
 const tag = process.env.GITHUB_REF_NAME ?? '';
 
-// Accepts ds-v1.2.3 and ds-1.2.3, plus a prerelease suffix like ds-v1.2.3-beta.1.
-const match = /^ds-v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/.exec(tag);
+// Accepts v1.2.3 and the legacy ds-v1.2.3, plus a prerelease suffix. Same shape
+// as parseReleaseTag in electron/main/update-check.ts — the client compares the
+// version this writes against those tags, so the two must agree on what a
+// release tag looks like.
+const match = /^(?:ds-)?v(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/.exec(tag);
 if (match === null) {
-  console.error(`Not a ds-* release tag: ${JSON.stringify(tag)}`);
+  console.error(`Not a release tag: ${JSON.stringify(tag)}`);
   process.exit(1);
 }
 

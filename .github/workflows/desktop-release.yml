@@ -1,16 +1,20 @@
 name: Desktop Client
 
-# 桌面客户端的构建与发布，和 Web 的 Docker 镜像完全分开。
+# 桌面客户端的构建与发布。和 Web 的 Docker 镜像（publish.yml）是两个独立的
+# workflow run —— 同一个 tag 会各自触发一次，任一边失败都不影响另一边的产物。
 #
-#   push desktop 分支  -> 三平台构建一遍，只验证能不能打出来，不发 release
-#   push ds-* tag      -> 三平台构建 + 创建 GitHub Release，附上 macOS/Windows 安装包
+#   push main      -> 三平台跑类型检查和测试，不打包（打包一次约 7 分钟 × 3，
+#                     而 macOS runner 计费是 Linux 的 10 倍；Next 构建本身由
+#                     publish.yml 的 Docker 构建覆盖，这里不重复）
+#   push v* tag    -> 三平台完整打包 + 创建 GitHub Release，附上安装包
+#   push ds-* tag  -> 同上。客户端曾单独走 ds-* 线，保留以便回滚老版本
 #
-# Web 镜像走 publish.yml，只认 `v*` tag；`ds-v0.0.1` 不匹配 `v*`，两边不会互相触发。
+# 只有本 workflow 创建 release；publish.yml 不再建，否则两边会抢同一个 tag。
 
 on:
   push:
-    branches: [desktop]
-    tags: ['ds-*']
+    branches: [main]
+    tags: ['v*', 'ds-*']
   workflow_dispatch:
 
 permissions:
@@ -80,7 +84,7 @@ jobs:
       # 放在 install 之后：版本号只影响 electron-builder 生成的文件名，不影响依赖
       # 解析，先装依赖能让 --frozen-lockfile 比对的是仓库里原样的 package.json。
       - name: Align version with the tag
-        if: startsWith(github.ref, 'refs/tags/ds-')
+        if: startsWith(github.ref, 'refs/tags/')
         run: node scripts/set-version-from-tag.mjs
 
       - name: Type check
@@ -89,15 +93,20 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # 分支推送到此为止：类型检查和测试已经跑过，那是三平台各跑一遍真正能抓到
+      # 东西的部分（Windows 上的测试就抓到过 POSIX 权限位不可移植的用例）。
       - name: Build Next standalone + electron bundles
+        if: startsWith(github.ref, 'refs/tags/')
         run: pnpm build:desktop
 
       # --publish never 是必须的：electron-builder 在 tag 上构建且环境里有
       # GH_TOKEN 时会自作主张地上传，绕开下面那个 release job 的编排。
       - name: Package installer
+        if: startsWith(github.ref, 'refs/tags/')
         run: pnpm exec electron-builder --config config/electron-builder.config.cjs ${{ matrix.flags }} --publish never
 
       - name: Upload installer
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
           name: jadeai-${{ matrix.artifact }}
@@ -111,7 +120,7 @@ jobs:
   release:
     name: Publish release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/ds-')
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - name: Download all installers
@@ -144,7 +153,17 @@ jobs:
           files: artifacts/*
           generate_release_notes: true
           body: |
-            JadeAI 桌面客户端 ${{ github.ref_name }}
+            ## JadeAI ${{ github.ref_name }}
+
+            ### Web 版
+
+            ```
+            docker pull twwch/jadeai:${{ github.ref_name }}
+            ```
+
+            数据库支持 SQLite（默认，零配置）与 PostgreSQL（`DB_TYPE=postgresql`）。
+
+            ### 桌面客户端
 
             | 平台 | 文件 |
             |---|---|
@@ -171,9 +190,14 @@ jobs:
 
             **Windows** —— SmartScreen 提示时点"更多信息" → "仍要运行"。
 
-            ### 数据存放位置
+            ### 客户端数据存放位置
 
-            全部数据在本机，不上传任何服务器：
+            全部在本机，不上传任何服务器。卸载不会删除，需要清空请手动删目录：
 
             - macOS：`~/Library/Application Support/JadeAI/`
             - Windows：`%APPDATA%\JadeAI\`
+
+            客户端会在启动时检查新版本，右下角提示并可直接下载。这是它唯一的对外
+            请求，可在 `jade-settings.json` 里设 `"updateCheckEnabled": false` 关闭。
+
+            ---
