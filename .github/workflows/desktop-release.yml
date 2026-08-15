@@ -77,6 +77,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # 放在 install 之后：版本号只影响 electron-builder 生成的文件名，不影响依赖
+      # 解析，先装依赖能让 --frozen-lockfile 比对的是仓库里原样的 package.json。
+      - name: Align version with the tag
+        if: startsWith(github.ref, 'refs/tags/ds-')
+        run: node scripts/set-version-from-tag.mjs
+
       - name: Type check
         run: pnpm type-check
 
