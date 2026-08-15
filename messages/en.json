@@ -210,9 +210,18 @@
       "clear": "Clear",
       "dateDisplay": "{month} {year}",
       "months": {
-        "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr",
-        "05": "May", "06": "Jun", "07": "Jul", "08": "Aug",
-        "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"
+        "01": "Jan",
+        "02": "Feb",
+        "03": "Mar",
+        "04": "Apr",
+        "05": "May",
+        "06": "Jun",
+        "07": "Jul",
+        "08": "Aug",
+        "09": "Sep",
+        "10": "Oct",
+        "11": "Nov",
+        "12": "Dec"
       }
     }
   },
@@ -891,5 +900,19 @@
       "leader": "Leader",
       "custom": "Custom"
     }
+  },
+  "desktopUpdate": {
+    "found": "Version {version} is available",
+    "download": "Download",
+    "downloading": "Downloading {percent}%",
+    "downloaded": "Download complete. Open the installer to update; your data is untouched.",
+    "openInstaller": "Open installer",
+    "reveal": "Show in folder",
+    "openReleasePage": "Open release page",
+    "skipVersion": "Skip this version",
+    "failed": "Download failed: {message}",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "close": "Close"
   }
 }

@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/components/layout/theme-provider';
 import { RuntimeConfigProvider } from '@/components/providers/runtime-config-provider';
 import { BrandProvider } from '@/components/layout/brand-provider';
+import { UpdateNotice } from '@/components/desktop/update-notice';
 
 export default async function LocaleLayout({
   children,
@@ -39,6 +40,8 @@ export default async function LocaleLayout({
             <TooltipProvider>
               {children}
               <Toaster />
+              {/* Renders nothing outside the Electron shell. */}
+              <UpdateNotice />
             </TooltipProvider>
           </BrandProvider>
         </ThemeProvider>

@@ -167,28 +167,6 @@ export function selectAvailableUpdate(
   return best;
 }
 
-/**
- * Buttons on the update prompt, in the order the dialog renders them.
- *
- * Exported and paired with resolveUpdatePromptAction so the labels and the
- * index-to-action mapping cannot drift apart. That drift is the one real risk
- * in this dialog — reordering the labels alone would silently turn "skip this
- * version" into "download" — and it is otherwise unverifiable here, since
- * clicking a native modal needs accessibility permission the test environment
- * does not have.
- */
-export const UPDATE_PROMPT_BUTTONS = ['立即下载', '稍后再说', '跳过此版本'] as const;
-
-export type UpdatePromptAction = 'open' | 'dismiss' | 'skip';
-
-export function resolveUpdatePromptAction(response: number): UpdatePromptAction {
-  if (response === UPDATE_PROMPT_BUTTONS.indexOf('立即下载')) return 'open';
-  if (response === UPDATE_PROMPT_BUTTONS.indexOf('跳过此版本')) return 'skip';
-  // Anything else — including the dialog being dismissed by other means — is a
-  // decision to do nothing, never an accidental skip.
-  return 'dismiss';
-}
-
 export interface UpdateCheckDeps {
   fetch: typeof fetch;
   repository: string;

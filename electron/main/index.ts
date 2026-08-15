@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeImage, shell } from 'electron';
 import {
   getAppRoot,
   getAssetRoot,
@@ -8,16 +8,10 @@ import {
 } from './app-paths';
 import { getDatabaseFile, getSettingsFile, initDataPath } from './data-path';
 import { registerSettingsIpc } from './ipc/settings';
+import { registerUpdateIpc, UpdateCoordinator } from './ipc/update';
 import { NextServerHost, type ServerMode } from './next-server-host';
 import { SettingsStore } from './settings-store';
-import { downloadFile } from './download-installer';
-import {
-  type AvailableUpdate,
-  fetchDesktopReleases,
-  resolveUpdatePromptAction,
-  selectAvailableUpdate,
-  UPDATE_PROMPT_BUTTONS,
-} from './update-check';
+import { fetchDesktopReleases, selectAvailableUpdate } from './update-check';
 
 // Must run before any path is resolved: app.setName() changes how
 // app.getPath('userData') resolves, and data-path.ts captures that value once.
@@ -28,6 +22,7 @@ const serverMode: ServerMode = isDevelopment ? 'development' : 'production';
 
 const serverHost = new NextServerHost();
 let settings: SettingsStore;
+let updates: UpdateCoordinator;
 let mainWindow: BrowserWindow | null = null;
 
 // Guards against two loadFile('startup-error.html') calls racing the same
@@ -195,93 +190,12 @@ async function checkForUpdates(window: BrowserWindow): Promise<void> {
   );
   if (update === null || window.isDestroyed()) return;
 
-  const { response } = await dialog.showMessageBox(window, {
-    type: 'info',
-    message: `JadeAI ${update.version} 可以下载了`,
-    detail: `当前版本 ${app.getVersion()}。下载后覆盖安装即可，本机数据不受影响。`,
-    buttons: [...UPDATE_PROMPT_BUTTONS],
-    defaultId: UPDATE_PROMPT_BUTTONS.indexOf('立即下载'),
-    cancelId: UPDATE_PROMPT_BUTTONS.indexOf('稍后再说'),
-  });
-
-  switch (resolveUpdatePromptAction(response)) {
-    case 'open':
-      await downloadUpdate(window, update);
-      break;
-    case 'skip':
-      settings.patch({ skippedUpdateVersion: update.version });
-      break;
-    case 'dismiss':
-      break;
-  }
-}
-
-/**
- * Fetch the installer for this machine into the user's Downloads folder.
- *
- * Downloading is as far as this can go: applying the update would need
- * Squirrel, which will not accept an ad-hoc signed app (see update-check.ts).
- * So the app gets the right file — no picking between three on a release page —
- * and hands off to the installer the user already knows how to drive.
- *
- * Falls back to opening the release page whenever anything is off: no matching
- * asset for this platform, or a download that failed. The user is never left
- * with only an error.
- */
-async function downloadUpdate(window: BrowserWindow, update: AvailableUpdate): Promise<void> {
-  if (update.asset === null) {
-    void shell.openExternal(update.url);
-    return;
-  }
-
-  const directory = app.getPath('downloads');
-  try {
-    // Dock (macOS) / taskbar (Windows) progress. The app has no UI channel of
-    // its own here — the renderer is showing the resume editor, not an
-    // installer — and this is the one progress surface that needs no window.
-    window.setProgressBar(0);
-    const file = await downloadFile(
-      {
-        url: update.asset.url,
-        fileName: update.asset.name,
-        expectedSize: update.asset.size,
-        directory,
-      },
-      {
-        fetch,
-        onProgress: (fraction) => {
-          if (!window.isDestroyed()) window.setProgressBar(fraction);
-        },
-      },
-    );
-    if (!window.isDestroyed()) window.setProgressBar(-1);
-
-    const { response } = await dialog.showMessageBox(window, {
-      type: 'info',
-      message: `${update.asset.name} 下载完成`,
-      detail:
-        process.platform === 'darwin'
-          ? '打开后把 JadeAI 拖到"应用程序"覆盖安装。首次打开若被拦下，见 README 的说明。'
-          : '打开安装程序，按提示覆盖安装即可。',
-      buttons: ['打开安装包', '在文件夹中显示', '完成'],
-      defaultId: 0,
-      cancelId: 2,
-    });
-    if (response === 0) void shell.openPath(file);
-    if (response === 1) shell.showItemInFolder(file);
-  } catch (error) {
-    if (!window.isDestroyed()) window.setProgressBar(-1);
-    console.error('[update] download failed:', error);
-    const { response } = await dialog.showMessageBox(window, {
-      type: 'warning',
-      message: '下载失败',
-      detail: `${error instanceof Error ? error.message : String(error)}\n\n可以到发布页手动下载。`,
-      buttons: ['打开发布页', '取消'],
-      defaultId: 0,
-      cancelId: 1,
-    });
-    if (response === 0) void shell.openExternal(update.url);
-  }
+  // Hand it to the in-app notice rather than a native dialog. A modal seizes
+  // the window the moment the app opens, before the user has done anything —
+  // too heavy for "there is a newer version". The renderer shows a dismissible
+  // panel instead, and can also pull this state itself on mount, which covers
+  // the case where the check finishes before the page is listening.
+  updates.announce(update, window);
 }
 
 app.whenReady().then(async () => {
@@ -298,6 +212,8 @@ app.whenReady().then(async () => {
   }
   settings = new SettingsStore(getSettingsFile());
   registerSettingsIpc(settings);
+  updates = new UpdateCoordinator(settings, app.getPath('downloads'));
+  registerUpdateIpc(updates, () => mainWindow);
 
   ipcMain.on('jade:startup:retry', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;

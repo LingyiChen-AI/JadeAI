@@ -236,9 +236,11 @@ erase your data.
 ### Updates
 
 On launch the app asks GitHub once whether a newer `ds-*` release exists. If
-there is one, it offers to **download the installer built for your machine** —
-you don't pick between three files — with progress on the dock/taskbar icon.
-When it finishes you can open the installer or reveal it in your file manager.
+there is one, a small panel appears in the corner of the window — not a modal
+dialog — offering to **download the installer built for your machine**, so you
+don't pick between three files. Progress shows in the panel; when it finishes
+you can open the installer or reveal it in your file manager. It can be
+collapsed, dismissed, or silenced for that version.
 
 It stops there: installing is still a manual step (drag to Applications, or run
 the `.exe`). Silent install would need Squirrel, which refuses an ad-hoc signed

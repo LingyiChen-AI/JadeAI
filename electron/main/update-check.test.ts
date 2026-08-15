@@ -3,10 +3,8 @@ import {
   compareVersions,
   fetchDesktopReleases,
   parseDesktopTag,
-  resolveUpdatePromptAction,
   selectAvailableUpdate,
   selectInstallerAsset,
-  UPDATE_PROMPT_BUTTONS,
   type GitHubRelease,
   type GitHubReleaseAsset,
 } from './update-check';
@@ -172,26 +170,6 @@ describe('selectAvailableUpdate', () => {
 
   it('returns null for an empty list', () => {
     expect(selectAvailableUpdate([], '0.0.1', null)).toBeNull();
-  });
-});
-
-describe('resolveUpdatePromptAction', () => {
-  // Pins each label to its behaviour by looking the index up from the same
-  // array the dialog renders. Reordering the buttons without updating the
-  // mapping would otherwise turn "skip this version" into "download".
-  it.each([
-    ['立即下载', 'open'],
-    ['稍后再说', 'dismiss'],
-    ['跳过此版本', 'skip'],
-  ] as const)('maps %s to %s', (label, expected) => {
-    expect(resolveUpdatePromptAction(UPDATE_PROMPT_BUTTONS.indexOf(label))).toBe(expected);
-  });
-
-  // A dialog closed by Esc or the window going away reports an index of its
-  // own; none of those are consent to never hear about this version again.
-  it('treats any unexpected response as dismiss, never as skip', () => {
-    expect(resolveUpdatePromptAction(-1)).toBe('dismiss');
-    expect(resolveUpdatePromptAction(99)).toBe('dismiss');
   });
 });
 
