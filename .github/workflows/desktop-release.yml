@@ -1,0 +1,153 @@
+name: Desktop Client
+
+# 桌面客户端的构建与发布，和 Web 的 Docker 镜像完全分开。
+#
+#   push desktop 分支  -> 三平台构建一遍，只验证能不能打出来，不发 release
+#   push ds-* tag      -> 三平台构建 + 创建 GitHub Release，附上 macOS/Windows 安装包
+#
+# Web 镜像走 publish.yml，只认 `v*` tag；`ds-v0.0.1` 不匹配 `v*`，两边不会互相触发。
+
+on:
+  push:
+    branches: [desktop]
+    tags: ['ds-*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # 一个平台挂了也要看到其他平台的结果，否则每次只能修一个。
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS arm64
+            flags: --mac --arm64
+            artifact: macos-arm64
+          # macos-13 是 Intel runner。必须在真 x64 机器上构建：原生模块
+          # (better-sqlite3 / sharp / @next/swc) 不能跨架构打包，在 arm64 机器上
+          # 打 x64 会把 arm64 的二进制塞进去，构建全绿、装上去启动即崩。
+          - os: macos-13
+            label: macOS x64
+            flags: --mac --x64
+            artifact: macos-x64
+          - os: windows-latest
+            label: Windows x64
+            flags: --win --x64
+            artifact: windows-x64
+
+    env:
+      # 打进 app 的是 .next/standalone/node_modules 的原样拷贝。pnpm 默认的
+      # isolated 布局靠 .pnpm 软链，在 Windows 上是 junction（绝对路径），拷进
+      # 安装包后指向构建机器上的路径，装到用户机器上必然找不到。hoisted 布局
+      # 没有链接，三个平台行为一致。
+      NPM_CONFIG_NODE_LINKER: hoisted
+      # 不让 electron-builder 自己去钥匙串里翻签名身份。仓库没有 Developer ID，
+      # 自动发现只会让 macOS 构建随 runner 环境变化而时好时坏。
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build Next standalone + electron bundles
+        run: pnpm build:desktop
+
+      # --publish never 是必须的：electron-builder 在 tag 上构建且环境里有
+      # GH_TOKEN 时会自作主张地上传，绕开下面那个 release job 的编排。
+      - name: Package installer
+        run: pnpm exec electron-builder --config config/electron-builder.config.cjs ${{ matrix.flags }} --publish never
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: jadeai-${{ matrix.artifact }}
+          path: |
+            release/*.dmg
+            release/*.exe
+          # 打包"成功"但产物为空是这条流水线最容易悄悄发生的失败方式。
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/ds-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all installers
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -lh artifacts
+
+      # 三个平台缺一个就不该发版：一个只有 macOS 包的 release 比构建失败更难发现。
+      - name: Verify all three installers are present
+        run: |
+          set -euo pipefail
+          missing=0
+          for pattern in "artifacts/*mac-arm64.dmg" "artifacts/*mac-x64.dmg" "artifacts/*win-x64-setup.exe"; do
+            if ! compgen -G "$pattern" > /dev/null; then
+              echo "::error::missing installer matching $pattern"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          files: artifacts/*
+          generate_release_notes: true
+          body: |
+            JadeAI 桌面客户端 ${{ github.ref_name }}
+
+            | 平台 | 文件 |
+            |---|---|
+            | macOS (Apple Silicon) | `JadeAI-*-mac-arm64.dmg` |
+            | macOS (Intel) | `JadeAI-*-mac-x64.dmg` |
+            | Windows (x64) | `JadeAI-*-win-x64-setup.exe` |
+
+            ### 首次打开
+
+            安装包**没有代码签名**，第一次打开会被系统拦下，这是预期的：
+
+            - **macOS**：右键点图标 → 打开，弹窗里再点"打开"。或终端执行
+              `xattr -dr com.apple.quarantine /Applications/JadeAI.app`
+            - **Windows**：SmartScreen 提示时点"更多信息" → "仍要运行"
+
+            ### 数据存放位置
+
+            全部数据在本机，不上传任何服务器：
+
+            - macOS：`~/Library/Application Support/JadeAI/`
+            - Windows：`%APPDATA%\JadeAI\`

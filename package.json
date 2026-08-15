@@ -21,7 +21,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/lib/db/seed.ts",
     "build:electron": "node scripts/build-electron.mjs",
-    "dist:mac": "pnpm build && pnpm build:electron && electron-builder --config config/electron-builder.config.cjs --mac"
+    "dist:mac": "pnpm build:desktop && electron-builder --config config/electron-builder.config.cjs --mac",
+    "dist:win": "pnpm build:desktop && electron-builder --config config/electron-builder.config.cjs --win"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

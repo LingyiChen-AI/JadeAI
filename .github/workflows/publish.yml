@@ -1,5 +1,8 @@
 name: Build & Push Docker Image
 
+# 这是 Web 版的镜像流水线。桌面客户端走 desktop-release.yml，用 `ds-*` tag。
+# 下面的 `v*` 不匹配 `ds-v0.0.1`（它以 d 开头），所以客户端发版不会打 Web 镜像。
+
 on:
   push:
     branches: [main]
@@ -7,6 +10,9 @@ on:
 
 jobs:
   build:
+    # 上面的 tag 过滤已经排除了 `ds-*`，这里是第二道闸：将来若有人把过滤放宽成
+    # `*`，也不会让一次客户端发版悄悄推出一个 Web 镜像并覆盖 latest。
+    if: ${{ !startsWith(github.ref_name, 'ds-') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -25,9 +25,51 @@ function copyStandaloneNodeModules(resourcesDir, projectDir) {
   if (!existsSync(from)) {
     throw new Error(`Missing traced standalone node_modules at ${from} — run \`next build\` first`);
   }
-  // verbatimSymlinks: the pnpm layout is symlinks into .pnpm. Resolving them to
-  // absolutes would bake this machine's paths into the shipped app.
+  // verbatimSymlinks: pnpm's default isolated layout is relative symlinks into
+  // .pnpm, which keep resolving once the whole tree is copied. Following them
+  // instead would resolve to absolutes and bake this machine's paths into the
+  // shipped app. CI sidesteps the question entirely with node-linker=hoisted —
+  // Windows links these as junctions, which are absolute and would not survive
+  // the copy at all.
   cpSync(from, to, { recursive: true, verbatimSymlinks: true });
+}
+
+// electron-builder hands afterPack an `Arch` enum member, not a string.
+const ARCH_NAMES = { 0: 'ia32', 1: 'x64', 2: 'armv7l', 3: 'arm64', 4: 'universal' };
+
+/** prebuildify names its binaries `<platform>-<arch>.node`. */
+function prebuildTriple(electronPlatformName, arch) {
+  const archName = ARCH_NAMES[arch];
+  if (archName === undefined) throw new Error(`Unknown electron-builder arch: ${arch}`);
+  return `${electronPlatformName}-${archName}`;
+}
+
+/**
+ * Locate better-sqlite3's prebuilt binary under either node_modules layout.
+ *
+ * CI installs with `node-linker=hoisted` so the tree copied into the app has no
+ * symlinks to survive (Windows junctions are absolute and would bake in the
+ * build machine's paths); a local `pnpm dist:mac` keeps pnpm's default isolated
+ * layout. Both have to pass, and neither may hardcode a version.
+ */
+function findSqlitePrebuild(nodeModulesDir, triple) {
+  const hoisted = join(nodeModulesDir, 'better-sqlite3', 'prebuilds', `${triple}.node`);
+  if (existsSync(hoisted)) return hoisted;
+
+  const pnpmDir = join(nodeModulesDir, '.pnpm');
+  if (!existsSync(pnpmDir)) return null;
+  const packageDir = readdirSync(pnpmDir).find((name) => name.startsWith('better-sqlite3@'));
+  if (packageDir === undefined) return null;
+
+  const isolated = join(
+    pnpmDir,
+    packageDir,
+    'node_modules',
+    'better-sqlite3',
+    'prebuilds',
+    `${triple}.node`,
+  );
+  return existsSync(isolated) ? isolated : null;
 }
 
 /**
@@ -36,7 +78,7 @@ function copyStandaloneNodeModules(resourcesDir, projectDir) {
  * Every entry here is a path the main process resolves at runtime, so a silent
  * copy failure would otherwise only surface as a broken app on a user's machine.
  */
-function verifyPackagedLayout(resourcesDir) {
+function verifyPackagedLayout(resourcesDir, electronPlatformName, arch) {
   const required = [
     'standalone/server.js',
     'standalone/.next/static',
@@ -61,14 +103,14 @@ function verifyPackagedLayout(resourcesDir) {
     throw new Error('Packaged app has no migration SQL — the app would start with no tables');
   }
 
-  // better-sqlite3 ships prebuildify N-API binaries; without the platform one the
-  // database cannot open at all.
-  const prebuild = join(
-    resourcesDir,
-    'standalone/node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/prebuilds/darwin-arm64.node',
-  );
-  if (!existsSync(prebuild)) {
-    throw new Error(`Missing better-sqlite3 prebuild at ${prebuild}`);
+  // better-sqlite3 ships prebuildify N-API binaries; without the one matching
+  // the target platform AND arch the database cannot open at all. Checking the
+  // target rather than the host is what makes a cross-arch mistake loud: an
+  // arm64 binary in an x64 dmg builds cleanly and crashes on first launch.
+  const triple = prebuildTriple(electronPlatformName, arch);
+  const prebuild = findSqlitePrebuild(join(resourcesDir, 'standalone', 'node_modules'), triple);
+  if (prebuild === null) {
+    throw new Error(`Missing better-sqlite3 prebuild for ${triple} in the packaged app`);
   }
 }
 
@@ -86,8 +128,8 @@ module.exports = {
         : join(context.appOutDir, 'resources');
 
     copyStandaloneNodeModules(resourcesDir, context.packager.projectDir);
-    verifyPackagedLayout(resourcesDir);
-    console.log('  • packaged layout verified');
+    verifyPackagedLayout(resourcesDir, context.electronPlatformName, context.arch);
+    console.log(`  • packaged layout verified (${prebuildTriple(context.electronPlatformName, context.arch)})`);
   },
 
   appId: 'com.jadeai.desktop',
@@ -151,10 +193,14 @@ module.exports = {
   // against Electron's V8 headers, which fails outright for this package.
   npmRebuild: false,
 
+  // No arch here on purpose: it comes from the CLI (`--mac --arm64`, `--mac
+  // --x64`), because each arch must be built on a runner of that arch. Native
+  // modules cannot be cross-packaged — an arm64 better-sqlite3 in an x64 dmg
+  // builds cleanly and crashes on first launch, which afterPack now catches.
   mac: {
     icon: 'resources/build/icon.icns',
     category: 'public.app-category.productivity',
-    target: [{ target: 'dmg', arch: ['arm64'] }],
+    target: ['dmg'],
     // No Developer ID in this environment: ship an ad-hoc signature so the app
     // runs locally after the user clears Gatekeeper once. A release build would
     // set hardenedRuntime + notarize and sign with a real identity.
@@ -164,6 +210,24 @@ module.exports = {
   },
 
   dmg: {
-    artifactName: 'JadeAI-${version}-${arch}.${ext}',
+    artifactName: 'JadeAI-${version}-mac-${arch}.${ext}',
+  },
+
+  win: {
+    // Generated from the 1024px png; there is no separate .ico to keep in sync.
+    icon: 'resources/build/icon.png',
+    target: ['nsis'],
+  },
+
+  nsis: {
+    // Per-user install with a directory choice, not a silent one-click: this is
+    // an unsigned installer, and a visible install flow is less alarming than a
+    // one-click that writes somewhere the user never chose. Per-user also means
+    // no UAC prompt, which an unsigned binary would make people refuse.
+    oneClick: false,
+    perMachine: false,
+    allowToChangeInstallationDirectory: true,
+    shortcutName: 'JadeAI',
+    artifactName: 'JadeAI-${version}-win-${arch}-setup.${ext}',
   },
 };
