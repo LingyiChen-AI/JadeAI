@@ -80,6 +80,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      postgres:
+        specifier: ^3.4.8
+        version: 3.4.8
       puppeteer-core:
         specifier: ^24.37.2
         version: 24.37.2
@@ -12457,8 +12460,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postgres@3.4.8:
-    optional: true
+  postgres@3.4.8: {}
 
   postject@1.0.0-alpha.6:
     dependencies:

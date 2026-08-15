@@ -41,8 +41,13 @@ export function resolveDatabasePath(
   env: Record<string, string | undefined>,
   pid: number,
 ): string {
-  if (env.NEXT_PHASE === PRODUCTION_BUILD_PHASE) {
+  if (isProductionBuild(env)) {
     return join(tmpdir(), `jade-build-${pid}.db`);
   }
   return env.SQLITE_PATH || DEFAULT_DATABASE_PATH;
+}
+
+/** True while `next build` is running, in the parent and its page-data workers. */
+export function isProductionBuild(env: Record<string, string | undefined>): boolean {
+  return env.NEXT_PHASE === PRODUCTION_BUILD_PHASE;
 }
