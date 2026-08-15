@@ -198,7 +198,45 @@ async function checkForUpdates(window: BrowserWindow): Promise<void> {
   updates.announce(update, window);
 }
 
+/**
+ * Only one instance may own the data directory.
+ *
+ * Without this, a second launch is not a harmless duplicate window — it starts
+ * a SECOND Next server on a different port and opens a SECOND handle on the
+ * same SQLite file. Three things go wrong at once:
+ *
+ *  - Two windows stack on screen, each with its own update panel showing its
+ *    own download progress, which reads as a rendering bug rather than as two
+ *    apps.
+ *  - The port is part of the page origin, and Chromium keys localStorage on the
+ *    origin. The instance that loses the stored port gets a different one, so
+ *    it silently sees an empty storage area — the saved API keys are "gone"
+ *    for that window (see the serverPort note in settings-store.ts).
+ *  - Both run migrations against one database file and can race each other,
+ *    the same way `next build`'s workers did.
+ *
+ * The loser quits before touching any of it. The winner brings its window
+ * forward, which is what someone re-launching an already-running app wants.
+ */
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!hasSingleInstanceLock) {
+  // Before initDataPath, before the settings store, before any server: this
+  // process must not open anything the running instance owns.
+  app.quit();
+}
+
+app.on('second-instance', () => {
+  if (mainWindow === null || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+});
+
 app.whenReady().then(async () => {
+  // whenReady still resolves in the losing instance; quitting is asynchronous.
+  if (!hasSingleInstanceLock) return;
+
   initDataPath(isDevelopment);
 
   // In development the dock icon comes from Electron's own bundle, so the app
