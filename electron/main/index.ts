@@ -10,7 +10,9 @@ import { getDatabaseFile, getSettingsFile, initDataPath } from './data-path';
 import { registerSettingsIpc } from './ipc/settings';
 import { NextServerHost, type ServerMode } from './next-server-host';
 import { SettingsStore } from './settings-store';
+import { downloadFile } from './download-installer';
 import {
+  type AvailableUpdate,
   fetchDesktopReleases,
   resolveUpdatePromptAction,
   selectAvailableUpdate,
@@ -198,19 +200,87 @@ async function checkForUpdates(window: BrowserWindow): Promise<void> {
     message: `JadeAI ${update.version} 可以下载了`,
     detail: `当前版本 ${app.getVersion()}。下载后覆盖安装即可，本机数据不受影响。`,
     buttons: [...UPDATE_PROMPT_BUTTONS],
-    defaultId: UPDATE_PROMPT_BUTTONS.indexOf('前往下载'),
+    defaultId: UPDATE_PROMPT_BUTTONS.indexOf('立即下载'),
     cancelId: UPDATE_PROMPT_BUTTONS.indexOf('稍后再说'),
   });
 
   switch (resolveUpdatePromptAction(response)) {
     case 'open':
-      void shell.openExternal(update.url);
+      await downloadUpdate(window, update);
       break;
     case 'skip':
       settings.patch({ skippedUpdateVersion: update.version });
       break;
     case 'dismiss':
       break;
+  }
+}
+
+/**
+ * Fetch the installer for this machine into the user's Downloads folder.
+ *
+ * Downloading is as far as this can go: applying the update would need
+ * Squirrel, which will not accept an ad-hoc signed app (see update-check.ts).
+ * So the app gets the right file — no picking between three on a release page —
+ * and hands off to the installer the user already knows how to drive.
+ *
+ * Falls back to opening the release page whenever anything is off: no matching
+ * asset for this platform, or a download that failed. The user is never left
+ * with only an error.
+ */
+async function downloadUpdate(window: BrowserWindow, update: AvailableUpdate): Promise<void> {
+  if (update.asset === null) {
+    void shell.openExternal(update.url);
+    return;
+  }
+
+  const directory = app.getPath('downloads');
+  try {
+    // Dock (macOS) / taskbar (Windows) progress. The app has no UI channel of
+    // its own here — the renderer is showing the resume editor, not an
+    // installer — and this is the one progress surface that needs no window.
+    window.setProgressBar(0);
+    const file = await downloadFile(
+      {
+        url: update.asset.url,
+        fileName: update.asset.name,
+        expectedSize: update.asset.size,
+        directory,
+      },
+      {
+        fetch,
+        onProgress: (fraction) => {
+          if (!window.isDestroyed()) window.setProgressBar(fraction);
+        },
+      },
+    );
+    if (!window.isDestroyed()) window.setProgressBar(-1);
+
+    const { response } = await dialog.showMessageBox(window, {
+      type: 'info',
+      message: `${update.asset.name} 下载完成`,
+      detail:
+        process.platform === 'darwin'
+          ? '打开后把 JadeAI 拖到"应用程序"覆盖安装。首次打开若被拦下，见 README 的说明。'
+          : '打开安装程序，按提示覆盖安装即可。',
+      buttons: ['打开安装包', '在文件夹中显示', '完成'],
+      defaultId: 0,
+      cancelId: 2,
+    });
+    if (response === 0) void shell.openPath(file);
+    if (response === 1) shell.showItemInFolder(file);
+  } catch (error) {
+    if (!window.isDestroyed()) window.setProgressBar(-1);
+    console.error('[update] download failed:', error);
+    const { response } = await dialog.showMessageBox(window, {
+      type: 'warning',
+      message: '下载失败',
+      detail: `${error instanceof Error ? error.message : String(error)}\n\n可以到发布页手动下载。`,
+      buttons: ['打开发布页', '取消'],
+      defaultId: 0,
+      cancelId: 1,
+    });
+    if (response === 0) void shell.openExternal(update.url);
   }
 }
 

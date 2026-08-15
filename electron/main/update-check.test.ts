@@ -5,13 +5,51 @@ import {
   parseDesktopTag,
   resolveUpdatePromptAction,
   selectAvailableUpdate,
+  selectInstallerAsset,
   UPDATE_PROMPT_BUTTONS,
   type GitHubRelease,
+  type GitHubReleaseAsset,
 } from './update-check';
 
 function release(tag: string, extra: Partial<GitHubRelease> = {}): GitHubRelease {
   return { tag_name: tag, html_url: `https://example.test/${tag}`, ...extra };
 }
+
+function asset(name: string, size: number): GitHubReleaseAsset {
+  return { name, browser_download_url: `https://example.test/asset/${name}`, size };
+}
+
+describe('selectInstallerAsset', () => {
+  const assets = [
+    asset('JadeAI-1.0.0-mac-arm64.dmg', 1),
+    asset('JadeAI-1.0.0-mac-x64.dmg', 2),
+    asset('JadeAI-1.0.0-win-x64-setup.exe', 3),
+  ];
+
+  // These suffixes mirror artifactName in the electron-builder config. If they
+  // drift apart the app silently stops finding its own installers.
+  it.each([
+    ['darwin', 'arm64', 'JadeAI-1.0.0-mac-arm64.dmg'],
+    ['darwin', 'x64', 'JadeAI-1.0.0-mac-x64.dmg'],
+    ['win32', 'x64', 'JadeAI-1.0.0-win-x64-setup.exe'],
+  ] as const)('picks the %s %s installer', (platform, arch, expected) => {
+    expect(selectInstallerAsset(assets, platform, arch)?.name).toBe(expected);
+  });
+
+  // mac arm64 must not match the x64 dmg just because both end in .dmg.
+  it('does not fall back to another arch', () => {
+    const onlyX64 = [asset('JadeAI-1.0.0-mac-x64.dmg', 2)];
+    expect(selectInstallerAsset(onlyX64, 'darwin', 'arm64')).toBeNull();
+  });
+
+  it('returns null on a platform with no installer, rather than guessing', () => {
+    expect(selectInstallerAsset(assets, 'linux', 'x64')).toBeNull();
+  });
+
+  it('returns null for an empty asset list', () => {
+    expect(selectInstallerAsset([], 'darwin', 'arm64')).toBeNull();
+  });
+});
 
 describe('parseDesktopTag', () => {
   it('accepts desktop tags with and without a prerelease suffix', () => {
@@ -70,7 +108,35 @@ describe('selectAvailableUpdate', () => {
       version: '0.2.0',
       tag: 'ds-v0.2.0',
       url: 'https://example.test/ds-v0.2.0',
+      asset: null,
     });
+  });
+
+  it('attaches the installer built for this machine', () => {
+    const releases = [
+      release('ds-v0.2.0', {
+        assets: [
+          asset('JadeAI-0.2.0-mac-arm64.dmg', 111),
+          asset('JadeAI-0.2.0-mac-x64.dmg', 222),
+          asset('JadeAI-0.2.0-win-x64-setup.exe', 333),
+        ],
+      }),
+    ];
+    expect(selectAvailableUpdate(releases, '0.0.1', null, 'darwin', 'arm64')?.asset).toEqual({
+      name: 'JadeAI-0.2.0-mac-arm64.dmg',
+      url: 'https://example.test/asset/JadeAI-0.2.0-mac-arm64.dmg',
+      size: 111,
+    });
+    expect(selectAvailableUpdate(releases, '0.0.1', null, 'win32', 'x64')?.asset?.size).toBe(333);
+  });
+
+  // A release with no matching asset must still be reported, so the caller can
+  // fall back to opening the page rather than staying silent about an update.
+  it('reports the update with a null asset when nothing matches this machine', () => {
+    const releases = [release('ds-v0.2.0', { assets: [asset('JadeAI-0.2.0-mac-x64.dmg', 1)] })];
+    const update = selectAvailableUpdate(releases, '0.0.1', null, 'darwin', 'arm64');
+    expect(update?.version).toBe('0.2.0');
+    expect(update?.asset).toBeNull();
   });
 
   it('returns null when the running version is already the newest', () => {
@@ -114,7 +180,7 @@ describe('resolveUpdatePromptAction', () => {
   // array the dialog renders. Reordering the buttons without updating the
   // mapping would otherwise turn "skip this version" into "download".
   it.each([
-    ['前往下载', 'open'],
+    ['立即下载', 'open'],
     ['稍后再说', 'dismiss'],
     ['跳过此版本', 'skip'],
   ] as const)('maps %s to %s', (label, expected) => {

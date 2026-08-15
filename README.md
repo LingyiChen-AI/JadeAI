@@ -235,10 +235,14 @@ erase your data.
 
 ### Updates
 
-On launch the app asks GitHub once whether a newer `ds-*` release exists, and
-tells you if so. It does not download or install anything by itself: updating
-means downloading the new installer and installing over the old one. Your data
-is untouched.
+On launch the app asks GitHub once whether a newer `ds-*` release exists. If
+there is one, it offers to **download the installer built for your machine** —
+you don't pick between three files — with progress on the dock/taskbar icon.
+When it finishes you can open the installer or reveal it in your file manager.
+
+It stops there: installing is still a manual step (drag to Applications, or run
+the `.exe`). Silent install would need Squirrel, which refuses an ad-hoc signed
+app. Your data is untouched by an update.
 
 **This is the only outbound request the app makes.** To turn it off, set
 `"updateCheckEnabled": false` in `jade-settings.json` (see the paths above) and

@@ -1,9 +1,10 @@
 /**
  * Update checking against this repo's GitHub releases.
  *
- * Deliberately a *check and notify*, not electron-updater's download-and-apply.
- * Three things block silent installation today, and shipping it half-working
- * would be worse than not shipping it:
+ * The app checks, and downloads the right installer, but does not apply it.
+ * Downloading needs nothing special; *installing* silently is what is blocked,
+ * for three reasons — and shipping that half-working would be worse than not
+ * shipping it:
  *
  *  1. macOS. Squirrel.Mac verifies that an update's signature matches the
  *     running app's, and an ad-hoc signature has no identity to match. Silent
@@ -17,21 +18,71 @@
  *     when a publish provider is configured, and CI runs with --publish never.
  *
  * So this reads the releases list, finds the newest `ds-v*` above the running
- * version, and points the user at it. Moving to real auto-update later means
- * fixing (1) and (2); this module's version selection stays useful either way.
+ * version, and picks the installer matching this machine — the user gets the
+ * right file rather than a page with three to choose between, and runs it
+ * themselves. Moving to real auto-update later means fixing (1) and (2); this
+ * module's selection logic stays useful either way.
  */
+
+export interface GitHubReleaseAsset {
+  name: string;
+  browser_download_url: string;
+  size: number;
+}
 
 export interface GitHubRelease {
   tag_name: string;
   html_url: string;
   draft?: boolean;
   prerelease?: boolean;
+  assets?: GitHubReleaseAsset[];
+}
+
+export interface InstallerAsset {
+  name: string;
+  url: string;
+  size: number;
 }
 
 export interface AvailableUpdate {
   version: string;
   tag: string;
   url: string;
+  /** The installer for this machine, or null when the release has none. */
+  asset: InstallerAsset | null;
+}
+
+/**
+ * Suffix identifying the installer built for a given platform and arch.
+ *
+ * Mirrors the artifactName patterns in config/electron-builder.config.cjs
+ * (`JadeAI-${version}-mac-${arch}.dmg`, `JadeAI-${version}-win-${arch}-setup.exe`).
+ * Renaming one without the other means this returns null and the app falls back
+ * to opening the release page — degraded, not broken.
+ */
+export function installerSuffix(platform: NodeJS.Platform, arch: string): string | null {
+  if (platform === 'darwin') return `-mac-${arch}.dmg`;
+  if (platform === 'win32') return `-win-${arch}-setup.exe`;
+  return null;
+}
+
+/**
+ * Pick the installer matching this machine.
+ *
+ * Matches on the running process's arch rather than the CPU's: an x64 build
+ * running under Rosetta on Apple Silicon reports x64 and is offered the x64
+ * build again, which is correct — that is the one it can definitely run.
+ */
+export function selectInstallerAsset(
+  assets: GitHubReleaseAsset[],
+  platform: NodeJS.Platform,
+  arch: string,
+): InstallerAsset | null {
+  const suffix = installerSuffix(platform, arch);
+  if (suffix === null) return null;
+  const match = assets.find((asset) => asset.name.endsWith(suffix));
+  if (match === undefined) return null;
+  return { name: match.name, url: match.browser_download_url, size: match.size };
 }
 
 /** Tag prefix that marks a desktop client release. See the note above. */
@@ -89,6 +140,8 @@ export function selectAvailableUpdate(
   releases: GitHubRelease[],
   currentVersion: string,
   skippedVersion: string | null,
+  platform: NodeJS.Platform = process.platform,
+  arch: string = process.arch,
 ): AvailableUpdate | null {
   let best: AvailableUpdate | null = null;
 
@@ -100,7 +153,12 @@ export function selectAvailableUpdate(
     if (version === null) continue;
     if (compareVersions(version, currentVersion) <= 0) continue;
     if (best !== null && compareVersions(version, best.version) <= 0) continue;
-    best = { version, tag: release.tag_name, url: release.html_url };
+    best = {
+      version,
+      tag: release.tag_name,
+      url: release.html_url,
+      asset: selectInstallerAsset(release.assets ?? [], platform, arch),
+    };
   }
 
   if (best !== null && skippedVersion !== null && compareVersions(best.version, skippedVersion) <= 0) {
@@ -119,12 +177,12 @@ export function selectAvailableUpdate(
  * clicking a native modal needs accessibility permission the test environment
  * does not have.
  */
-export const UPDATE_PROMPT_BUTTONS = ['前往下载', '稍后再说', '跳过此版本'] as const;
+export const UPDATE_PROMPT_BUTTONS = ['立即下载', '稍后再说', '跳过此版本'] as const;
 
 export type UpdatePromptAction = 'open' | 'dismiss' | 'skip';
 
 export function resolveUpdatePromptAction(response: number): UpdatePromptAction {
-  if (response === UPDATE_PROMPT_BUTTONS.indexOf('前往下载')) return 'open';
+  if (response === UPDATE_PROMPT_BUTTONS.indexOf('立即下载')) return 'open';
   if (response === UPDATE_PROMPT_BUTTONS.indexOf('跳过此版本')) return 'skip';
   // Anything else — including the dialog being dismissed by other means — is a
   // decision to do nothing, never an accidental skip.
