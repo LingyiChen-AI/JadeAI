@@ -1,8 +1,12 @@
 import { SQLiteAdapter } from './adapters/sqlite';
+import { resolveDatabasePath } from './database-path';
 import type { DatabaseAdapter } from './adapter';
 
+// Not `process.env.SQLITE_PATH || './data/jade.db'`: `next build`'s page-data
+// workers all import this module at once, and sharing one file makes them race
+// each other's migrations. See resolveDatabasePath.
 const adapter: DatabaseAdapter = new SQLiteAdapter(
-  process.env.SQLITE_PATH || './data/jade.db',
+  resolveDatabasePath(process.env, process.pid),
 );
 
 /**
