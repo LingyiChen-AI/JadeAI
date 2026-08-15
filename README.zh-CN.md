@@ -34,6 +34,14 @@
 
 ## 最近更新
 
+### v0.5.0 · 桌面客户端首发
+- **[桌面客户端](#桌面客户端)** 正式发布：macOS（Apple Silicon / Intel）与 Windows x64
+  安装包，零配置、无需账号、数据全在本机
+- 客户端内置更新提示，可直接下载对应架构的安装包
+- Web 与客户端统一发版：同一个 tag 同时产出 Docker 镜像与三平台安装包
+- 修复导出功能在容器中运行一段时间后失效（#95）
+- 简历子项支持上移 / 下移 / 在上方插入（#89，感谢 @Silas-Zhu）
+
 ### v0.3.4 · 主题色系统与配色切换
 - 引入语义化 `--brand-*` CSS token，下线全站 60+ 文件硬编码 `pink-*`
 - 用户菜单新增主题色切换器，三套预设：**薄荷**（默认）、**经典蓝**、**玫粉**
@@ -196,14 +204,28 @@
 
 ## 桌面客户端
 
-独立的桌面版本在本机跑完整应用——不需要服务器、不需要账号、不联网，数据存在本机的
-SQLite 文件里。
+**欢迎试用桌面客户端** —— 不用部署、不用注册、不用联网，下载装上就能写简历。
 
-从[最新的 `ds-*` release](https://github.com/LingyiChen-AI/JadeAI/releases?q=ds-v&expanded=true) 下载：
+[![下载客户端](https://img.shields.io/badge/下载客户端-macOS%20%7C%20Windows-2ea44f?style=for-the-badge)](https://github.com/LingyiChen-AI/JadeAI/releases/latest)
+
+它跑的是和 Web 版**完全相同**的应用——50 套模板、AI 润色、JD 匹配、模拟面试、
+多格式导出，一个都不少。区别只在于服务跑在你自己的电脑上：
+
+- **零配置** —— 装完打开就能用，不需要 Docker、不需要数据库、不需要 `AUTH_SECRET`
+- **不需要账号** —— 本机单用户，没有登录，没有指纹识别
+- **数据只在本机** —— 简历存在你电脑上的一个 SQLite 文件里，不经过任何服务器
+- **AI 用你自己的 Key** —— 在应用内「设置 → AI」里填，请求直连你配置的服务商
+- **自动提示更新** —— 有新版时右下角弹个小条，点一下就下载好对应你机器的安装包
+
+> 唯一的对外网络请求是启动时问 GitHub 有没有新版本，可以关掉（见下文「更新」）。
+
+### 下载
+
+从 **[最新 Release](https://github.com/LingyiChen-AI/JadeAI/releases/latest)** 下载对应你系统的包：
 
 | 平台 | 文件 |
 |---|---|
-| macOS（Apple Silicon） | `JadeAI-*-mac-arm64.dmg` |
+| macOS（Apple Silicon，M 系列芯片） | `JadeAI-*-mac-arm64.dmg` |
 | macOS（Intel） | `JadeAI-*-mac-x64.dmg` |
 | Windows（x64） | `JadeAI-*-win-x64-setup.exe` |
 
@@ -239,7 +261,7 @@ xattr -dr com.apple.quarantine /Applications/JadeAI.app
 
 ### 更新
 
-启动时应用会向 GitHub 查一次有没有更新的 `ds-*` release。有的话会在窗口右下角出现一个
+启动时应用会向 GitHub 查一次有没有新版本。有的话会在窗口右下角出现一个
 小提示条——不是弹窗——点「立即下载」它会**自动下载匹配你这台机器的那个安装包**，
 不用在三个文件里挑。进度显示在提示条里，下完可以直接打开安装包或在文件夹中显示。
 提示条可以收起、关闭，或者对这个版本不再提示。

@@ -27,6 +27,15 @@ Join our groups for discussion and support:
 
 ## Recent Updates
 
+### v0.5.0 · Desktop Client
+- **[Desktop client](#desktop-client)** released: macOS (Apple Silicon / Intel)
+  and Windows x64 installers — zero config, no account, data stays local
+- Built-in update notice that downloads the installer for your machine
+- Web and desktop now ship together: one tag produces both the Docker image and
+  all three installers
+- Fixed PDF export failing after the container had been up for a while (#95)
+- Resume items can be moved up/down and inserted above (#89, thanks @Silas-Zhu)
+
 ### v0.3.4 · Brand Color System & Theme Switching
 - Introduced semantic `--brand-*` CSS tokens; replaced hardcoded `pink-*` across 60+ files
 - New brand switcher in the user menu with three presets: **Mint** (default), **Blue**, **Pink**
@@ -187,10 +196,30 @@ The following resume sections support Markdown syntax:
 
 ## Desktop Client
 
-A standalone desktop build runs the whole app locally — no server, no account, no
-network. Data lives in a SQLite file on your machine.
+**Try the desktop app** — nothing to deploy, no account, no network. Download,
+install, start writing.
 
-Download from the [latest `ds-*` release](https://github.com/LingyiChen-AI/JadeAI/releases?q=ds-v&expanded=true):
+[![Download](https://img.shields.io/badge/Download-macOS%20%7C%20Windows-2ea44f?style=for-the-badge)](https://github.com/LingyiChen-AI/JadeAI/releases/latest)
+
+It runs the **same** application as the web version — all 50 templates, AI
+polish, JD matching, mock interviews, every export format. The difference is
+only where it runs:
+
+- **Zero config** — no Docker, no database, no `AUTH_SECRET`. Install and open.
+- **No account** — one local user, no sign-in, no fingerprinting
+- **Your data stays put** — resumes live in a SQLite file on your machine and
+  never reach a server
+- **Your own AI key** — set it in Settings → AI; requests go straight to the
+  provider you configured
+- **Update notices** — a small panel appears when a new version is out and
+  downloads the installer built for your machine
+
+> The only outbound request it makes is asking GitHub whether a newer version
+> exists, and that can be turned off (see Updates below).
+
+### Download
+
+Grab the build for your system from the **[latest release](https://github.com/LingyiChen-AI/JadeAI/releases/latest)**:
 
 | Platform | File |
 |---|---|
@@ -235,7 +264,7 @@ erase your data.
 
 ### Updates
 
-On launch the app asks GitHub once whether a newer `ds-*` release exists. If
+On launch the app asks GitHub once whether a newer version exists. If
 there is one, a small panel appears in the corner of the window — not a modal
 dialog — offering to **download the installer built for your machine**, so you
 don't pick between three files. Progress shows in the panel; when it finishes
