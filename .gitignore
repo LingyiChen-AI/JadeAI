@@ -46,3 +46,4 @@ jadeai-data/*
 
 test
 release/
+.vscode
