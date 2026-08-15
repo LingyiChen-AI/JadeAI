@@ -7,6 +7,7 @@
 // Every extraResources entry below exists to satisfy one of those, so a rename
 // here breaks startup at runtime rather than at build time. Keep them in sync.
 
+const { execFileSync } = require('node:child_process');
 const { cpSync, existsSync, readdirSync } = require('node:fs');
 const { join } = require('node:path');
 
@@ -114,22 +115,57 @@ function verifyPackagedLayout(resourcesDir, electronPlatformName, arch) {
   }
 }
 
+/**
+ * Ad-hoc sign the .app, and fail the build if the result does not validate.
+ *
+ * `identity: null` tells electron-builder not to sign, and without this step
+ * nothing else does either: the bundle ships carrying only the linker-generated
+ * signature that comes on the raw Electron binary. That signature says
+ * `Identifier=Electron` and `Sealed Resources=none` — it covers the executable
+ * Electron shipped, not the application built around it. `codesign --verify`
+ * rejects it with "code has no resources but signature indicates they must be
+ * present".
+ *
+ * It runs anyway when launched straight out of a build directory, because
+ * Gatekeeper only assesses a bundle carrying `com.apple.quarantine` — which is
+ * exactly what a browser download attaches. So the failure appears only after
+ * downloading a release: macOS reports "JadeAI 已损坏，无法打开" and offers
+ * nothing but Move to Trash. An unsigned build is not merely unverified, it is
+ * unopenable.
+ *
+ * An ad-hoc signature is anonymous, so Gatekeeper still refuses the first
+ * launch — but with the "unidentified developer" prompt, which right-click →
+ * Open clears. Shipping a real Developer ID signature plus notarization is what
+ * removes the prompt entirely; that needs credentials this repo does not have.
+ *
+ * Must run after copyStandaloneNodeModules: signing seals the bundle's
+ * contents, so anything added afterwards invalidates it again.
+ */
+function adhocSignMacApp(appPath) {
+  execFileSync('codesign', ['--force', '--deep', '--sign', '-', appPath], { stdio: 'inherit' });
+  // Verify here rather than trusting the exit code above: this is the check
+  // that would have caught the broken signature before it reached a release.
+  execFileSync('codesign', ['--verify', '--deep', '--strict', appPath], { stdio: 'inherit' });
+}
+
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
   afterPack: async (context) => {
-    const resourcesDir =
-      context.electronPlatformName === 'darwin'
-        ? join(
-            context.appOutDir,
-            `${context.packager.appInfo.productFilename}.app`,
-            'Contents',
-            'Resources',
-          )
-        : join(context.appOutDir, 'resources');
+    const isMac = context.electronPlatformName === 'darwin';
+    const appPath = join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`);
+    const resourcesDir = isMac
+      ? join(appPath, 'Contents', 'Resources')
+      : join(context.appOutDir, 'resources');
 
     copyStandaloneNodeModules(resourcesDir, context.packager.projectDir);
     verifyPackagedLayout(resourcesDir, context.electronPlatformName, context.arch);
     console.log(`  • packaged layout verified (${prebuildTriple(context.electronPlatformName, context.arch)})`);
+
+    // Last, so the signature seals everything copied above.
+    if (isMac) {
+      adhocSignMacApp(appPath);
+      console.log('  • ad-hoc signature applied and verified');
+    }
   },
 
   appId: 'com.jadeai.desktop',
@@ -201,9 +237,8 @@ module.exports = {
     icon: 'resources/build/icon.icns',
     category: 'public.app-category.productivity',
     target: ['dmg'],
-    // No Developer ID in this environment: ship an ad-hoc signature so the app
-    // runs locally after the user clears Gatekeeper once. A release build would
-    // set hardenedRuntime + notarize and sign with a real identity.
+    // null means electron-builder does not sign; afterPack ad-hoc signs instead.
+    // Leaving it at that alone shipped an unopenable app — see adhocSignMacApp.
     identity: null,
     hardenedRuntime: false,
     gatekeeperAssess: false,
