@@ -15,7 +15,7 @@ import type { AvailableUpdate } from '../update-check';
  */
 
 export interface UpdateStatus {
-  update: { version: string; url: string; downloadable: boolean } | null;
+  update: { version: string; url: string } | null;
   /** Set once a download has finished, so a remounted UI knows to offer "open". */
   downloadedFileName: string | null;
 }
@@ -49,20 +49,14 @@ export class UpdateCoordinator {
       update:
         this.pending === null
           ? null
-          : {
-              version: this.pending.version,
-              url: this.pending.url,
-              // False when the release has no installer for this platform and
-              // arch; the UI then offers the release page instead of a download.
-              downloadable: this.pending.asset !== null,
-            },
+          : { version: this.pending.version, url: this.pending.url },
       downloadedFileName: this.downloadedPath === null ? null : basename(this.downloadedPath),
     };
   }
 
   async download(window: BrowserWindow): Promise<{ fileName: string } | { error: string }> {
     const asset = this.pending?.asset;
-    if (asset === undefined || asset === null) return { error: 'no-asset' };
+    if (asset === undefined) return { error: 'no-update' };
     // A second click while the first download runs would write the same .part
     // file from two streams at once.
     if (this.downloading) return { error: 'in-progress' };

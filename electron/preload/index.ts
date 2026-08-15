@@ -5,7 +5,7 @@ import { contextBridge, ipcRenderer } from 'electron';
  * here is reachable from page JavaScript.
  */
 export interface UpdateStatus {
-  update: { version: string; url: string; downloadable: boolean } | null;
+  update: { version: string; url: string } | null;
   downloadedFileName: string | null;
 }
 

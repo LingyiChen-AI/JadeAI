@@ -9,19 +9,20 @@
  *  1. macOS. Squirrel.Mac verifies that an update's signature matches the
  *     running app's, and an ad-hoc signature has no identity to match. Silent
  *     updates need a Developer ID certificate, which this repo has none of.
- *  2. Release collision. The repo publishes the web app under `v*` tags and the
- *     client under `ds-*`, into the same releases list. electron-updater's
- *     GitHub provider takes whatever release is newest — so a web release would
- *     be offered to the desktop client as its own update. Filtering by the
- *     `ds-v` prefix here is what avoids that; a provider cannot express it.
+ *  2. Web-only releases. One repo, one releases list, and most of its history
+ *     (`v0.1.0` … `v0.4.1`) predates the client and carries no installers at
+ *     all. electron-updater's GitHub provider takes whatever release is newest
+ *     and expects metadata to be there; here it would hand the client a release
+ *     with nothing to install. Requiring a matching installer asset is what
+ *     avoids that, and a provider cannot express it.
  *  3. No update metadata. electron-builder only emits latest-mac.yml/latest.yml
  *     when a publish provider is configured, and CI runs with --publish never.
  *
- * So this reads the releases list, finds the newest `ds-v*` above the running
- * version, and picks the installer matching this machine — the user gets the
- * right file rather than a page with three to choose between, and runs it
- * themselves. Moving to real auto-update later means fixing (1) and (2); this
- * module's selection logic stays useful either way.
+ * So this reads the releases list, finds the newest version above the running
+ * one that ships an installer for this machine, and offers exactly that file —
+ * rather than a page with three to choose between — for the user to run. Moving
+ * to real auto-update later means fixing (1); this module's selection logic
+ * stays useful either way.
  */
 
 export interface GitHubReleaseAsset {
@@ -48,8 +49,12 @@ export interface AvailableUpdate {
   version: string;
   tag: string;
   url: string;
-  /** The installer for this machine, or null when the release has none. */
-  asset: InstallerAsset | null;
+  /**
+   * The installer for this machine. Never null: selectAvailableUpdate skips a
+   * release it cannot install from, so an update that exists is always one the
+   * user can act on.
+   */
+  asset: InstallerAsset;
 }
 
 /**
@@ -85,17 +90,19 @@ export function selectInstallerAsset(
   return { name: match.name, url: match.browser_download_url, size: match.size };
 }
 
-/** Tag prefix that marks a desktop client release. See the note above. */
-export const DESKTOP_TAG_PREFIX = 'ds-v';
-
 /**
- * Parse `ds-v1.2.3` / `ds-v1.2.3-beta.1` into its version, or null.
+ * Parse a release tag into its version, or null.
+ *
+ * Accepts both `v1.2.3` and the legacy `ds-v1.2.3`. The client and the web app
+ * used to tag separately, `v*` and `ds-*`, so that one repo could carry two
+ * release lines; they now share one tag per version. Old `ds-*` releases stay
+ * parseable so a client installed before the change still sees its own history.
  *
  * Anything not matching is skipped rather than guessed at: an unparseable tag
  * that compared as "newer" would nag users about a release that does not exist.
  */
-export function parseDesktopTag(tag: string): string | null {
-  const match = /^ds-v(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/.exec(tag);
+export function parseReleaseTag(tag: string): string | null {
+  const match = /^(?:ds-)?v(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/.exec(tag);
   return match === null ? null : match[1];
 }
 
@@ -131,10 +138,17 @@ export function compareVersions(a: string, b: string): number {
 }
 
 /**
- * Pick the newest desktop release worth telling the user about.
+ * Pick the newest release worth telling the user about.
+ *
+ * A release only counts if it actually carries an installer for this platform
+ * and arch. That is not a nicety — the repo's release history is mostly web-only
+ * (`v0.1.0` … `v0.4.1`, no installers), and a client whose version number is
+ * lower than those would otherwise be told to "update" to a release it cannot
+ * install anything from. Requiring the asset makes the check ask the only
+ * question that matters: is there something here I can actually run?
  *
  * Returns null when there is nothing newer, when the newest is the version the
- * user chose to skip, or when the list holds no desktop releases at all.
+ * user chose to skip, or when no release carries a usable installer.
  */
 export function selectAvailableUpdate(
   releases: GitHubRelease[],
@@ -149,16 +163,15 @@ export function selectAvailableUpdate(
     // Drafts are invisible to users and prereleases are opt-in; neither should
     // surface in an unsolicited prompt.
     if (release.draft === true || release.prerelease === true) continue;
-    const version = parseDesktopTag(release.tag_name);
+    const version = parseReleaseTag(release.tag_name);
     if (version === null) continue;
     if (compareVersions(version, currentVersion) <= 0) continue;
     if (best !== null && compareVersions(version, best.version) <= 0) continue;
-    best = {
-      version,
-      tag: release.tag_name,
-      url: release.html_url,
-      asset: selectInstallerAsset(release.assets ?? [], platform, arch),
-    };
+    // Web-only releases carry no installer for anyone; a release missing only
+    // THIS arch is equally unusable here. Either way, skip rather than offer.
+    const asset = selectInstallerAsset(release.assets ?? [], platform, arch);
+    if (asset === null) continue;
+    best = { version, tag: release.tag_name, url: release.html_url, asset };
   }
 
   if (best !== null && skippedVersion !== null && compareVersions(best.version, skippedVersion) <= 0) {

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   compareVersions,
   fetchDesktopReleases,
-  parseDesktopTag,
+  parseReleaseTag,
   selectAvailableUpdate,
   selectInstallerAsset,
   type GitHubRelease,
@@ -49,24 +49,25 @@ describe('selectInstallerAsset', () => {
   });
 });
 
-describe('parseDesktopTag', () => {
-  it('accepts desktop tags with and without a prerelease suffix', () => {
-    expect(parseDesktopTag('ds-v0.0.1')).toBe('0.0.1');
-    expect(parseDesktopTag('ds-v1.2.3-beta.1')).toBe('1.2.3-beta.1');
+describe('parseReleaseTag', () => {
+  it('accepts the unified v* tags', () => {
+    expect(parseReleaseTag('v0.5.0')).toBe('0.5.0');
+    expect(parseReleaseTag('v1.2.3-beta.1')).toBe('1.2.3-beta.1');
   });
 
-  // The repo publishes the web app under `v*` into the same releases list. If
-  // those parsed, the client would offer the web release as its own update.
-  it('rejects the web app tags that share this releases list', () => {
-    expect(parseDesktopTag('v0.4.1')).toBeNull();
-    expect(parseDesktopTag('v1.0.0')).toBeNull();
+  // A client installed before the tag schemes merged must still recognise its
+  // own release history, or its "current version" has nothing to compare to.
+  it('still accepts the legacy ds-v* tags', () => {
+    expect(parseReleaseTag('ds-v0.0.4')).toBe('0.0.4');
+    expect(parseReleaseTag('ds-v1.2.3-beta.1')).toBe('1.2.3-beta.1');
   });
 
   it('rejects anything it cannot parse rather than guessing', () => {
-    expect(parseDesktopTag('ds-v1.2')).toBeNull();
-    expect(parseDesktopTag('ds-1.2.3')).toBeNull();
-    expect(parseDesktopTag('desktop-v1.2.3')).toBeNull();
-    expect(parseDesktopTag('')).toBeNull();
+    expect(parseReleaseTag('v1.2')).toBeNull();
+    expect(parseReleaseTag('1.2.3')).toBeNull();
+    expect(parseReleaseTag('ds-1.2.3')).toBeNull();
+    expect(parseReleaseTag('desktop-v1.2.3')).toBeNull();
+    expect(parseReleaseTag('')).toBeNull();
   });
 });
 
@@ -100,13 +101,19 @@ describe('compareVersions', () => {
 });
 
 describe('selectAvailableUpdate', () => {
-  it('finds the newest desktop release above the running version', () => {
-    const releases = [release('ds-v0.0.1'), release('ds-v0.2.0'), release('ds-v0.1.0')];
-    expect(selectAvailableUpdate(releases, '0.0.1', null)).toEqual({
+  it('finds the newest release above the running version', () => {
+    const withAsset = (tag: string, v: string) =>
+      release(tag, { assets: [asset(`JadeAI-${v}-mac-arm64.dmg`, 1)] });
+    const releases = [withAsset('v0.0.1', '0.0.1'), withAsset('v0.2.0', '0.2.0'), withAsset('v0.1.0', '0.1.0')];
+    expect(selectAvailableUpdate(releases, '0.0.1', null, 'darwin', 'arm64')).toEqual({
       version: '0.2.0',
-      tag: 'ds-v0.2.0',
-      url: 'https://example.test/ds-v0.2.0',
-      asset: null,
+      tag: 'v0.2.0',
+      url: 'https://example.test/v0.2.0',
+      asset: {
+        name: 'JadeAI-0.2.0-mac-arm64.dmg',
+        url: 'https://example.test/asset/JadeAI-0.2.0-mac-arm64.dmg',
+        size: 1,
+      },
     });
   });
 
@@ -128,44 +135,63 @@ describe('selectAvailableUpdate', () => {
     expect(selectAvailableUpdate(releases, '0.0.1', null, 'win32', 'x64')?.asset?.size).toBe(333);
   });
 
-  // A release with no matching asset must still be reported, so the caller can
-  // fall back to opening the page rather than staying silent about an update.
-  it('reports the update with a null asset when nothing matches this machine', () => {
-    const releases = [release('ds-v0.2.0', { assets: [asset('JadeAI-0.2.0-mac-x64.dmg', 1)] })];
-    const update = selectAvailableUpdate(releases, '0.0.1', null, 'darwin', 'arm64');
-    expect(update?.version).toBe('0.2.0');
-    expect(update?.asset).toBeNull();
-  });
-
   it('returns null when the running version is already the newest', () => {
-    expect(selectAvailableUpdate([release('ds-v0.0.1')], '0.0.1', null)).toBeNull();
-    expect(selectAvailableUpdate([release('ds-v0.0.1')], '0.1.0', null)).toBeNull();
+    const releases = [release('v0.0.1', { assets: [asset('JadeAI-0.0.1-mac-arm64.dmg', 1)] })];
+    expect(selectAvailableUpdate(releases, '0.0.1', null, 'darwin', 'arm64')).toBeNull();
+    expect(selectAvailableUpdate(releases, '0.1.0', null, 'darwin', 'arm64')).toBeNull();
   });
 
-  // The reason this module filters at all. A web release is always "newer" by
-  // number (0.4.1 today) and would otherwise be offered to the client.
-  it('ignores the web app releases sharing the same list', () => {
+  // The trap that requiring an installer exists for. Now that v* tags parse,
+  // the repo's web-only history (v0.1.0 … v0.4.1, no installers) all outranks a
+  // client on 0.0.4 by number. Offering one would send the user to a release
+  // with nothing to install.
+  it('ignores releases that carry no installer at all', () => {
     const releases = [release('v0.4.1'), release('v9.9.9'), release('ds-v0.0.1')];
-    expect(selectAvailableUpdate(releases, '0.0.1', null)).toBeNull();
+    expect(selectAvailableUpdate(releases, '0.0.4', null, 'darwin', 'arm64')).toBeNull();
+  });
+
+  // A release built for other platforms is just as unusable here as one built
+  // for none.
+  it('ignores a release missing an installer for this arch', () => {
+    const releases = [
+      release('v0.5.0', { assets: [asset('JadeAI-0.5.0-win-x64-setup.exe', 1)] }),
+    ];
+    expect(selectAvailableUpdate(releases, '0.0.4', null, 'darwin', 'arm64')).toBeNull();
+  });
+
+  // The mixed state right after the schemes merge: an old ds-* release and a
+  // new v* release both present, both with installers.
+  it('prefers the newer version across both tag schemes', () => {
+    const releases = [
+      release('ds-v0.0.4', { assets: [asset('JadeAI-0.0.4-mac-arm64.dmg', 1)] }),
+      release('v0.5.0', { assets: [asset('JadeAI-0.5.0-mac-arm64.dmg', 2)] }),
+    ];
+    expect(selectAvailableUpdate(releases, '0.0.2', null, 'darwin', 'arm64')?.version).toBe('0.5.0');
   });
 
   it('ignores drafts and prereleases', () => {
+    const dmg = [asset('JadeAI-9.0.0-mac-arm64.dmg', 1)];
     const releases = [
-      release('ds-v9.0.0', { draft: true }),
-      release('ds-v8.0.0', { prerelease: true }),
+      release('v9.0.0', { draft: true, assets: dmg }),
+      release('v8.0.0', { prerelease: true, assets: dmg }),
     ];
-    expect(selectAvailableUpdate(releases, '0.0.1', null)).toBeNull();
+    expect(selectAvailableUpdate(releases, '0.0.1', null, 'darwin', 'arm64')).toBeNull();
   });
 
   it('stays quiet about a version the user chose to skip', () => {
-    const releases = [release('ds-v0.2.0')];
-    expect(selectAvailableUpdate(releases, '0.0.1', '0.2.0')).toBeNull();
+    const releases = [release('v0.2.0', { assets: [asset('JadeAI-0.2.0-mac-arm64.dmg', 1)] })];
+    expect(selectAvailableUpdate(releases, '0.0.1', '0.2.0', 'darwin', 'arm64')).toBeNull();
   });
 
   // Skipping one version must not mute every later one.
   it('still reports a version newer than the skipped one', () => {
-    const releases = [release('ds-v0.2.0'), release('ds-v0.3.0')];
-    expect(selectAvailableUpdate(releases, '0.0.1', '0.2.0')?.version).toBe('0.3.0');
+    const releases = [
+      release('v0.2.0', { assets: [asset('JadeAI-0.2.0-mac-arm64.dmg', 1)] }),
+      release('v0.3.0', { assets: [asset('JadeAI-0.3.0-mac-arm64.dmg', 1)] }),
+    ];
+    expect(selectAvailableUpdate(releases, '0.0.1', '0.2.0', 'darwin', 'arm64')?.version).toBe(
+      '0.3.0',
+    );
   });
 
   it('returns null for an empty list', () => {

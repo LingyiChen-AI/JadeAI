@@ -9,7 +9,6 @@ import { useRuntimeConfig } from '@/components/providers/runtime-config-provider
 interface UpdateInfo {
   version: string;
   url: string;
-  downloadable: boolean;
 }
 
 type Phase =
@@ -162,19 +161,12 @@ export function UpdateNotice() {
 
           {phase.name === 'idle' && (
             <div className="flex flex-wrap gap-2">
-              {info.downloadable ? (
-                <Button size="sm" onClick={() => void startDownload()}>
-                  <Download className="mr-1.5 h-3.5 w-3.5" />
-                  {t('download')}
-                </Button>
-              ) : (
-                // No installer built for this platform and arch. Offering the
-                // release page beats offering a download that cannot happen.
-                <Button size="sm" onClick={() => void window.jade?.openReleasePage()}>
-                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                  {t('openReleasePage')}
-                </Button>
-              )}
+              {/* Always downloadable: the main process only reports an update
+                  that ships an installer for this machine. */}
+              <Button size="sm" onClick={() => void startDownload()}>
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+                {t('download')}
+              </Button>
               <Button size="sm" variant="ghost" onClick={() => void skip()}>
                 {t('skipVersion')}
               </Button>
