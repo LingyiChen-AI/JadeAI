@@ -154,11 +154,22 @@ jobs:
 
             ### 首次打开
 
-            安装包**没有代码签名**，第一次打开会被系统拦下，这是预期的：
+            安装包带的是 **ad-hoc 签名**（有效但匿名），没有 Apple Developer ID，
+            也没有公证，所以第一次打开会被系统拦下。这是预期的。
 
-            - **macOS**：右键点图标 → 打开，弹窗里再点"打开"。或终端执行
-              `xattr -dr com.apple.quarantine /Applications/JadeAI.app`
-            - **Windows**：SmartScreen 提示时点"更多信息" → "仍要运行"
+            **macOS** —— 终端执行这一条，然后正常双击：
+
+            ```
+            xattr -dr com.apple.quarantine /Applications/JadeAI.app
+            ```
+
+            也可以走图形界面：双击被拦后打开 系统设置 → 隐私与安全性，
+            在底部点"仍要打开"。
+
+            > 注意：**不要**依赖"右键 → 打开"。macOS 15 起 Apple 移除了这个
+            > 绕过方式，对未公证的应用不再生效。
+
+            **Windows** —— SmartScreen 提示时点"更多信息" → "仍要运行"。
 
             ### 数据存放位置
 
