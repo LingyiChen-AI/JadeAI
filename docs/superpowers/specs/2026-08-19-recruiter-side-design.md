@@ -24,7 +24,9 @@ JadeAI 现有的 `/interview` 是**候选人侧**的 AI 模拟面试：AI 扮演
 
 候选人侧是对话式（rounds → messages），面试官侧是文档式（生成题目 → 回填记录 → 出评价）。两者数据模型、AI prompt、页面交互都不同。强行复用会在 `interview_sessions` 上堆出大量空字段，并让现有组件长满 if 分支。
 
-唯一共享的是：AI provider 封装（`src/lib/ai/provider.ts`）、JSON 解析容错（`src/lib/ai/extract-json.ts`）、雷达图组件（`src/components/interview/radar-chart.tsx`）、简历解析能力（见「必要重构」）。
+唯一共享的是：AI provider 封装（`src/lib/ai/provider.ts`）、JSON 解析容错（`src/lib/ai/extract-json.ts`）、简历解析能力（见「必要重构」）。
+
+雷达图不复用 `src/components/interview/radar-chart.tsx`——它绑死了 `interview.report` 的 i18n 命名空间和 `dimension` 字段名，而招聘侧的维度字段是 `key`/`label`。新建 `src/components/recruit/dimension-radar.tsx`，参照其 recharts 用法即可（约 40 行）。
 
 ## 数据模型
 
