@@ -3393,8 +3393,9 @@ export default function RecruitPage() {
 
 - [ ] **Step 5: 类型检查 + lint**
 
-Run: `pnpm type-check && pnpm lint`
-Expected: 无错误
+Run: `pnpm type-check` —— 必须零错误。
+
+再跑 `pnpm lint`。**注意：本仓库 lint 基线就是失败的**（main 上 1340 个问题，绝大多数是 `@typescript-eslint/no-explicit-any`）。判断标准不是「零错误」，而是**你新增的文件里不出现除 `no-explicit-any` 之外的新规则违规**（`no-explicit-any` 与 `interview.repository.ts` / `resume.repository.ts` 等既有文件同款，属于仓库既定风格）。有其他类型的新错误就修掉。
 
 - [ ] **Step 6: 手动验证**
 
@@ -3731,8 +3732,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ jobId: str
 
 - [ ] **Step 3: 类型检查 + lint**
 
-Run: `pnpm type-check && pnpm lint`
-Expected: 无错误
+Run: `pnpm type-check` —— 必须零错误。
+
+再跑 `pnpm lint`。**注意：本仓库 lint 基线就是失败的**（main 上 1340 个问题，绝大多数是 `@typescript-eslint/no-explicit-any`）。判断标准不是「零错误」，而是**你新增的文件里不出现除 `no-explicit-any` 之外的新规则违规**（`no-explicit-any` 与 `interview.repository.ts` / `resume.repository.ts` 等既有文件同款，属于仓库既定风格）。有其他类型的新错误就修掉。
 
 - [ ] **Step 4: 手动验证**
 
@@ -4008,8 +4010,9 @@ export default function CandidatePage({
 
 - [ ] **Step 4: 类型检查 + lint**
 
-Run: `pnpm type-check && pnpm lint`
-Expected: 无错误
+Run: `pnpm type-check` —— 必须零错误。
+
+再跑 `pnpm lint`。**注意：本仓库 lint 基线就是失败的**（main 上 1340 个问题，绝大多数是 `@typescript-eslint/no-explicit-any`）。判断标准不是「零错误」，而是**你新增的文件里不出现除 `no-explicit-any` 之外的新规则违规**（`no-explicit-any` 与 `interview.repository.ts` / `resume.repository.ts` 等既有文件同款，属于仓库既定风格）。有其他类型的新错误就修掉。
 
 - [ ] **Step 5: 手动验证**
 
@@ -4301,8 +4304,9 @@ import { QuestionsPanel } from './questions-panel';
 
 - [ ] **Step 4: 类型检查 + lint**
 
-Run: `pnpm type-check && pnpm lint`
-Expected: 无错误
+Run: `pnpm type-check` —— 必须零错误。
+
+再跑 `pnpm lint`。**注意：本仓库 lint 基线就是失败的**（main 上 1340 个问题，绝大多数是 `@typescript-eslint/no-explicit-any`）。判断标准不是「零错误」，而是**你新增的文件里不出现除 `no-explicit-any` 之外的新规则违规**（`no-explicit-any` 与 `interview.repository.ts` / `resume.repository.ts` 等既有文件同款，属于仓库既定风格）。有其他类型的新错误就修掉。
 
 - [ ] **Step 5: 手动验证**
 
@@ -4622,8 +4626,9 @@ import { EvaluationPanel } from './evaluation-panel';
 
 - [ ] **Step 4: 类型检查 + lint**
 
-Run: `pnpm type-check && pnpm lint`
-Expected: 无错误
+Run: `pnpm type-check` —— 必须零错误。
+
+再跑 `pnpm lint`。**注意：本仓库 lint 基线就是失败的**（main 上 1340 个问题，绝大多数是 `@typescript-eslint/no-explicit-any`）。判断标准不是「零错误」，而是**你新增的文件里不出现除 `no-explicit-any` 之外的新规则违规**（`no-explicit-any` 与 `interview.repository.ts` / `resume.repository.ts` 等既有文件同款，属于仓库既定风格）。有其他类型的新错误就修掉。
 
 - [ ] **Step 5: 手动验证 —— 完整走一遍**
 
