@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractAIConfig, AIConfigError } from '@/lib/ai/provider';
 import { resolveUser, getUserIdFromRequest } from '@/lib/auth/helpers';
 import { resumeRepository } from '@/lib/db/repositories/resume.repository';
-import { parseResumeFile, validateResumeFile } from '@/lib/ai/parse-resume';
+import { parseResumeFile, validateResumeFile, ResumeParseError } from '@/lib/ai/parse-resume';
 import type { ParsedResume } from '@/lib/ai/parse-schema';
 
 export async function POST(request: NextRequest) {
@@ -59,6 +59,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof AIConfigError) {
       return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    if (error instanceof ResumeParseError) {
+      console.error('POST /api/resume/parse error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
     console.error('POST /api/resume/parse error:', error);
     return NextResponse.json({ error: 'Failed to parse resume' }, { status: 500 });

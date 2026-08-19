@@ -27,6 +27,14 @@ RULES:
 - Extract ALL items for EVERY section — every work experience, every project, every education entry, every certification, every language. Do NOT merge or omit any entries. If the resume has 3 projects, return 3 objects in the projects array. If the resume has 5 work experiences, return 5 objects in the workExperience array.
 - Read ALL pages of the document thoroughly. Information may span multiple pages.`;
 
+/** 解析失败（模型没能返回可用的 JSON）。调用方据此区分「解析不出来」和其它错误。 */
+export class ResumeParseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ResumeParseError';
+  }
+}
+
 /** 文件类型/大小校验。通过返回 null，不通过返回错误信息。 */
 export function validateResumeFile(file: File): string | null {
   if (!ACCEPTED_RESUME_TYPES.includes(file.type)) {
@@ -104,7 +112,7 @@ export async function parseResumeFile(file: File, aiConfig: AIConfig): Promise<P
   const raw = parseJsonFromText(result.text);
   if (!raw || typeof raw !== 'object') {
     console.error('[parse] Failed to parse JSON. Raw text:', result.text.slice(0, 500));
-    throw new Error('Failed to extract resume data');
+    throw new ResumeParseError('Failed to extract resume data');
   }
 
   // Map to our schema (handles models that return different field names)
