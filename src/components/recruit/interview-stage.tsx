@@ -279,12 +279,15 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
           {t('stage.elapsed', { minutes: elapsed })}
         </span>
         <span className="ml-auto flex shrink-0 items-center gap-2">
+          {/* 重量 = 频率 × 鼓励程度。重新生成在面试中几乎不会点，
+              点了还会连同已记的答案一起覆盖——它该是这里最轻的，
+              不该和「结束面试」平起平坐。 */}
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => setRegenerateOpen(true)}
             disabled={regenerating}
-            className="cursor-pointer gap-1.5"
+            className="cursor-pointer gap-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
           >
             {regenerating ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
