@@ -100,4 +100,58 @@ describe('buildEvaluationPrompt', () => {
     // 总分由服务端算，prompt 里不能让模型给 overallScore
     expect(system).not.toContain('overallScore');
   });
+
+  it('填了答案的题，把答案写进 prompt', () => {
+    const withAnswer: InterviewQuestion[] = [
+      { ...questions[0], id: 'q1', answer: '双十一订单页白屏，先看监控发现接口 500' },
+    ];
+    const { prompt } = buildEvaluationPrompt({
+      jobTitle: 'T',
+      jobDescription: 'JD',
+      resumeText: 'R',
+      dimensions: DIMENSIONS,
+      questions: withAnswer,
+      transcript: '整段记录',
+    });
+    expect(prompt).toContain('双十一订单页白屏，先看监控发现接口 500');
+    expect(prompt).toContain('recorded answer');
+  });
+
+  it('没填答案的题不出现 recorded answer 行', () => {
+    const { prompt } = buildEvaluationPrompt({
+      jobTitle: 'T',
+      jobDescription: 'JD',
+      resumeText: 'R',
+      dimensions: DIMENSIONS,
+      questions,
+      transcript: '整段记录',
+    });
+    expect(prompt).not.toContain('recorded answer');
+  });
+
+  it('空白答案视同没填', () => {
+    const blank: InterviewQuestion[] = [{ ...questions[0], answer: '   ' }];
+    const { prompt } = buildEvaluationPrompt({
+      jobTitle: 'T',
+      jobDescription: 'JD',
+      resumeText: 'R',
+      dimensions: DIMENSIONS,
+      questions: blank,
+      transcript: '整段记录',
+    });
+    expect(prompt).not.toContain('recorded answer');
+  });
+
+  it('system prompt 说明有答案的题不要再去记录里找', () => {
+    const { system } = buildEvaluationPrompt({
+      jobTitle: 'T',
+      jobDescription: 'JD',
+      resumeText: 'R',
+      dimensions: DIMENSIONS,
+      questions,
+      transcript: 'x',
+    });
+    expect(system).toContain('recorded answer');
+    expect(system).toContain('do not search the transcript');
+  });
 });

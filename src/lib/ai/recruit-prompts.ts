@@ -28,6 +28,7 @@ const EVALUATION_SYSTEM = `You are a seasoned hiring interviewer scoring a compl
 ${LANGUAGE_RULE}
 
 Rules:
+- Some questions include a "Candidate's recorded answer" line. For those, score that recorded answer directly — do not search the transcript for them, and always set "answered" to true.
 - For each question, locate the candidate's answer in the transcript. Summarize it in "answerSummary".
 - If a question was never asked or never answered, set "answered" to false and "score" to 0. Do NOT invent an answer.
 - Score each question 0-100 against its rubric.
@@ -93,15 +94,20 @@ export function buildEvaluationPrompt(input: EvaluationPromptInput): {
   prompt: string;
 } {
   const questionBlocks = input.questions
-    .map(
-      (q, i) => `${i + 1}. [id: ${q.id}] [dimension: ${q.dimension}]
+    .map((q, i) => {
+      const base = `${i + 1}. [id: ${q.id}] [dimension: ${q.dimension}]
 Question: ${q.question}
 What it probes: ${q.intent}
 Excellent answer: ${q.rubric.excellent}
 Passing answer: ${q.rubric.pass}
 Failing answer: ${q.rubric.fail}
-Reference points: ${q.referencePoints.join('; ')}`,
-    )
+Reference points: ${q.referencePoints.join('; ')}`;
+
+      // 面试中逐题记下来的答案是确定的，直接给模型，省得它从整段速记里
+      // 猜哪句对应哪题——那正是归错题的来源。
+      const answer = q.answer?.trim();
+      return answer ? `${base}\nCandidate's recorded answer: ${answer}` : base;
+    })
     .join('\n\n');
 
   const dimensionLines = input.dimensions
