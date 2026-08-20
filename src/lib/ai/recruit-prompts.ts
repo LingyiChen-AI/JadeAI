@@ -43,11 +43,10 @@ Other fields:
 - "dimension" must be exactly the dimension key given in the user message, on every question.
 - "intent" states what the question really discriminates between — a strong candidate and a plausible-sounding weak one. Not a restatement of the question.
 - "rubric" describes an excellent / passing / failing answer concretely enough that an interviewer who is not an expert in this area can still tell them apart.
-- "referencePoints" — 4-6 specific points a strong answer should hit. Be concrete (name the mechanism, the metric, the trade-off), not "有深度理解".
 - "redFlags" — 2-4 things that, if you hear them, should count against the candidate. This is what an experienced interviewer actually carries in their head. Examples of the right shape: "把「我们团队做了」和「我做了」混着说，问细节就转回团队"、"只会复述文档里的默认配置". Not generic ("回答不深入").
-- "referenceAnswer" — REQUIRED on every question, never empty. Write it as 3-6 bullet-style lines
-  separated by newlines, each naming a concrete mechanism, term, metric or trade-off a strong answer
-  would contain. This is the interviewer's cheat sheet: they read it after the candidate answers, to
+- "referenceAnswer" — REQUIRED on every question, never empty. Write it as 4-6 lines separated by
+  newlines. Each line is "标签：内容" — e.g. 定位阶段 / 技术细节 / 解决方案 / 具体指标 / 常见误区 —
+  and names a concrete mechanism, term, metric or trade-off a strong answer would contain. This is the interviewer's cheat sheet: they read it after the candidate answers, to
   judge the answer and to decide what to dig into. Vague summaries ("能体现深度理解") are useless — be
   specific enough that someone who has never worked with this technology could still spot a wrong
   answer. For open-ended or behavioural questions, describe the skeleton of a strong account
@@ -55,7 +54,7 @@ Other fields:
 - "estimatedMinutes" is an integer covering the question AND its follow-ups; "difficulty" is one of easy / medium / hard.
 
 Return JSON with this exact shape:
-{"questions":[{"dimension":"","question":"","intent":"","rubric":{"excellent":"","pass":"","fail":""},"followUps":[{"purpose":"要细节","question":"","answer":""}],"referencePoints":[],"redFlags":[],"referenceAnswer":"","estimatedMinutes":8,"difficulty":"medium"}]}
+{"questions":[{"dimension":"","question":"","intent":"","rubric":{"excellent":"","pass":"","fail":""},"followUps":[{"purpose":"要细节","question":"","answer":""}],"redFlags":[],"referenceAnswer":"","estimatedMinutes":8,"difficulty":"medium"}]}
 
 ${JSON_RULE}`;
 

@@ -288,6 +288,9 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
   }
 
   const done = countAnswered(questions);
+  // 新题目给 referenceAnswer，老题目只有 referencePoints，两者都算「有正面参考」
+  const hasAnswerBody =
+    Boolean(current.referenceAnswer?.trim()) || current.referencePoints.length > 0;
   const color = dimensionColor(current.dimension);
   const label = dimensions.find((d) => d.key === current.dimension)?.label ?? current.dimension;
 
@@ -462,14 +465,28 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
               </div>
             )}
 
-            {(current.referencePoints.length > 0 || (current.redFlags?.length ?? 0) > 0) && (
+            {/* 正面（参考答案）和负面（危险信号）并排。之前「参考答案要点」和
+                「参考答案」两个名字差两个字、内容重叠还挨着，是没清理干净的重复。 */}
+            {(hasAnswerBody || (current.redFlags?.length ?? 0) > 0) && (
               <div className="grid border-b dark:border-zinc-800 sm:grid-cols-2">
-                {current.referencePoints.length > 0 && (
-                  <Col title={t('questions.referencePoints')} count={current.referencePoints.length}>
-                    {current.referencePoints.map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-                  </Col>
+                {showAnswers && hasAnswerBody && (
+                  <div className="border-b bg-brand/[0.04] px-5 py-3 last:border-b-0 dark:border-zinc-800 sm:border-b-0 sm:border-r">
+                    <p className="text-[10.5px] uppercase tracking-wider text-brand">
+                      {t('questions.referenceAnswer')}
+                    </p>
+                    {current.referenceAnswer?.trim() ? (
+                      <p className="mt-1.5 whitespace-pre-wrap text-[12.5px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+                        {current.referenceAnswer}
+                      </p>
+                    ) : (
+                      // 老题目只有 referencePoints，顶上来占这个位置，不另起一个标题
+                      <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-[12.5px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+                        {current.referencePoints.map((r, i) => (
+                          <li key={i}>{r}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 )}
                 {(current.redFlags?.length ?? 0) > 0 && (
                   <Col
@@ -482,18 +499,6 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
                     ))}
                   </Col>
                 )}
-              </div>
-            )}
-
-            {/* 和追问的答案共用一个开关：要么都看，要么都不看 */}
-            {showAnswers && current.referenceAnswer?.trim() && (
-              <div className="border-b bg-brand/[0.04] px-5 py-3 dark:border-zinc-800">
-                <p className="text-[10.5px] uppercase tracking-wider text-brand">
-                  {t('questions.referenceAnswer')}
-                </p>
-                <p className="mt-1.5 whitespace-pre-wrap text-[12.5px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  {current.referenceAnswer}
-                </p>
               </div>
             )}
           </div>
