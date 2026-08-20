@@ -976,6 +976,7 @@
       "paste": "Or paste the resume text",
       "pastePlaceholder": "Paste the candidate's resume",
       "savePaste": "Save resume text",
+      "saved": "Saved",
       "empty": "No resume yet — upload a file or paste text",
       "parsed": "Parsed resume"
     },

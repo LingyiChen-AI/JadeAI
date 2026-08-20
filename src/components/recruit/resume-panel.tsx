@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Upload, Loader2 } from 'lucide-react';
+import { Upload, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -65,12 +65,18 @@ export function ResumePanel({ candidate, onUpdated }: ResumePanelProps) {
       if (!res.ok) throw new Error('save failed');
       const data = await res.json();
       onUpdated(data.candidate);
+      toast.success(t('resume.saved'));
     } catch {
       toast.error(t('errors.saveFailed'));
     } finally {
       setSaving(false);
     }
   }
+
+  // 上传 PDF 时服务端已经把解析结果落库了，此时 text 与库里一致。
+  // 只置灰按钮而不给任何提示的话，「有内容却点不动」看起来就是坏的，
+  // 所以把「已保存」显式画出来。
+  const dirty = text !== candidate.resumeText;
 
   return (
     <div className="space-y-6">
@@ -115,12 +121,19 @@ export function ResumePanel({ candidate, onUpdated }: ResumePanelProps) {
           placeholder={t('resume.pastePlaceholder')}
           rows={16}
         />
-        <div className="flex justify-end">
+        <div className="flex items-center justify-end gap-3">
+          {!dirty && text.trim() && (
+            <span className="inline-flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+              <Check className="h-3.5 w-3.5 text-emerald-600" />
+              {t('resume.saved')}
+            </span>
+          )}
           <Button
             onClick={handleSaveText}
-            disabled={saving || text === candidate.resumeText}
+            disabled={saving || !dirty}
             className="cursor-pointer gap-2"
           >
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {t('resume.savePaste')}
           </Button>
         </div>

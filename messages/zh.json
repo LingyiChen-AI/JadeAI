@@ -976,6 +976,7 @@
       "paste": "或直接粘贴简历文本",
       "pastePlaceholder": "粘贴候选人简历内容",
       "savePaste": "保存简历文本",
+      "saved": "已保存",
       "empty": "还没有简历，上传文件或粘贴文本",
       "parsed": "已解析的简历"
     },
