@@ -23,8 +23,9 @@ export function QuestionList({ questions, selectedId, onSelect }: QuestionListPr
   const done = countAnswered(questions);
 
   return (
-    <div className="flex w-full flex-col gap-3 lg:w-[300px] lg:flex-none">
-      <nav className="flex flex-col gap-1">
+    <div className="flex w-full min-h-0 flex-col gap-2 lg:w-[300px] lg:flex-none">
+      {/* 题目多时（十几道很常见）列表自己滚，不把整页撑长 */}
+      <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
         {questions.map((q, i) => {
           const answered = Boolean(q.answer?.trim());
           const active = q.id === selectedId;
@@ -59,7 +60,7 @@ export function QuestionList({ questions, selectedId, onSelect }: QuestionListPr
         })}
       </nav>
 
-      <p className="px-3 text-xs text-zinc-400">
+      <p className="shrink-0 px-3 text-xs text-zinc-400">
         {t('recorded', { done, total: questions.length })}
       </p>
     </div>

@@ -47,7 +47,9 @@ export function QuestionDetail({
   const [draft, setDraft] = useState(question.answer ?? '');
 
   return (
-    <div className="min-w-0 flex-1 rounded-xl border bg-white p-5 dark:bg-zinc-900">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border bg-white dark:bg-zinc-900">
+      {/* 细则区可滚，答案区钉在下面——面试中输入框必须始终在眼前 */}
+      <div className="min-h-0 flex-1 overflow-y-auto p-5">
       <h3 className="text-[15px] font-semibold leading-relaxed">
         {index + 1}. {question.question}
       </h3>
@@ -76,30 +78,39 @@ export function QuestionDetail({
         </div>
       </Section>
 
-      {question.followUps.length > 0 && (
-        <Section title={t('followUps')}>
-          <ul className="list-disc space-y-0.5 pl-4 text-sm text-zinc-700 dark:text-zinc-300">
-            {question.followUps.map((f, i) => (
-              <li key={i}>{f}</li>
-            ))}
-          </ul>
-        </Section>
-      )}
+      {/* 追问和要点都是短列表，并排放省掉一屏的一半高度 */}
+      {(question.followUps.length > 0 || question.referencePoints.length > 0) && (
+        <div className="grid gap-x-6 sm:grid-cols-2">
+          {question.followUps.length > 0 && (
+            <Section title={t('followUps')}>
+              <ul className="list-disc space-y-0.5 pl-4 text-sm text-zinc-700 dark:text-zinc-300">
+                {question.followUps.map((f, i) => (
+                  <li key={i}>{f}</li>
+                ))}
+              </ul>
+            </Section>
+          )}
 
-      {question.referencePoints.length > 0 && (
-        <Section title={t('referencePoints')}>
-          <ul className="list-disc space-y-0.5 pl-4 text-sm text-zinc-700 dark:text-zinc-300">
-            {question.referencePoints.map((r, i) => (
-              <li key={i}>{r}</li>
-            ))}
-          </ul>
-        </Section>
+          {question.referencePoints.length > 0 && (
+            <Section title={t('referencePoints')}>
+              <ul className="list-disc space-y-0.5 pl-4 text-sm text-zinc-700 dark:text-zinc-300">
+                {question.referencePoints.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            </Section>
+          )}
+        </div>
       )}
+      </div>
 
-      <div className="mt-5 border-t pt-4">
-        <Label htmlFor="answer" className="text-sm font-medium">
-          {t('answer')}
-        </Label>
+      <div className="shrink-0 border-t p-4">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="answer" className="text-sm font-medium">
+            {t('answer')}
+          </Label>
+          <SaveIndicator state={saveState} onRetry={onFlush} />
+        </div>
         <Textarea
           id="answer"
           value={draft}
@@ -108,19 +119,19 @@ export function QuestionDetail({
             onAnswerChange(question.id, e.target.value);
           }}
           placeholder={t('answerPlaceholder')}
-          // Textarea 带 field-sizing-content，rows 无效，必须用 min-h
-          className="mt-2 min-h-[160px]"
+          // Textarea 带 field-sizing-content，rows 无效，必须用 min-h。
+          // 钉底之后这块占的是固定版面，不宜太高。
+          className="mt-2 max-h-[220px] min-h-[104px]"
         />
 
-        <div className="mt-2 flex items-center justify-between">
-          <SaveIndicator state={saveState} onRetry={onFlush} />
+        <div className="mt-1.5 flex justify-end">
           <Button
             variant="ghost"
             size="sm"
             onClick={onRemove}
-            className="cursor-pointer gap-2 text-zinc-400 hover:text-red-600"
+            className="h-7 cursor-pointer gap-1.5 text-xs text-zinc-400 hover:text-red-600"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3.5 w-3.5" />
             {t('remove')}
           </Button>
         </div>
@@ -165,7 +176,7 @@ function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => vo
 /** 小标题弱化、正文正常，四个区块才有层次。 */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mt-4">
+    <div className="mt-3.5">
       <p className="mb-1 text-[11px] uppercase tracking-wide text-zinc-400">{title}</p>
       {children}
     </div>

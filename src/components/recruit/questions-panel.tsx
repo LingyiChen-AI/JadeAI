@@ -228,7 +228,9 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
       )}
 
       {!generating && questions.length > 0 && (
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        // 定高 + 内部滚动，让整块在一屏内放得下。减掉的是页头、步骤条、
+        // 工具条那些固定高度；min-h 兜底，避免小屏上被压扁。
+        <div className="flex min-h-[420px] flex-col gap-4 lg:h-[calc(100vh-20.5rem)] lg:flex-row lg:items-stretch">
           <QuestionList
             questions={questions}
             selectedId={selectedId}
