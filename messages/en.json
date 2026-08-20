@@ -914,6 +914,7 @@
     "stats": {
       "candidates": "Candidates",
       "interviewed": "Interviewed",
+      "interviewing": "In progress",
       "passed": "Passed"
     },
     "editJob": "Edit role",
@@ -927,6 +928,44 @@
     "candidateCount": "{count} candidates",
     "save": "Save",
     "cancel": "Cancel",
+    "list": {
+        "back": "Roles",
+        "backToCandidates": "Candidates",
+        "searchPlaceholder": "Search candidates",
+        "progress": "{done}/{total} recorded",
+        "noQuestions": "No questions yet",
+        "noResume": "No resume yet"
+    },
+    "actions": {
+        "uploadResume": "Add resume",
+        "generateQuestions": "Generate questions",
+        "startInterview": "Start interview",
+        "continueInterview": "Resume {done}/{total}",
+        "viewReport": "View report"
+    },
+    "prep": {
+        "title": "Prepare",
+        "dimensionsTitle": "Competencies",
+        "dimensionsHint": "Questions are split across competencies by weight. Changing this affects every candidate for this role.",
+        "editJobConfig": "Edit role config",
+        "generateHint": "You go straight to the interview stage after generating",
+        "hasQuestions": "{count} questions ready"
+    },
+    "stage": {
+        "elapsed": "{minutes} min elapsed",
+        "finish": "End interview",
+        "prev": "Previous",
+        "recordNext": "Save & next",
+        "recordFinish": "Save & finish",
+        "exit": "Exit",
+        "shortcutNext": "next",
+        "shortcutExit": "exit",
+        "empty": "This candidate has no questions yet",
+        "goPrep": "Generate questions"
+    },
+    "report": {
+        "title": "Report"
+    },
     "overview": {
       "stats": "{total} candidates · {evaluated} evaluated",
       "avgScore": "Avg {score}",

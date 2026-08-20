@@ -73,22 +73,30 @@ export function JobList() {
               {/* 内边距与 hover 效果对齐面试模拟的卡片（p-4 + hover:shadow-md），
                   两个模块的卡片摆在一起时不该有 4px 的差 */}
               <div className="group flex h-full cursor-pointer flex-col rounded-xl border border-zinc-200 bg-white p-4 transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
-                <h3 className="truncate text-[15px] font-bold">{job.title}</h3>
+                {/* 日期挪到标题行：底部现在有四个数，再塞日期就挤了 */}
+                <div className="flex items-baseline gap-2">
+                  <h3 className="min-w-0 flex-1 truncate text-[15px] font-bold">{job.title}</h3>
+                  <span className="shrink-0 text-[11px] text-zinc-400">
+                    {new Date(job.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
                 <p className="mt-1.5 line-clamp-2 flex-1 text-xs leading-relaxed text-zinc-500">
                   {job.jobDescription}
                 </p>
 
-                <div className="mt-3 flex items-center gap-4 border-t pt-3 dark:border-zinc-800">
+                <div className="mt-3 flex items-center gap-5 border-t pt-3 dark:border-zinc-800">
                   <Stat label={t('stats.candidates')} value={stats[job.id]?.total ?? 0} />
+                  <Stat
+                    label={t('stats.interviewing')}
+                    value={stats[job.id]?.interviewing ?? 0}
+                    accent={(stats[job.id]?.interviewing ?? 0) > 0}
+                  />
                   <Stat label={t('stats.interviewed')} value={stats[job.id]?.evaluated ?? 0} />
                   <Stat
                     label={t('stats.passed')}
                     value={stats[job.id]?.passed ?? 0}
                     highlight={(stats[job.id]?.passed ?? 0) > 0}
                   />
-                  <span className="ml-auto self-end text-[11px] text-zinc-400">
-                    {new Date(job.createdAt).toLocaleDateString()}
-                  </span>
                 </div>
               </div>
             </Link>
@@ -110,17 +118,23 @@ function Stat({
   label,
   value,
   highlight,
+  accent,
 }: {
   label: string;
   value: number;
+  /** 通过人数：品牌绿 */
   highlight?: boolean;
+  /** 面试中：琥珀色，表示「进行中」而不是「已达成」 */
+  accent?: boolean;
 }) {
   return (
     <div className="flex flex-col">
       <span
         className={cn(
           'text-sm font-semibold tabular-nums',
-          highlight ? 'text-brand' : 'text-zinc-700 dark:text-zinc-300',
+          highlight && 'text-brand',
+          accent && 'text-amber-600 dark:text-amber-500',
+          !highlight && !accent && 'text-zinc-700 dark:text-zinc-300',
         )}
       >
         {value}

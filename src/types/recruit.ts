@@ -107,6 +107,11 @@ export interface CandidateSummary {
   id: string;
   name: string;
   status: CandidateStatus;
+  /** 简历是否已填。正文不进列表响应，只给个布尔 */
+  hasResume: boolean;
+  questionCount: number;
+  /** 已记录回答的题数，「继续面试 5/14」里的 5 */
+  answeredCount: number;
   overallScore: number | null;
   recommendation: Recommendation | null;
   createdAt: Date | string;

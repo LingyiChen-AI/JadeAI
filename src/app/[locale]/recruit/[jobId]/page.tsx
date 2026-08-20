@@ -1,9 +1,6 @@
-'use client';
+import { CandidateList } from '@/components/recruit/candidate-list';
 
-import { use } from 'react';
-import { JobOverview } from '@/components/recruit/job-overview';
-
-export default function JobDetailPage({ params }: { params: Promise<{ jobId: string }> }) {
-  const { jobId } = use(params);
-  return <JobOverview jobId={jobId} />;
+export default async function JobPage({ params }: { params: Promise<{ jobId: string }> }) {
+  const { jobId } = await params;
+  return <CandidateList jobId={jobId} />;
 }

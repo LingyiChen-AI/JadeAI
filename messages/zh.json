@@ -914,6 +914,7 @@
     "stats": {
       "candidates": "候选人",
       "interviewed": "已面",
+      "interviewing": "面试中",
       "passed": "通过"
     },
     "editJob": "编辑岗位",
@@ -927,6 +928,44 @@
     "candidateCount": "{count} 位候选人",
     "save": "保存",
     "cancel": "取消",
+    "list": {
+        "back": "招聘岗位",
+        "backToCandidates": "候选人",
+        "searchPlaceholder": "搜索候选人",
+        "progress": "已记 {done}/{total}",
+        "noQuestions": "还没生成题目",
+        "noResume": "还没上传简历"
+    },
+    "actions": {
+        "uploadResume": "传简历",
+        "generateQuestions": "生成题目",
+        "startInterview": "开始面试",
+        "continueInterview": "继续面试 {done}/{total}",
+        "viewReport": "看报告"
+    },
+    "prep": {
+        "title": "准备",
+        "dimensionsTitle": "考察维度",
+        "dimensionsHint": "题目按权重分配给各维度，改配置会影响这个岗位下所有候选人",
+        "editJobConfig": "改岗位配置",
+        "generateHint": "生成后直接进入面试台",
+        "hasQuestions": "已生成 {count} 题"
+    },
+    "stage": {
+        "elapsed": "已用 {minutes} 分钟",
+        "finish": "结束面试",
+        "prev": "上一题",
+        "recordNext": "记录并下一题",
+        "recordFinish": "记录并结束",
+        "exit": "退出",
+        "shortcutNext": "下一题",
+        "shortcutExit": "退出",
+        "empty": "这个候选人还没有题目",
+        "goPrep": "去生成题目"
+    },
+    "report": {
+        "title": "复盘"
+    },
     "overview": {
       "stats": "{total} 位候选人 · {evaluated} 已评价",
       "avgScore": "均分 {score}",
