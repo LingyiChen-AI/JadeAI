@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
-import { DimensionEditor } from './dimension-editor';
+import { DimensionChips } from './dimension-chips';
 import { defaultDimensions } from '@/lib/recruit/dimensions';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import {
@@ -81,7 +81,7 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-h-[70vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{job ? t('editJob') : t('createJob')}</DialogTitle>
         </DialogHeader>
@@ -121,7 +121,7 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
             />
           </div>
 
-          <DimensionEditor
+          <DimensionChips
             value={dimensions}
             onChange={setDimensions}
             questionCount={questionCount}
