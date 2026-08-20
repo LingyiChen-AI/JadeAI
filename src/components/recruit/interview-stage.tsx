@@ -20,7 +20,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StageRail } from './stage-rail';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import { dimensionColor } from '@/lib/recruit/dimension-colors';
-import { countAnswered } from '@/lib/recruit/answers';
 import { cn } from '@/lib/utils';
 import type {
   DimensionConfig,
@@ -227,7 +226,6 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
     );
   }
 
-  const done = countAnswered(questions);
   const color = dimensionColor(current.dimension);
   const label = dimensions.find((d) => d.key === current.dimension)?.label ?? current.dimension;
 
@@ -242,6 +240,7 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
           onJump={goTo}
         />
         <span className="shrink-0 text-xs tabular-nums text-zinc-400">
+          {/* 记了几道靠进度带的颜色看，这里再写一遍 n/m 就是重复 */}
           {index + 1} / {questions.length} · {t('stage.elapsed', { minutes: elapsed })}
         </span>
         <Button variant="outline" size="sm" onClick={() => void finish()} className="shrink-0 cursor-pointer">
@@ -257,81 +256,83 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
         </button>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <main className="min-h-0 flex-1 overflow-y-auto px-8 py-7 lg:px-10">
-          <div className="mx-auto max-w-2xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className={color.chip}>
-                <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
-                {label}
-              </Badge>
-              <span className="text-xs text-zinc-400">
-                {current.difficulty} · {t('questions.minutes', { count: current.estimatedMinutes })}
-              </span>
-              <span className="ml-auto">
-                <SaveIndicator state={saveState} onRetry={() => void flush()} />
-              </span>
-            </div>
+      {/* 整块内容限宽后一起居中。之前是左栏内部 mx-auto，于是在 1580px 宽的
+          主区里内容只占 670px，左右各空 455px，加上侧栏就成了四段式，很散。 */}
+      <div className="mx-auto flex w-full min-h-0 max-w-[1180px] flex-1 flex-col gap-5 px-5 py-5 lg:flex-row">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border bg-white px-7 py-6 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Badge variant="outline" className={color.chip}>
+              <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
+              {label}
+            </Badge>
+            <span className="text-xs text-zinc-400">
+              {current.difficulty} · {t('questions.minutes', { count: current.estimatedMinutes })}
+            </span>
+            <span className="ml-auto">
+              <SaveIndicator state={saveState} onRetry={() => void flush()} />
+            </span>
+          </div>
 
-            {/* 全页最大的字。面试中抬眼扫一次就要读完 */}
-            <h1 className="mt-3 text-[21px] font-semibold leading-[1.55] tracking-[-0.01em]">
-              {current.question}
-            </h1>
+          {/* 题干可能很长（十几行的场景真实存在），单独给它一段可滚区域，
+              不让它把答案框挤出屏幕 */}
+          <h1 className="mt-3 max-h-[38vh] shrink-0 overflow-y-auto text-[20px] font-semibold leading-[1.6] tracking-[-0.01em]">
+            {current.question}
+          </h1>
 
-            {current.intent && (
-              <p className="mt-2.5 text-[13px] leading-relaxed text-zinc-500">{current.intent}</p>
-            )}
+          {/* 答案框吃掉剩下的全部高度。固定高度会在底部留一大片空白 */}
+          <Textarea
+            value={draft}
+            onChange={(e) => handleDraftChange(e.target.value)}
+            placeholder={t('questions.answerPlaceholder')}
+            autoFocus
+            className="mt-4 min-h-[160px] flex-1 resize-none border-2 border-brand bg-white text-[15px] leading-relaxed focus-visible:ring-0 dark:bg-zinc-900"
+          />
 
-            {/* 答案框紧贴题干下方，不再钉在页面底部——中间隔着评分标准的话，
-                记一句话要上下扫视两次 */}
-            <Textarea
-              value={draft}
-              onChange={(e) => handleDraftChange(e.target.value)}
-              placeholder={t('questions.answerPlaceholder')}
-              autoFocus
-              // 面试中要边听边打，写字的地方给足；上限用 vh 是因为
-              // 小屏上固定 px 会把下面的按钮顶出可视区
-              className="mt-5 max-h-[46vh] min-h-[240px] border-2 border-brand bg-white text-[15px] leading-relaxed focus-visible:ring-0 dark:bg-zinc-900"
-            />
+          <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => goTo(index - 1)}
+              disabled={index === 0}
+              className="cursor-pointer gap-1.5"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              {t('stage.prev')}
+            </Button>
+            <Button
+              onClick={() => (isLast ? void finish() : goTo(index + 1))}
+              className="cursor-pointer gap-1.5"
+            >
+              {isLast ? t('stage.recordFinish') : t('stage.recordNext')}
+              {!isLast && <ChevronRight className="h-4 w-4" />}
+            </Button>
 
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => goTo(index - 1)}
-                disabled={index === 0}
-                className="cursor-pointer gap-1.5"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                {t('stage.prev')}
-              </Button>
-              <Button
-                onClick={() => (isLast ? void finish() : goTo(index + 1))}
-                className="cursor-pointer gap-1.5"
-              >
-                {isLast ? t('stage.recordFinish') : t('stage.recordNext')}
-                {!isLast && <ChevronRight className="h-4 w-4" />}
-              </Button>
-
-              <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-400">
-                <Kbd>⌘↵</Kbd> {t('stage.shortcutNext')}
-                <Kbd>esc</Kbd> {t('stage.shortcutExit')}
-              </span>
-            </div>
-
-            <p className="mt-4 text-[11px] text-zinc-400">
-              {t('questions.recorded', { done, total: questions.length })}
-            </p>
+            <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-400">
+              <Kbd>⌘↵</Kbd> {t('stage.shortcutNext')}
+              <Kbd>esc</Kbd> {t('stage.shortcutExit')}
+            </span>
           </div>
         </main>
 
-        <aside className="min-h-0 shrink-0 overflow-y-auto border-t bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 lg:w-[340px] lg:border-l lg:border-t-0">
+        <aside className="min-h-0 shrink-0 overflow-y-auto rounded-xl border bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 lg:w-[330px]">
+          {/* 考察点挪到这里。它是给面试官瞟的元信息，不是要念的，
+              压在题干下面就成了第二堵墙 */}
+          {current.intent && (
+            <Section title={t('questions.intent')}>
+              <p className="text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                {current.intent}
+              </p>
+            </Section>
+          )}
+
           <Section title={t('questions.rubric')}>
-            <div className="grid gap-1.5">
+            <div className="grid gap-2">
               {(['excellent', 'pass', 'fail'] as const).map((level) => (
                 <div key={level} className="flex gap-2">
                   <span className={cn('w-0.5 shrink-0 rounded-full', RUBRIC_BAR[level])} />
                   <p className="text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-                    <span className="text-zinc-500 dark:text-zinc-400">{t(`questions.${level}`)}：</span>
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      {t(`questions.${level}`)}：
+                    </span>
                     {current.rubric[level]}
                   </p>
                 </div>
