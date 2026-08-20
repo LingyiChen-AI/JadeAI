@@ -17,9 +17,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StageRail } from './stage-rail';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import { dimensionColor } from '@/lib/recruit/dimension-colors';
+import { countAnswered } from '@/lib/recruit/answers';
 import { cn } from '@/lib/utils';
 import type {
   DimensionConfig,
@@ -30,10 +30,10 @@ import type {
 
 const AUTOSAVE_DELAY = 800;
 
-const RUBRIC_BAR = {
-  excellent: 'bg-emerald-500',
-  pass: 'bg-amber-500',
-  fail: 'bg-red-500',
+const RUBRIC_TEXT = {
+  excellent: 'text-emerald-600 dark:text-emerald-400',
+  pass: 'text-amber-600 dark:text-amber-500',
+  fail: 'text-red-600 dark:text-red-400',
 } as const;
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -224,6 +224,7 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
     );
   }
 
+  const done = countAnswered(questions);
   const color = dimensionColor(current.dimension);
   const label = dimensions.find((d) => d.key === current.dimension)?.label ?? current.dimension;
 
@@ -231,144 +232,168 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
     <div className={shell}>
       <header className="flex shrink-0 items-center gap-4 border-b bg-white px-5 py-2.5 dark:border-zinc-800 dark:bg-zinc-900">
         <span className="shrink-0 text-sm font-semibold">{candidate.name}</span>
-        <StageRail
-          questions={questions}
-          dimensions={dimensions}
-          currentIndex={index}
-          onJump={goTo}
-        />
+        {/* 第几题和已记几道左栏都有，这里只留时间 */}
         <span className="shrink-0 text-xs tabular-nums text-zinc-400">
-          {/* 记了几道靠进度带的颜色看，这里再写一遍 n/m 就是重复 */}
-          {index + 1} / {questions.length} · {t('stage.elapsed', { minutes: elapsed })}
+          {t('stage.elapsed', { minutes: elapsed })}
         </span>
-        <Button variant="outline" size="sm" onClick={() => void finish()} className="shrink-0 cursor-pointer">
-          {t('stage.finish')}
-        </Button>
-        <button
-          type="button"
-          onClick={() => void exit()}
-          aria-label={t('stage.exit')}
-          className="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => void finish()} className="cursor-pointer">
+            {t('stage.finish')}
+          </Button>
+          <button
+            type="button"
+            onClick={() => void exit()}
+            aria-label={t('stage.exit')}
+            className="cursor-pointer rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </span>
       </header>
 
-      {/* 整块内容限宽后一起居中。之前是左栏内部 mx-auto，于是在 1580px 宽的
-          主区里内容只占 670px，左右各空 455px，加上侧栏就成了四段式，很散。 */}
-      {/* 单栏满铺，没有侧栏。评分标准横着排在题干下面——横向三栏比竖着
-          一列好扫，也正好吃掉宽度，不用为了塞它专门留一条 330px 的边栏。 */}
-      {/* 两个区：上面读题（可滚），下面记录（钉底）。分区之后，读题区里
-          多出来的空白属于那个区，不是页面中间一个洞。 */}
-      <div className="min-h-0 flex-1 overflow-y-auto bg-white px-10 py-7 dark:bg-zinc-900">
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Badge variant="outline" className={color.chip}>
-            <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
-            {label}
-          </Badge>
-          <span className="text-xs text-zinc-400">
-            {current.difficulty} · {t('questions.minutes', { count: current.estimatedMinutes })}
-          </span>
-          <span className="ml-auto flex items-center gap-3">
-            <SaveIndicator state={saveState} onRetry={() => void flush()} />
-            <button
-              type="button"
-              onClick={() => void handleRemove()}
-              aria-label={t('questions.remove')}
-              className="cursor-pointer text-zinc-300 hover:text-red-600 dark:text-zinc-600"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </span>
-        </div>
+      {/* 控制台：什么都不折叠。左栏列出全部题目（色点即维度、勾即已记），
+          右侧题干、评分标准三栏、追问与要点全部铺开。
+          用网格线而不是圆角盒子分区——密度高，但眼睛有格可循。 */}
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <nav className="shrink-0 overflow-y-auto border-b bg-zinc-50 py-3 dark:border-zinc-800 dark:bg-zinc-950 lg:w-[228px] lg:border-b-0 lg:border-r">
+          <p className="px-4 pb-2 text-[10.5px] uppercase tracking-wider text-zinc-400">
+            {t('questions.recorded', { done, total: questions.length })}
+          </p>
+          {questions.map((q, i) => {
+            const answered = Boolean(q.answer?.trim());
+            const on = i === index;
+            return (
+              <button
+                key={q.id}
+                type="button"
+                onClick={() => goTo(i)}
+                className={cn(
+                  'flex w-full cursor-pointer items-center gap-2.5 px-4 py-1.5 text-left text-[12.5px]',
+                  on
+                    ? 'bg-white font-semibold text-zinc-900 shadow-[inset_2px_0_0_var(--brand)] dark:bg-zinc-900 dark:text-zinc-50'
+                    : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200',
+                )}
+              >
+                <span
+                  className={cn('h-1.5 w-1.5 shrink-0 rounded-full', dimensionColor(q.dimension).dot)}
+                />
+                <span className="w-4 shrink-0 text-right tabular-nums text-zinc-400">{i + 1}</span>
+                <span className="min-w-0 flex-1 truncate">{q.question}</span>
+                {answered && <Check className="h-3 w-3 shrink-0 text-brand" />}
+              </button>
+            );
+          })}
+        </nav>
 
-        {/* 题干单独限个字宽——满屏一行七十多个汉字读不下来 */}
-        <h1 className="mt-4 shrink-0 text-[21px] font-semibold leading-[1.7] tracking-[-0.01em] xl:max-w-[46em]">
-          {current.question}
-        </h1>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-white dark:bg-zinc-900">
+          <div className="flex shrink-0 items-center gap-2.5 border-b px-6 py-2.5 text-xs text-zinc-500 dark:border-zinc-800">
+            <Badge variant="outline" className={color.chip}>
+              <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
+              {label}
+            </Badge>
+            <span>
+              {current.difficulty} · {t('questions.minutes', { count: current.estimatedMinutes })}
+            </span>
+            <span className="ml-auto flex items-center gap-3">
+              <SaveIndicator state={saveState} onRetry={() => void flush()} />
+              <button
+                type="button"
+                onClick={() => void handleRemove()}
+                aria-label={t('questions.remove')}
+                className="cursor-pointer text-zinc-300 hover:text-red-600 dark:text-zinc-600"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          </div>
 
-        <div className="mt-6 grid shrink-0 gap-3 sm:grid-cols-3">
-          {(['excellent', 'pass', 'fail'] as const).map((level) => (
-            <div key={level} className="overflow-hidden rounded-lg border dark:border-zinc-800">
-              <div className={cn('h-[3px]', RUBRIC_BAR[level])} />
-              <div className="px-3.5 py-3">
-                <p className="text-[11px] uppercase tracking-wide text-zinc-400">
-                  {t(`questions.${level}`)}
-                </p>
-                <p className="mt-1 text-[13.5px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  {current.rubric[level]}
-                </p>
-              </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="px-6 py-5">
+              <h1 className="max-w-[52em] text-[19px] font-semibold leading-[1.65] tracking-[-0.01em]">
+                {current.question}
+              </h1>
+              {current.intent && (
+                <p className="mt-2 max-w-[62em] text-[12.5px] leading-relaxed text-zinc-500">{current.intent}</p>
+              )}
             </div>
-          ))}
-        </div>
 
-        {/* 追问、要点、参考答案、考察点：一行折叠条，需要时才展开 */}
-        <div className="mt-3 flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1">
-          {current.followUps.length > 0 && (
-            <Fold title={t('questions.followUps')} count={current.followUps.length}>
-              <ul className="list-disc space-y-1 pl-4">
-                {current.followUps.map((f, i) => (
-                  <li key={i}>{f}</li>
-                ))}
-              </ul>
-            </Fold>
-          )}
-          {current.referencePoints.length > 0 && (
-            <Fold title={t('questions.referencePoints')} count={current.referencePoints.length}>
-              <ul className="list-disc space-y-1 pl-4">
-                {current.referencePoints.map((r, i) => (
-                  <li key={i}>{r}</li>
-                ))}
-              </ul>
-            </Fold>
-          )}
-          {current.referenceAnswer?.trim() && (
-            <Fold title={t('questions.referenceAnswer')}>
-              <p className="whitespace-pre-wrap">{current.referenceAnswer}</p>
-            </Fold>
-          )}
-          {current.intent && (
-            <Fold title={t('questions.intent')}>
-              <p>{current.intent}</p>
-            </Fold>
-          )}
-        </div>
+            <div className="grid border-y dark:border-zinc-800 sm:grid-cols-3">
+              {(['excellent', 'pass', 'fail'] as const).map((level) => (
+                <div
+                  key={level}
+                  className="border-b px-5 py-3 last:border-b-0 dark:border-zinc-800 sm:border-b-0 sm:border-r sm:last:border-r-0"
+                >
+                  <p className={cn('text-[10.5px] font-semibold uppercase tracking-wider', RUBRIC_TEXT[level])}>
+                    {t(`questions.${level}`)}
+                  </p>
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                    {current.rubric[level]}
+                  </p>
+                </div>
+              ))}
+            </div>
 
-      </div>
+            {(current.followUps.length > 0 || current.referencePoints.length > 0) && (
+              <div className="grid border-b dark:border-zinc-800 sm:grid-cols-2">
+                {current.followUps.length > 0 && (
+                  <Col title={t('questions.followUps')} count={current.followUps.length}>
+                    {current.followUps.map((f, i) => (
+                      <li key={i}>{f}</li>
+                    ))}
+                  </Col>
+                )}
+                {current.referencePoints.length > 0 && (
+                  <Col title={t('questions.referencePoints')} count={current.referencePoints.length}>
+                    {current.referencePoints.map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </Col>
+                )}
+              </div>
+            )}
 
-      {/* 记录区。位置固定，不随题目长短跳动 */}
-      <div className="shrink-0 border-t bg-zinc-50 px-10 py-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <Textarea
-          value={draft}
-          onChange={(e) => handleDraftChange(e.target.value)}
-          placeholder={t('questions.answerPlaceholder')}
-          autoFocus
-          className="max-h-[30vh] min-h-[68px] bg-white text-[15px] leading-relaxed dark:bg-zinc-900"
-        />
+            {/* 唯一保持折叠的：参考答案是剧透，先听候选人怎么说 */}
+            {current.referenceAnswer?.trim() && (
+              <div className="border-b px-6 dark:border-zinc-800">
+                <Fold title={t('questions.referenceAnswer')}>
+                  <p className="whitespace-pre-wrap">{current.referenceAnswer}</p>
+                </Fold>
+              </div>
+            )}
+          </div>
 
-        <div className="mt-2.5 flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => goTo(index - 1)}
-            disabled={index === 0}
-            className="cursor-pointer gap-1.5"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            {t('stage.prev')}
-          </Button>
-          <Button
-            onClick={() => (isLast ? void finish() : goTo(index + 1))}
-            className="cursor-pointer gap-1.5"
-          >
-            {isLast ? t('stage.recordFinish') : t('stage.recordNext')}
-            {!isLast && <ChevronRight className="h-4 w-4" />}
-          </Button>
-
-          <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-400">
-            <Kbd>⌘↵</Kbd> {t('stage.shortcutNext')}
-            <Kbd>esc</Kbd> {t('stage.shortcutExit')}
-          </span>
+          <div className="shrink-0 border-t bg-zinc-50 px-6 py-3.5 dark:border-zinc-800 dark:bg-zinc-950">
+            <Textarea
+              value={draft}
+              onChange={(e) => handleDraftChange(e.target.value)}
+              placeholder={t('questions.answerPlaceholder')}
+              autoFocus
+              // 五行。再高就是在假设你要写逐字稿了
+              className="max-h-[40vh] min-h-[132px] bg-white text-[15px] leading-relaxed dark:bg-zinc-900"
+            />
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => goTo(index - 1)}
+                disabled={index === 0}
+                className="cursor-pointer gap-1.5"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                {t('stage.prev')}
+              </Button>
+              <Button
+                onClick={() => (isLast ? void finish() : goTo(index + 1))}
+                className="cursor-pointer gap-1.5"
+              >
+                {isLast ? t('stage.recordFinish') : t('stage.recordNext')}
+                {!isLast && <ChevronRight className="h-4 w-4" />}
+              </Button>
+              <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-400">
+                <Kbd>⌘↵</Kbd> {t('stage.shortcutNext')}
+                <Kbd>esc</Kbd> {t('stage.shortcutExit')}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -408,7 +433,29 @@ function Kbd({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** 右栏的折叠条。默认收起，标题行只占 32px。 */
+/** 网格里的一格：小标题 + 列表。用边框分格，不用圆角盒。 */
+function Col({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-b px-5 py-3 last:border-b-0 dark:border-zinc-800 sm:border-b-0 sm:border-r sm:last:border-r-0">
+      <p className="text-[10.5px] uppercase tracking-wider text-zinc-400">
+        {title} · {count}
+      </p>
+      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+        {children}
+      </ul>
+    </div>
+  );
+}
+
+/** 折叠条。这里只用于参考答案。 */
 function Fold({
   title,
   count,
