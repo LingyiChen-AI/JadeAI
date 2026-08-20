@@ -273,19 +273,19 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
             </span>
           </div>
 
-          {/* 题干限个字宽，但是靠左的——满屏一行七十多个汉字读不下来。
-              没有边框，右边多出来的白就是白，不是「空卡片」。 */}
-          <h1 className="mt-4 max-h-[34vh] shrink-0 overflow-y-auto text-[21px] font-semibold leading-[1.65] tracking-[-0.01em] xl:max-w-[46em]">
+          {/* 垂直空间给题干，不给输入框。面试时你在听人说话，
+              手上顶多记三五个关键词——不需要一个能写论文的框。 */}
+          <h1 className="mt-4 min-h-0 flex-1 overflow-y-auto text-[21px] font-semibold leading-[1.7] tracking-[-0.01em] xl:max-w-[46em]">
             {current.question}
           </h1>
 
-          {/* 写字的地方吃掉下面全部高度 */}
           <Textarea
             value={draft}
             onChange={(e) => handleDraftChange(e.target.value)}
             placeholder={t('questions.answerPlaceholder')}
             autoFocus
-            className="mt-6 min-h-[180px] flex-1 resize-none bg-white text-[15px] leading-relaxed dark:bg-zinc-900"
+            // 三行起步，写多了自己长，上限 30vh。field-sizing-content 会跟着内容走
+            className="mt-4 max-h-[30vh] min-h-[76px] shrink-0 bg-white text-[15px] leading-relaxed dark:bg-zinc-900"
           />
 
           <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2">
