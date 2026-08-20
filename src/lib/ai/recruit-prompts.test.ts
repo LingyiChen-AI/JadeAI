@@ -251,3 +251,35 @@ describe('buildEvaluationPrompt 与参考答案', () => {
     expect(prompt).not.toContain('Reference answer:');
   });
 });
+
+describe('出题 system prompt 的硬约束', () => {
+  const { system } = buildDimensionQuestionsPrompt({
+    jobTitle: 'T',
+    jobDescription: 'JD',
+    resumeText: 'R',
+    dimensions: DIMENSIONS,
+    dimension: DIMENSIONS[0],
+    count: 3,
+  });
+
+  it('明确要求题干短、且深度放在追问里', () => {
+    expect(system).toContain('One sentence');
+    expect(system).toMatch(/Depth lives in "followUps"/);
+  });
+
+  it('追问要 4-6 条并带目的标签', () => {
+    expect(system).toContain('4-6 of them');
+    for (const purpose of ['要细节', '要归因', '反事实', '挑战', '要教训']) {
+      expect(system).toContain(purpose);
+    }
+  });
+
+  it('要求给危险信号，且不许写成泛泛的话', () => {
+    expect(system).toContain('redFlags');
+    expect(system).toContain('回答不深入');
+  });
+
+  it('返回格式里追问是「目的 + 问题」的对象', () => {
+    expect(system).toContain('"followUps":[{"purpose":');
+  });
+});

@@ -14,6 +14,13 @@ export interface DimensionConfig {
 
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
 
+/** 一条追问。老数据里 followUps 是纯字符串，读取时会补成 purpose 为空。 */
+export interface FollowUp {
+  /** 这一问想拿到什么。空字符串表示老数据没标 */
+  purpose: string;
+  question: string;
+}
+
 export interface InterviewQuestion {
   id: string;
   /** 对应 DimensionConfig.key */
@@ -26,8 +33,15 @@ export interface InterviewQuestion {
     pass: string;
     fail: string;
   };
-  followUps: string[];
+  /**
+   * 追问阶梯。深度靠这些挖，不靠把条件全塞进题干。
+   * purpose 是这一问的目的（要细节/要归因/反事实/挑战/要教训）。
+   */
+  followUps: FollowUp[];
+  /** 强答案会覆盖到的点 */
   referencePoints: string[];
+  /** 危险信号：听到这些表述就该扣分 */
+  redFlags?: string[];
   /**
    * 参考答案。只有有确定技术答案的题目才有，开放题/行为题留空。
    */

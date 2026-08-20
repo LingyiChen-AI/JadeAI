@@ -124,7 +124,7 @@ describe('recruitRepository — candidates', () => {
         question: '讲一个你排查过的线上问题',
         intent: '看拆解问题的路径',
         rubric: { excellent: '有假设有验证', pass: '能说清现象', fail: '只会复述结论' },
-        followUps: ['当时为什么先怀疑这里？'],
+        followUps: [{ purpose: '要细节', question: '当时为什么先怀疑这里？' }],
         referencePoints: ['定位手段', '验证方式'],
         estimatedMinutes: 8,
         difficulty: 'medium' as const,

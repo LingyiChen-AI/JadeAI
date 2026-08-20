@@ -159,3 +159,39 @@ describe('dimensionsSchema', () => {
     expect(dimensionsSchema.safeParse([{ ...ok, label: '' }]).success).toBe(false);
   });
 });
+
+describe('questionsOutputSchema · 追问与危险信号', () => {
+  const base = {
+    dimension: 'logic',
+    question: '题干',
+    intent: '',
+    rubric: { excellent: 'a', pass: 'b', fail: 'c' },
+    referencePoints: [],
+    estimatedMinutes: 5,
+    difficulty: 'medium',
+  };
+
+  it('追问给对象时原样保留目的', () => {
+    const r = questionsOutputSchema.parse({
+      questions: [{ ...base, followUps: [{ purpose: '要细节', question: '当时 QPS 多少' }] }],
+    });
+    expect(r.questions[0].followUps).toEqual([{ purpose: '要细节', question: '当时 QPS 多少' }]);
+  });
+
+  it('模型偷懒给字符串时补成 purpose 为空——老数据也走这条', () => {
+    const r = questionsOutputSchema.parse({
+      questions: [{ ...base, followUps: ['当时 QPS 多少'] }],
+    });
+    expect(r.questions[0].followUps).toEqual([{ purpose: '', question: '当时 QPS 多少' }]);
+  });
+
+  it('追问整个缺失时补空数组', () => {
+    const r = questionsOutputSchema.parse({ questions: [base] });
+    expect(r.questions[0].followUps).toEqual([]);
+  });
+
+  it('危险信号缺失时补空数组', () => {
+    const r = questionsOutputSchema.parse({ questions: [{ ...base, followUps: [] }] });
+    expect(r.questions[0].redFlags).toEqual([]);
+  });
+});

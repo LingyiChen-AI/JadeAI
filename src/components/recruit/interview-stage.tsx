@@ -255,7 +255,7 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
           右侧题干、评分标准三栏、追问与要点全部铺开。
           用网格线而不是圆角盒子分区——密度高，但眼睛有格可循。 */}
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <nav className="shrink-0 overflow-y-auto border-b bg-zinc-50 py-3 dark:border-zinc-800 dark:bg-zinc-950 lg:w-[228px] lg:border-b-0 lg:border-r">
+        <nav className="shrink-0 overflow-y-auto border-b bg-zinc-50 py-3 dark:border-zinc-800 dark:bg-zinc-950 lg:w-[300px] lg:border-b-0 lg:border-r">
           <p className="px-4 pb-2 text-[10.5px] uppercase tracking-wider text-zinc-400">
             {t('questions.recorded', { done, total: questions.length })}
           </p>
@@ -333,18 +333,43 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
               ))}
             </div>
 
-            {(current.followUps.length > 0 || current.referencePoints.length > 0) && (
+            {current.followUps.length > 0 && (
+              <div className="border-b px-5 py-3 dark:border-zinc-800">
+                <p className="text-[10.5px] uppercase tracking-wider text-zinc-400">
+                  {t('questions.followUps')} · {current.followUps.length}
+                </p>
+                {/* 追问是一条阶梯，按目的分档——这是深度真正的来源 */}
+                <ol className="mt-1.5 space-y-1.5">
+                  {current.followUps.map((f, i) => (
+                    <li key={i} className="flex gap-2.5 text-[12.5px] leading-relaxed">
+                      {f.purpose && (
+                        <span className="mt-[3px] shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[10.5px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                          {f.purpose}
+                        </span>
+                      )}
+                      <span className="text-zinc-700 dark:text-zinc-300">{f.question}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {(current.referencePoints.length > 0 || (current.redFlags?.length ?? 0) > 0) && (
               <div className="grid border-b dark:border-zinc-800 sm:grid-cols-2">
-                {current.followUps.length > 0 && (
-                  <Col title={t('questions.followUps')} count={current.followUps.length}>
-                    {current.followUps.map((f, i) => (
-                      <li key={i}>{f}</li>
-                    ))}
-                  </Col>
-                )}
                 {current.referencePoints.length > 0 && (
                   <Col title={t('questions.referencePoints')} count={current.referencePoints.length}>
                     {current.referencePoints.map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </Col>
+                )}
+                {(current.redFlags?.length ?? 0) > 0 && (
+                  <Col
+                    title={t('questions.redFlags')}
+                    count={current.redFlags!.length}
+                    tone="bad"
+                  >
+                    {current.redFlags!.map((r, i) => (
                       <li key={i}>{r}</li>
                     ))}
                   </Col>
@@ -437,15 +462,23 @@ function Kbd({ children }: { children: React.ReactNode }) {
 function Col({
   title,
   count,
+  tone,
   children,
 }: {
   title: string;
   count: number;
+  /** "bad" 用于危险信号：红色小标题，扫到就知道是负面清单 */
+  tone?: 'bad';
   children: React.ReactNode;
 }) {
   return (
     <div className="border-b px-5 py-3 last:border-b-0 dark:border-zinc-800 sm:border-b-0 sm:border-r sm:last:border-r-0">
-      <p className="text-[10.5px] uppercase tracking-wider text-zinc-400">
+      <p
+        className={cn(
+          'text-[10.5px] uppercase tracking-wider',
+          tone === 'bad' ? 'text-red-500' : 'text-zinc-400',
+        )}
+      >
         {title} · {count}
       </p>
       <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-400">

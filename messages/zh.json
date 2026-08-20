@@ -1082,6 +1082,7 @@
       "fail": "不合格",
       "followUps": "追问建议",
       "referenceAnswer": "参考答案",
+      "redFlags": "危险信号",
       "referencePoints": "参考答案要点",
       "minutes": "{count} 分钟",
       "regenerateConfirm": "重新生成会覆盖现有全部题目，确定吗？"

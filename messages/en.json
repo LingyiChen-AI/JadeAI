@@ -1082,6 +1082,7 @@
       "fail": "Fail",
       "followUps": "Follow-up probes",
       "referenceAnswer": "Reference answer",
+      "redFlags": "Red flags",
       "referencePoints": "Reference points",
       "minutes": "{count} min",
       "regenerateConfirm": "Regenerating replaces all current questions. Continue?"

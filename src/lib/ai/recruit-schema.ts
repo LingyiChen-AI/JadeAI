@@ -86,8 +86,25 @@ const rawQuestionSchema = z.object({
       z.undefined(),
     ])
     .transform((v) => v ?? { excellent: '', pass: '', fail: '' }),
-  followUps: stringArray,
+  // 追问从纯字符串升级成「目的 + 问题」。老数据和偶尔偷懒的模型
+  // 还会给字符串，统一补成 purpose 为空。
+  followUps: z
+    .union([
+      z.array(
+        z.union([
+          z.object({
+            purpose: z.union([z.string(), z.null(), z.undefined()]).transform((v) => v ?? ''),
+            question: z.string(),
+          }),
+          z.string().transform((q) => ({ purpose: '', question: q })),
+        ]),
+      ),
+      z.null(),
+      z.undefined(),
+    ])
+    .transform((v) => v ?? []),
   referencePoints: stringArray,
+  redFlags: stringArray,
   // 只有客观题才该有参考答案，开放题模型会留空或整个漏掉。
   referenceAnswer: z
     .union([z.string(), z.null(), z.undefined()])

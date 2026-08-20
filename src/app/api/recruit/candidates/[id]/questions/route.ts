@@ -94,6 +94,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       rubric: q.rubric,
       followUps: q.followUps,
       referencePoints: q.referencePoints,
+      redFlags: q.redFlags,
       referenceAnswer: q.referenceAnswer,
       estimatedMinutes: q.estimatedMinutes,
       difficulty: q.difficulty,
