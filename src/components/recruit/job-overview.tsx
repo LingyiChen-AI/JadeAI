@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
@@ -49,12 +49,18 @@ export function JobOverview({ jobId }: { jobId: string }) {
     setJdClamped(el.scrollHeight > el.clientHeight + 1);
   }, [job?.jobDescription, jdExpanded]);
 
+  // 必须 memo，且必须在早返回之前：这个数组是 CandidateCompareTable 的 effect
+  // 依赖，每次渲染都新建的话，点一下「展开全文」就会把所有候选人详情重拉一遍。
+  const evaluated = useMemo(
+    () => candidates.filter((c) => c.overallScore !== null),
+    [candidates],
+  );
+
   if (loading) return <Skeleton className="h-64 rounded-xl" />;
   if (!job) return null;
 
   const dimensions = job.dimensions as DimensionConfig[];
   const allocation = allocateQuestions(dimensions, job.questionCount);
-  const evaluated = candidates.filter((c) => c.overallScore !== null);
   // 均分只算已评价的人；一个都没评价时不显示，避免出现「均分 0」的误导
   const avgScore =
     evaluated.length > 0
@@ -62,7 +68,8 @@ export function JobOverview({ jobId }: { jobId: string }) {
       : null;
 
   return (
-    <div className="space-y-6">
+    // 限宽：拉满 1600 时一行文字横跨整屏，眼睛扫不过来
+    <div className="max-w-4xl space-y-6">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-zinc-500">
         <span>{t('overview.stats', { total: candidates.length, evaluated: evaluated.length })}</span>
         {avgScore !== null && (

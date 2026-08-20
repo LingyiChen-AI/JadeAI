@@ -23,7 +23,13 @@ import { DimensionRadar } from './dimension-radar';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import { getAIHeaders } from '@/stores/settings-store';
 import { cn } from '@/lib/utils';
-import type { RecruitCandidate, RecruitEvaluation, Recommendation } from '@/types/recruit';
+import { countAnswered } from '@/lib/recruit/answers';
+import type {
+  InterviewQuestion,
+  RecruitCandidate,
+  RecruitEvaluation,
+  Recommendation,
+} from '@/types/recruit';
 
 const RECOMMENDATION_STYLE: Record<Recommendation, string> = {
   strong_hire: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
@@ -56,6 +62,8 @@ export function EvaluationPanel({
 
   const hasQuestions = (candidate.questions ?? []).length > 0;
   const answeredCount = evaluation?.questionEvaluations.filter((q) => q.answered).length ?? 0;
+  // 逐题记录过多少题——决定粘贴框上方那句提示说什么
+  const recordedCount = countAnswered((candidate.questions as InterviewQuestion[] | null) ?? []);
 
   async function doGenerate() {
     setGenerating(true);
@@ -104,7 +112,8 @@ export function EvaluationPanel({
   }
 
   return (
-    <div className="space-y-6">
+    // 限宽：报告拉满 1600 时，逐题点评一行横跨整屏
+    <div className="max-w-5xl space-y-6">
       {/* 记录区：没有报告时占主体；有报告后折成一行 */}
       {transcriptOpen ? (
         <div className="space-y-2">
@@ -121,7 +130,11 @@ export function EvaluationPanel({
               </Button>
             )}
           </div>
-          <p className="text-xs text-zinc-500">{t('evaluation.transcriptHint')}</p>
+          <p className="text-xs text-zinc-500">
+            {recordedCount > 0
+              ? t('evaluation.transcriptSupplement', { done: recordedCount })
+              : t('evaluation.transcriptHint')}
+          </p>
           <Textarea
             id="transcript"
             value={transcript}

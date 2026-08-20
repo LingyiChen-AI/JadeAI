@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { Badge } from '@/components/ui/badge';
@@ -43,37 +43,45 @@ export function CandidateCompareTable({ jobId, dimensions, evaluated }: Candidat
   const { fingerprint, isLoading: fpLoading } = useFingerprint();
   const [rows, setRows] = useState<Row[] | null>(null);
 
-  const load = useCallback(async () => {
-    // 摘要接口不返回维度分，逐个拉详情。候选人通常个位数，并发即可。
-    const results = await Promise.all(
-      evaluated.map(async (c) => {
-        try {
-          const res = await fetch(`/api/recruit/candidates/${c.id}`, {
-            headers: fingerprint ? { 'x-fingerprint': fingerprint } : {},
-          });
-          if (!res.ok) return null;
-          const data = await res.json();
-          const evaluation = data.evaluation as RecruitEvaluation | null;
-          if (!evaluation) return null;
-          return {
-            id: c.id,
-            name: c.name,
-            overallScore: evaluation.overallScore,
-            recommendation: evaluation.recommendation,
-            scoreByKey: new Map(evaluation.dimensionScores.map((d) => [d.key, d])),
-          } satisfies Row;
-        } catch {
-          return null;
-        }
-      }),
-    );
-    setRows(results.filter((r): r is Row => r !== null).sort((a, b) => b.overallScore - a.overallScore));
-  }, [evaluated, fingerprint]);
-
   useEffect(() => {
     if (fpLoading) return;
-    load();
-  }, [fpLoading, load]);
+    // 拉取中途 evaluated 变了的话，旧响应不能覆盖新数据
+    let cancelled = false;
+
+    void (async () => {
+      // 摘要接口不返回维度分，逐个拉详情。候选人通常个位数，并发即可。
+      const results = await Promise.all(
+        evaluated.map(async (c) => {
+          try {
+            const res = await fetch(`/api/recruit/candidates/${c.id}`, {
+              headers: fingerprint ? { 'x-fingerprint': fingerprint } : {},
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            const evaluation = data.evaluation as RecruitEvaluation | null;
+            if (!evaluation) return null;
+            return {
+              id: c.id,
+              name: c.name,
+              overallScore: evaluation.overallScore,
+              recommendation: evaluation.recommendation,
+              scoreByKey: new Map(evaluation.dimensionScores.map((d) => [d.key, d])),
+            } satisfies Row;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (cancelled) return;
+      setRows(
+        results.filter((r): r is Row => r !== null).sort((a, b) => b.overallScore - a.overallScore),
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fpLoading, evaluated, fingerprint]);
 
   if (rows === null) return <Skeleton className="h-40 rounded-xl" />;
   if (rows.length < 2) return null;

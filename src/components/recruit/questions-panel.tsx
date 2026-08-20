@@ -208,7 +208,7 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
           </Button>
         )}
         {questions.length > 0 && !generating && (
-          <span className="ml-auto text-xs text-zinc-400">
+          <span className="text-xs text-zinc-400">
             {t('questions.summary', { count: summary.count, minutes: summary.totalMinutes })}
           </span>
         )}
