@@ -485,6 +485,14 @@ function CandidateCard({
             <MoreVertical className="h-3.5 w-3.5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {/* 有题目之后主按钮直奔面试台，准备页就没有入口了——
+                重新出题、改简历都在那儿，必须留一条路回去 */}
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href={`/recruit/${jobId}/c/${c.id}/prep`}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                {t('prep.title')}
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer" onClick={onRename}>
               <Pencil className="mr-2 h-4 w-4" />
               {tc('rename')}

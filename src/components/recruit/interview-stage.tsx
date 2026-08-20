@@ -309,11 +309,11 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
 
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="px-6 py-5">
-              <h1 className="max-w-[52em] text-[19px] font-semibold leading-[1.65] tracking-[-0.01em]">
+              <h1 className="text-[19px] font-semibold leading-[1.65] tracking-[-0.01em]">
                 {current.question}
               </h1>
               {current.intent && (
-                <p className="mt-2 max-w-[62em] text-[12.5px] leading-relaxed text-zinc-500">{current.intent}</p>
+                <p className="mt-2 text-[12.5px] leading-relaxed text-zinc-500">{current.intent}</p>
               )}
             </div>
 

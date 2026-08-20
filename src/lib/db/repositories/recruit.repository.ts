@@ -3,6 +3,7 @@ import { db } from '../index';
 import { recruitJobs, recruitCandidates, recruitEvaluations } from '../schema';
 import type { CandidateStatRow } from '@/lib/recruit/job-stats';
 import { countAnswered } from '@/lib/recruit/answers';
+import { normalizeQuestions } from '@/lib/recruit/questions';
 import type {
   CandidateStatus,
   CandidateSummary,
@@ -111,7 +112,11 @@ export const recruitRepository = {
       .from(recruitCandidates)
       .where(eq(recruitCandidates.id, candidateId))
       .limit(1);
-    return rows[0] ?? null;
+    const row = rows[0];
+    if (!row) return null;
+    // 题目结构升级过（followUps 从字符串变成对象），库里还有老形状的数据。
+    // 在这里统一兜一次，下游就不用各自防御。
+    return { ...row, questions: normalizeQuestions((row as any).questions) } as any;
   },
 
   async findCandidatesByJobId(jobId: string): Promise<(typeof recruitCandidates.$inferSelect)[]> {

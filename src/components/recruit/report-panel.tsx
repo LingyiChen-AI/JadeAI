@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronLeft, Play } from 'lucide-react';
+import { ChevronLeft, Play, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from '@/i18n/routing';
 import { Button } from '@/components/ui/button';
@@ -71,15 +71,23 @@ export function ReportPanel({ jobId, candidateId }: { jobId: string; candidateId
             </span>
           </h1>
         </div>
-        {/* 报告看完想再补几道题的回答，直接回面试台 */}
-        {(candidate.questions?.length ?? 0) > 0 && (
-          <Button asChild variant="outline" size="sm" className="shrink-0 cursor-pointer gap-1.5">
-            <Link href={`/recruit/${jobId}/c/${candidateId}/stage`}>
-              <Play className="h-3.5 w-3.5" />
-              {t('actions.startInterview')}
+        <div className="flex shrink-0 items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="cursor-pointer gap-1.5">
+            <Link href={`/recruit/${jobId}/c/${candidateId}/prep`}>
+              <Sparkles className="h-3.5 w-3.5" />
+              {t('prep.title')}
             </Link>
           </Button>
-        )}
+          {/* 报告看完想再补几道题的回答，直接回面试台 */}
+          {(candidate.questions?.length ?? 0) > 0 && (
+            <Button asChild variant="outline" size="sm" className="cursor-pointer gap-1.5">
+              <Link href={`/recruit/${jobId}/c/${candidateId}/stage`}>
+                <Play className="h-3.5 w-3.5" />
+                {t('actions.startInterview')}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <EvaluationPanel
