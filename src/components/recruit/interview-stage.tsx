@@ -9,6 +9,7 @@ import {
   Check,
   AlertCircle,
   Trash2,
+  Sparkles,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,7 +18,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useFingerprint } from '@/hooks/use-fingerprint';
+import { getAIHeaders } from '@/stores/settings-store';
 import { dimensionColor } from '@/lib/recruit/dimension-colors';
 import { countAnswered } from '@/lib/recruit/answers';
 import { cn } from '@/lib/utils';
@@ -40,6 +52,7 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 export function InterviewStage({ jobId, candidateId }: { jobId: string; candidateId: string }) {
   const t = useTranslations('recruit');
+  const tc = useTranslations('common');
   const router = useRouter();
   const { fingerprint, isLoading: fpLoading } = useFingerprint();
 
@@ -50,6 +63,8 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
   const [draft, setDraft] = useState('');
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [elapsed, setElapsed] = useState(0);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenerateOpen, setRegenerateOpen] = useState(false);
 
   const questions = useMemo(() => candidate?.questions ?? [], [candidate?.questions]);
   const dimensions: DimensionConfig[] =
@@ -162,6 +177,33 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
     router.push(`/recruit/${jobId}/c/${candidateId}/report`);
   }, [flush, router, jobId, candidateId]);
 
+  async function doRegenerate() {
+    setRegenerating(true);
+    try {
+      const res = await fetch(`/api/recruit/candidates/${candidateId}/questions`, {
+        method: 'POST',
+        headers: {
+          ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}),
+          ...getAIHeaders(),
+        },
+      });
+      if (!res.ok) throw new Error('generate failed');
+      const data = await res.json();
+      // 题都换了，之前记的答案没有意义，防抖窗口里待存的也一并丢弃，
+      // 否则它会把旧答案写回到新题目上
+      pendingRef.current.clear();
+      if (timerRef.current) clearTimeout(timerRef.current);
+      setSaveState('idle');
+      setCandidate(data.candidate);
+      setIndex(0);
+      setDraft('');
+    } catch {
+      toast.error(t('errors.generateFailed'));
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
   const isLast = index >= questions.length - 1;
 
   // 面试中手在键盘上，不该为了下一题去找鼠标
@@ -237,6 +279,20 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
           {t('stage.elapsed', { minutes: elapsed })}
         </span>
         <span className="ml-auto flex shrink-0 items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setRegenerateOpen(true)}
+            disabled={regenerating}
+            className="cursor-pointer gap-1.5"
+          >
+            {regenerating ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
+            {regenerating ? t('questions.generating') : t('questions.regenerate')}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => void finish()} className="cursor-pointer">
             {t('stage.finish')}
           </Button>
@@ -421,6 +477,21 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
           </div>
         </div>
       </div>
+
+      <AlertDialog open={regenerateOpen} onOpenChange={setRegenerateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('questions.regenerate')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('questions.regenerateConfirm')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">{tc('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void doRegenerate()} className="cursor-pointer">
+              {tc('confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 
