@@ -5,7 +5,8 @@ export default function RecruitLayout({ children }: { children: React.ReactNode 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-background">
       <Header />
-      <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+      {/* 工作区要用满宽屏；岗位列表页自己再收窄 */}
+      <main className="mx-auto max-w-[1600px] px-4 py-8">{children}</main>
       <SettingsDialog />
     </div>
   );

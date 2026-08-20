@@ -40,7 +40,7 @@ export function JobList() {
   }, [fpLoading, load]);
 
   return (
-    <div>
+    <div className="mx-auto max-w-7xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-foreground">{t('title')}</h1>
