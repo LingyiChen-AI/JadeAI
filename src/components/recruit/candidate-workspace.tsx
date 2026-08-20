@@ -8,6 +8,7 @@ import { Link } from '@/i18n/routing';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ResumePanel } from './resume-panel';
+import { QuestionsPanel } from './questions-panel';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import type { RecruitCandidate, RecruitEvaluation, RecruitJob } from '@/types/recruit';
 
@@ -76,7 +77,7 @@ export function CandidateWorkspace({ jobId, candidateId }: CandidateWorkspacePro
         </TabsContent>
 
         <TabsContent value="questions" className="mt-6">
-          {/* Task 18 接入 QuestionsPanel */}
+          <QuestionsPanel job={job} candidate={candidate} onUpdated={setCandidate} />
         </TabsContent>
 
         <TabsContent value="evaluation" className="mt-6">
