@@ -279,15 +279,12 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
           {t('stage.elapsed', { minutes: elapsed })}
         </span>
         <span className="ml-auto flex shrink-0 items-center gap-2">
-          {/* 重量 = 频率 × 鼓励程度。重新生成在面试中几乎不会点，
-              点了还会连同已记的答案一起覆盖——它该是这里最轻的，
-              不该和「结束面试」平起平坐。 */}
+          {/* 绿 = AI 生成，和「生成题目」「生成评价」同一类 */}
           <Button
-            variant="ghost"
             size="sm"
             onClick={() => setRegenerateOpen(true)}
             disabled={regenerating}
-            className="cursor-pointer gap-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+            className="cursor-pointer gap-1.5"
           >
             {regenerating ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -296,8 +293,12 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
             )}
             {regenerating ? t('questions.generating') : t('questions.regenerate')}
           </Button>
-          {/* 流程的正常终点，也是这个角落里唯一你真会点的——给主操作的重量 */}
-          <Button size="sm" onClick={() => void finish()} className="cursor-pointer">
+          {/* 红 = 终止这场面试。和删除类操作用同一支红，语义是「到此为止」 */}
+          <Button
+            size="sm"
+            onClick={() => void finish()}
+            className="cursor-pointer bg-red-600 text-white hover:bg-red-700"
+          >
             {t('stage.finish')}
           </Button>
           <button
