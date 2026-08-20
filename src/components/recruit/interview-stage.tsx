@@ -10,6 +10,8 @@ import {
   AlertCircle,
   Trash2,
   Sparkles,
+  Eye,
+  EyeOff,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -41,6 +43,7 @@ import type {
 } from '@/types/recruit';
 
 const AUTOSAVE_DELAY = 800;
+const ANSWERS_KEY = 'jade-stage-show-answers';
 
 const RUBRIC_TEXT = {
   excellent: 'text-emerald-600 dark:text-emerald-400',
@@ -66,11 +69,25 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
   const [regenerating, setRegenerating] = useState(false);
   const [regenerateOpen, setRegenerateOpen] = useState(false);
   /**
-   * 一个开关控制所有「剧透」内容：追问的答案 + 主参考答案。
-   * 面试的节奏是「先听人说 → 再对照」，所以默认关；对方答完一键打开。
-   * 切题时保持不变——面试官的习惯是整场开着或整场关着，不是每题重设。
+   * 一个开关控制所有参考答案：追问的答案 + 主参考答案。
+   *
+   * 默认开。之前默认关，理由是「先听人说再对照」——那是想当然：
+   * 面试官记不住所有领域的知识点，答案本来就该在眼前，
+   * 需要遮住的时候再关。选择存 localStorage，不是每题重设。
    */
-  const [showAnswers, setShowAnswers] = useState(false);
+  const [showAnswers, setShowAnswers] = useState(true);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(ANSWERS_KEY);
+    if (saved !== null) setShowAnswers(saved === '1');
+  }, []);
+
+  function toggleAnswers() {
+    setShowAnswers((v) => {
+      localStorage.setItem(ANSWERS_KEY, v ? '0' : '1');
+      return !v;
+    });
+  }
 
   const questions = useMemo(() => candidate?.questions ?? [], [candidate?.questions]);
   const dimensions: DimensionConfig[] =
@@ -406,14 +423,19 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
                   </p>
                   <button
                     type="button"
-                    onClick={() => setShowAnswers((v) => !v)}
+                    onClick={toggleAnswers}
                     className={cn(
-                      'ml-auto cursor-pointer rounded px-2 py-0.5 text-[11px] transition-colors',
+                      'ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11.5px] font-medium transition-colors',
                       showAnswers
-                        ? 'bg-brand/10 text-brand'
-                        : 'text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800',
+                        ? 'border-brand/40 bg-brand/10 text-brand'
+                        : 'border-zinc-200 text-zinc-500 hover:text-zinc-800 dark:border-zinc-700 dark:hover:text-zinc-200',
                     )}
                   >
+                    {showAnswers ? (
+                      <EyeOff className="h-3.5 w-3.5" />
+                    ) : (
+                      <Eye className="h-3.5 w-3.5" />
+                    )}
                     {showAnswers ? t('questions.hideAnswers') : t('questions.showAnswers')}
                   </button>
                 </div>
