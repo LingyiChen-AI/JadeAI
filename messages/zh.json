@@ -1092,6 +1092,8 @@
       "pass": "合格",
       "fail": "不合格",
       "followUps": "追问建议",
+      "showAnswers": "参考答案",
+      "hideAnswers": "收起答案",
       "referenceAnswer": "参考答案",
       "redFlags": "危险信号",
       "referencePoints": "参考答案要点",

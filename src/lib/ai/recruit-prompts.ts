@@ -23,13 +23,21 @@ Depth bar:
 - At least one third must be "hard" — the kind where someone who only used the tool superficially runs out of things to say within a minute.
 - No warm-ups, no "tell me about yourself", no "what are your strengths".
 
-"followUps" is the heart of the question. Give 4-6 of them, ordered as a funnel (wide → narrow), each with an explicit purpose. Use exactly these purpose labels:
-- "要细节" — force out concrete numbers, scale, timeline
-- "要归因" — separate what THEY did from what the team did
-- "反事实" — remove an assumption and see if they still reason ("如果不能用 Redis 呢？")
-- "挑战" — push back once on their answer; a strong candidate defends with reasons, a weak one immediately folds
-- "要教训" — what would they change now
-A good ladder uses at least three different purposes. Two generic follow-ups is a failure.
+"followUps" is the heart of the question. Give 4-6 of them, ordered as a funnel (wide → narrow). Each one has THREE fields:
+- "purpose" — one of exactly these labels:
+  · "要细节" — force out concrete numbers, scale, timeline
+  · "要归因" — separate what THEY did from what the team did
+  · "反事实" — remove an assumption and see if they still reason ("如果不能用 Redis 呢？")
+  · "挑战" — push back once on their answer; a strong candidate defends with reasons, a weak one immediately folds
+  · "要教训" — what would they change now
+- "question" — the probe itself, one short sentence
+- "answer" — REQUIRED. What a good answer to THIS probe sounds like, 2-4 sentences. Name the actual
+  mechanism, the metric, the order of magnitude, the trade-off. The interviewer is not an expert in
+  every area they interview for — without this they cannot tell whether the answer was good, and they
+  cannot decide where to push next. For a behavioural probe, describe the shape of a strong answer
+  (what a credible account contains) rather than a factual answer.
+A good ladder uses at least three different purposes. Two generic follow-ups is a failure, and a
+follow-up without an "answer" is a failure.
 
 Other fields:
 - "dimension" must be exactly the dimension key given in the user message, on every question.
@@ -37,11 +45,17 @@ Other fields:
 - "rubric" describes an excellent / passing / failing answer concretely enough that an interviewer who is not an expert in this area can still tell them apart.
 - "referencePoints" — 4-6 specific points a strong answer should hit. Be concrete (name the mechanism, the metric, the trade-off), not "有深度理解".
 - "redFlags" — 2-4 things that, if you hear them, should count against the candidate. This is what an experienced interviewer actually carries in their head. Examples of the right shape: "把「我们团队做了」和「我做了」混着说，问细节就转回团队"、"只会复述文档里的默认配置". Not generic ("回答不深入").
-- "referenceAnswer" is a model answer, 3-6 sentences, ONLY for questions with a determinate technical answer. For open-ended, behavioural or experience questions return an empty string.
+- "referenceAnswer" — REQUIRED on every question, never empty. Write it as 3-6 bullet-style lines
+  separated by newlines, each naming a concrete mechanism, term, metric or trade-off a strong answer
+  would contain. This is the interviewer's cheat sheet: they read it after the candidate answers, to
+  judge the answer and to decide what to dig into. Vague summaries ("能体现深度理解") are useless — be
+  specific enough that someone who has never worked with this technology could still spot a wrong
+  answer. For open-ended or behavioural questions, describe the skeleton of a strong account
+  (what facts, what numbers, what self-criticism it would contain) instead of a factual answer.
 - "estimatedMinutes" is an integer covering the question AND its follow-ups; "difficulty" is one of easy / medium / hard.
 
 Return JSON with this exact shape:
-{"questions":[{"dimension":"","question":"","intent":"","rubric":{"excellent":"","pass":"","fail":""},"followUps":[{"purpose":"要细节","question":""}],"referencePoints":[],"redFlags":[],"referenceAnswer":"","estimatedMinutes":8,"difficulty":"medium"}]}
+{"questions":[{"dimension":"","question":"","intent":"","rubric":{"excellent":"","pass":"","fail":""},"followUps":[{"purpose":"要细节","question":"","answer":""}],"referencePoints":[],"redFlags":[],"referenceAnswer":"","estimatedMinutes":8,"difficulty":"medium"}]}
 
 ${JSON_RULE}`;
 

@@ -1092,6 +1092,8 @@
       "pass": "Pass",
       "fail": "Fail",
       "followUps": "Follow-up probes",
+      "showAnswers": "Show answers",
+      "hideAnswers": "Hide answers",
       "referenceAnswer": "Reference answer",
       "redFlags": "Red flags",
       "referencePoints": "Reference points",

@@ -65,6 +65,12 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
   const [elapsed, setElapsed] = useState(0);
   const [regenerating, setRegenerating] = useState(false);
   const [regenerateOpen, setRegenerateOpen] = useState(false);
+  /**
+   * 一个开关控制所有「剧透」内容：追问的答案 + 主参考答案。
+   * 面试的节奏是「先听人说 → 再对照」，所以默认关；对方答完一键打开。
+   * 切题时保持不变——面试官的习惯是整场开着或整场关着，不是每题重设。
+   */
+  const [showAnswers, setShowAnswers] = useState(false);
 
   const questions = useMemo(() => candidate?.questions ?? [], [candidate?.questions]);
   const dimensions: DimensionConfig[] =
@@ -394,19 +400,40 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
 
             {current.followUps.length > 0 && (
               <div className="border-b px-5 py-3 dark:border-zinc-800">
-                <p className="text-[10.5px] uppercase tracking-wider text-zinc-400">
-                  {t('questions.followUps')} · {current.followUps.length}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[10.5px] uppercase tracking-wider text-zinc-400">
+                    {t('questions.followUps')} · {current.followUps.length}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowAnswers((v) => !v)}
+                    className={cn(
+                      'ml-auto cursor-pointer rounded px-2 py-0.5 text-[11px] transition-colors',
+                      showAnswers
+                        ? 'bg-brand/10 text-brand'
+                        : 'text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800',
+                    )}
+                  >
+                    {showAnswers ? t('questions.hideAnswers') : t('questions.showAnswers')}
+                  </button>
+                </div>
                 {/* 追问是一条阶梯，按目的分档——这是深度真正的来源 */}
-                <ol className="mt-1.5 space-y-1.5">
+                <ol className="mt-1.5 space-y-2">
                   {current.followUps.map((f, i) => (
-                    <li key={i} className="flex gap-2.5 text-[12.5px] leading-relaxed">
-                      {f.purpose && (
-                        <span className="mt-[3px] shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[10.5px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                          {f.purpose}
-                        </span>
+                    <li key={i} className="text-[12.5px] leading-relaxed">
+                      <div className="flex gap-2.5">
+                        {f.purpose && (
+                          <span className="mt-[3px] shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[10.5px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                            {f.purpose}
+                          </span>
+                        )}
+                        <span className="text-zinc-700 dark:text-zinc-300">{f.question}</span>
+                      </div>
+                      {showAnswers && f.answer?.trim() && (
+                        <p className="mt-1 border-l-2 border-brand/40 pl-2.5 text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                          {f.answer}
+                        </p>
                       )}
-                      <span className="text-zinc-700 dark:text-zinc-300">{f.question}</span>
                     </li>
                   ))}
                 </ol>
@@ -436,12 +463,15 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
               </div>
             )}
 
-            {/* 唯一保持折叠的：参考答案是剧透，先听候选人怎么说 */}
-            {current.referenceAnswer?.trim() && (
-              <div className="border-b px-6 dark:border-zinc-800">
-                <Fold title={t('questions.referenceAnswer')}>
-                  <p className="whitespace-pre-wrap">{current.referenceAnswer}</p>
-                </Fold>
+            {/* 和追问的答案共用一个开关：要么都看，要么都不看 */}
+            {showAnswers && current.referenceAnswer?.trim() && (
+              <div className="border-b bg-brand/[0.04] px-5 py-3 dark:border-zinc-800">
+                <p className="text-[10.5px] uppercase tracking-wider text-brand">
+                  {t('questions.referenceAnswer')}
+                </p>
+                <p className="mt-1.5 whitespace-pre-wrap text-[12.5px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+                  {current.referenceAnswer}
+                </p>
               </div>
             )}
           </div>
@@ -558,37 +588,6 @@ function Col({
       <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-400">
         {children}
       </ul>
-    </div>
-  );
-}
-
-/** 折叠条。这里只用于参考答案。 */
-function Fold({
-  title,
-  count,
-  children,
-}: {
-  title: string;
-  count?: number;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className={cn(open && 'w-full')}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex cursor-pointer items-center gap-1 py-1.5 text-[11px] uppercase tracking-wide text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-      >
-        <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-90')} />
-        {title}
-        {count !== undefined && <span className="tabular-nums">· {count}</span>}
-      </button>
-      {open && (
-        <div className="pb-2 pl-4 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-          {children}
-        </div>
-      )}
     </div>
   );
 }

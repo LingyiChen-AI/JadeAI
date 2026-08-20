@@ -14,13 +14,17 @@ export function normalizeFollowUps(raw: unknown): FollowUp[] {
     .map((f): FollowUp | null => {
       if (typeof f === 'string') {
         const q = f.trim();
-        return q ? { purpose: '', question: q } : null;
+        return q ? { purpose: '', question: q, answer: '' } : null;
       }
       if (f && typeof f === 'object') {
-        const o = f as { purpose?: unknown; question?: unknown };
+        const o = f as { purpose?: unknown; question?: unknown; answer?: unknown };
         const q = typeof o.question === 'string' ? o.question.trim() : '';
         if (!q) return null;
-        return { purpose: typeof o.purpose === 'string' ? o.purpose : '', question: q };
+        return {
+          purpose: typeof o.purpose === 'string' ? o.purpose : '',
+          question: q,
+          answer: typeof o.answer === 'string' ? o.answer : '',
+        };
       }
       return null;
     })

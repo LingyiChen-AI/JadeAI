@@ -19,6 +19,11 @@ export interface FollowUp {
   /** 这一问想拿到什么。空字符串表示老数据没标 */
   purpose: string;
   question: string;
+  /**
+   * 这一问的参考答案。面试官不可能记住所有知识点，
+   * 对方答完之后要靠它判断答得对不对、还能往哪儿拉。
+   */
+  answer?: string;
 }
 
 export interface InterviewQuestion {
@@ -43,7 +48,8 @@ export interface InterviewQuestion {
   /** 危险信号：听到这些表述就该扣分 */
   redFlags?: string[];
   /**
-   * 参考答案。只有有确定技术答案的题目才有，开放题/行为题留空。
+   * 主问题的参考答案。分点写，覆盖强答案该讲到的机制、术语和量级。
+   * 开放题/行为题给的是「一个强答案长什么样」的骨架，不是标准答案。
    */
   referenceAnswer?: string;
   estimatedMinutes: number;

@@ -175,14 +175,18 @@ describe('questionsOutputSchema · 追问与危险信号', () => {
     const r = questionsOutputSchema.parse({
       questions: [{ ...base, followUps: [{ purpose: '要细节', question: '当时 QPS 多少' }] }],
     });
-    expect(r.questions[0].followUps).toEqual([{ purpose: '要细节', question: '当时 QPS 多少' }]);
+    expect(r.questions[0].followUps).toEqual([
+      { purpose: '要细节', question: '当时 QPS 多少', answer: '' },
+    ]);
   });
 
   it('模型偷懒给字符串时补成 purpose 为空——老数据也走这条', () => {
     const r = questionsOutputSchema.parse({
       questions: [{ ...base, followUps: ['当时 QPS 多少'] }],
     });
-    expect(r.questions[0].followUps).toEqual([{ purpose: '', question: '当时 QPS 多少' }]);
+    expect(r.questions[0].followUps).toEqual([
+      { purpose: '', question: '当时 QPS 多少', answer: '' },
+    ]);
   });
 
   it('追问整个缺失时补空数组', () => {
@@ -193,5 +197,36 @@ describe('questionsOutputSchema · 追问与危险信号', () => {
   it('危险信号缺失时补空数组', () => {
     const r = questionsOutputSchema.parse({ questions: [{ ...base, followUps: [] }] });
     expect(r.questions[0].redFlags).toEqual([]);
+  });
+});
+
+describe('questionsOutputSchema · 追问的参考答案', () => {
+  const base = {
+    dimension: 'logic',
+    question: '题干',
+    intent: '',
+    rubric: { excellent: 'a', pass: 'b', fail: 'c' },
+    referencePoints: [],
+    estimatedMinutes: 5,
+    difficulty: 'medium',
+  };
+
+  it('带答案时原样保留', () => {
+    const r = questionsOutputSchema.parse({
+      questions: [
+        {
+          ...base,
+          followUps: [{ purpose: '要细节', question: 'QPS 多少', answer: '大促峰值 3 万左右' }],
+        },
+      ],
+    });
+    expect(r.questions[0].followUps[0].answer).toBe('大促峰值 3 万左右');
+  });
+
+  it('模型漏了答案时补空串，不是 undefined——UI 里少一个字段就是崩', () => {
+    const r = questionsOutputSchema.parse({
+      questions: [{ ...base, followUps: [{ purpose: '挑战', question: '为什么' }] }],
+    });
+    expect(r.questions[0].followUps[0].answer).toBe('');
   });
 });

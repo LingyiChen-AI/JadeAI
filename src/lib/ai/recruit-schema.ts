@@ -95,8 +95,9 @@ const rawQuestionSchema = z.object({
           z.object({
             purpose: z.union([z.string(), z.null(), z.undefined()]).transform((v) => v ?? ''),
             question: z.string(),
+            answer: z.union([z.string(), z.null(), z.undefined()]).transform((v) => v ?? ''),
           }),
-          z.string().transform((q) => ({ purpose: '', question: q })),
+          z.string().transform((q) => ({ purpose: '', question: q, answer: '' })),
         ]),
       ),
       z.null(),
