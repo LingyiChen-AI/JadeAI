@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Sparkles, Copy, Loader2, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
+import { Sparkles, Copy, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,7 +15,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { QuestionCard } from './question-card';
+import { QuestionList } from './question-list';
+import { QuestionDetail, type SaveState } from './question-detail';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import { getAIHeaders } from '@/stores/settings-store';
 import { summarizeQuestions } from '@/lib/recruit/summary';
@@ -25,6 +26,8 @@ import type {
   RecruitCandidate,
   RecruitJob,
 } from '@/types/recruit';
+
+const AUTOSAVE_DELAY = 800;
 
 interface QuestionsPanelProps {
   job: RecruitJob;
@@ -38,27 +41,75 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
   const { fingerprint } = useFingerprint();
   const [generating, setGenerating] = useState(false);
   const [regenerateOpen, setRegenerateOpen] = useState(false);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  // 「已问」只活在本次会话里：面试中的临时进度标记，不值得为它加一列存储
-  const [askedIds, setAskedIds] = useState<Set<string>>(new Set());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
 
   const dimensions: DimensionConfig[] = candidate.dimensionsOverride ?? job.dimensions;
-  const questions = candidate.questions ?? [];
+  const questions = useMemo(() => candidate.questions ?? [], [candidate.questions]);
   const hasResume = Boolean(candidate.resumeText?.trim());
-
   const summary = useMemo(() => summarizeQuestions(questions, dimensions), [questions, dimensions]);
-  const allExpanded = questions.length > 0 && expandedIds.size === questions.length;
 
-  function toggle(set: Set<string>, id: string): Set<string> {
-    const next = new Set(set);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
-  }
+  // 待保存的答案：key 是题目 id。落库前一直留在这里，
+  // 保存失败也不清空——否则面试中输入的内容就真丢了。
+  const pendingRef = useRef<Map<string, string>>(new Map());
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function toggleAllExpanded() {
-    setExpandedIds(allExpanded ? new Set() : new Set(questions.map((q) => q.id)));
-  }
+  // 题目变化时把选中项复位到第一题（重新生成、切换候选人都会走到这）
+  useEffect(() => {
+    if (questions.length === 0) {
+      setSelectedId(null);
+      return;
+    }
+    setSelectedId((prev) => (prev && questions.some((q) => q.id === prev) ? prev : questions[0].id));
+  }, [questions]);
+
+  const flush = useCallback(async () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    const pending = pendingRef.current;
+    if (pending.size === 0) return;
+
+    const next = questions.map((q) =>
+      pending.has(q.id) ? { ...q, answer: pending.get(q.id) } : q,
+    );
+    setSaveState('saving');
+    try {
+      const res = await fetch(`/api/recruit/candidates/${candidate.id}`, {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}),
+        },
+        body: JSON.stringify({ questions: next }),
+      });
+      if (!res.ok) throw new Error('save failed');
+      const data = await res.json();
+      pending.clear();
+      setSaveState('saved');
+      onUpdated(data.candidate);
+    } catch {
+      // 刻意不清 pending：内容还在，用户点重试即可重发
+      setSaveState('error');
+      toast.error(t('errors.saveFailed'));
+    }
+  }, [questions, candidate.id, fingerprint, onUpdated, t]);
+
+  const handleAnswerChange = useCallback(
+    (questionId: string, answer: string) => {
+      pendingRef.current.set(questionId, answer);
+      setSaveState('saving');
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => void flush(), AUTOSAVE_DELAY);
+    },
+    [flush],
+  );
+
+  // 卸载时清掉定时器，避免对已卸载组件 setState
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
 
   async function doGenerate() {
     setGenerating(true);
@@ -72,10 +123,10 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
       });
       if (!res.ok) throw new Error('generate failed');
       const data = await res.json();
+      // 题都换了，之前记的答案没有意义，pending 也一并丢弃
+      pendingRef.current.clear();
+      setSaveState('idle');
       onUpdated(data.candidate);
-      // 新题目跟旧的没有对应关系，清掉展开与已问状态
-      setExpandedIds(new Set());
-      setAskedIds(new Set());
     } catch {
       toast.error(t('errors.generateFailed'));
     } finally {
@@ -85,7 +136,7 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
 
   function handleGenerate() {
     if (questions.length > 0) setRegenerateOpen(true);
-    else doGenerate();
+    else void doGenerate();
   }
 
   async function handleRemove(questionId: string) {
@@ -136,59 +187,32 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
     );
   }
 
+  const selected = questions.find((q) => q.id === selectedId) ?? null;
+  const selectedIndex = selected ? questions.findIndex((q) => q.id === selected.id) : -1;
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2">
-          <Button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="cursor-pointer gap-2 bg-brand hover:bg-brand-hover"
-          >
-            {generating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-            {questions.length > 0 ? t('questions.regenerate') : t('questions.generate')}
-          </Button>
-          {questions.length > 0 && (
-            <Button variant="outline" onClick={handleCopyAll} className="cursor-pointer gap-2">
-              <Copy className="h-4 w-4" />
-              {t('questions.copyAll')}
-            </Button>
-          )}
-        </div>
-
-        {questions.length > 0 && !generating && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleAllExpanded}
-            className="cursor-pointer gap-2 text-zinc-500"
-          >
-            {allExpanded ? (
-              <ChevronsDownUp className="h-4 w-4" />
-            ) : (
-              <ChevronsUpDown className="h-4 w-4" />
-            )}
-            {allExpanded ? t('questions.collapseAll') : t('questions.expandAll')}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          onClick={handleGenerate}
+          disabled={generating}
+          className="cursor-pointer gap-2 bg-brand hover:bg-brand-hover"
+        >
+          {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          {questions.length > 0 ? t('questions.regenerate') : t('questions.generate')}
+        </Button>
+        {questions.length > 0 && (
+          <Button variant="outline" onClick={handleCopyAll} className="cursor-pointer gap-2">
+            <Copy className="h-4 w-4" />
+            {t('questions.copyAll')}
           </Button>
         )}
-      </div>
-
-      {questions.length > 0 && !generating && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
-          <span>
+        {questions.length > 0 && !generating && (
+          <span className="ml-auto text-xs text-zinc-400">
             {t('questions.summary', { count: summary.count, minutes: summary.totalMinutes })}
           </span>
-          {summary.byDimension.map((d) => (
-            <span key={d.key} className="text-zinc-400">
-              {d.label} {d.count}
-            </span>
-          ))}
-        </div>
-      )}
+        )}
+      </div>
 
       {generating && (
         <div className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-zinc-200 py-16 dark:border-zinc-700">
@@ -203,21 +227,34 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
         </div>
       )}
 
-      {!generating && (
-        <div className="space-y-2">
-          {questions.map((q, i) => (
-            <QuestionCard
-              key={q.id}
-              index={i}
-              question={q}
+      {!generating && questions.length > 0 && (
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          <QuestionList
+            questions={questions}
+            selectedId={selectedId}
+            // 切题前先把防抖窗口里未落库的输入冲刷掉。QuestionDetail 带
+            // key={id} 会整体重挂载，指望它自己在卸载时保存是不可靠的。
+            onSelect={(id) => {
+              void flush();
+              setSelectedId(id);
+            }}
+          />
+          {selected ? (
+            <QuestionDetail
+              key={selected.id}
+              question={selected}
+              index={selectedIndex}
               dimensions={dimensions}
-              expanded={expandedIds.has(q.id)}
-              onToggleExpanded={() => setExpandedIds((s) => toggle(s, q.id))}
-              asked={askedIds.has(q.id)}
-              onToggleAsked={() => setAskedIds((s) => toggle(s, q.id))}
-              onRemove={() => handleRemove(q.id)}
+              saveState={saveState}
+              onAnswerChange={handleAnswerChange}
+              onFlush={() => void flush()}
+              onRemove={() => handleRemove(selected.id)}
             />
-          ))}
+          ) : (
+            <div className="flex-1 rounded-xl border-2 border-dashed border-zinc-200 py-16 text-center text-sm text-zinc-400 dark:border-zinc-700">
+              {t('questions.selectOne')}
+            </div>
+          )}
         </div>
       )}
 
@@ -230,7 +267,7 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">{tc('cancel')}</AlertDialogCancel>
             <AlertDialogAction
-              onClick={doGenerate}
+              onClick={() => void doGenerate()}
               className="cursor-pointer bg-brand hover:bg-brand-hover"
             >
               {tc('confirm')}
