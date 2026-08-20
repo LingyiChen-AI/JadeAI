@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ResumePanel } from './resume-panel';
 import { QuestionsPanel } from './questions-panel';
+import { EvaluationPanel } from './evaluation-panel';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import type { RecruitCandidate, RecruitEvaluation, RecruitJob } from '@/types/recruit';
 
@@ -81,7 +82,12 @@ export function CandidateWorkspace({ jobId, candidateId }: CandidateWorkspacePro
         </TabsContent>
 
         <TabsContent value="evaluation" className="mt-6">
-          {/* Task 19 接入 EvaluationPanel */}
+          <EvaluationPanel
+            candidate={candidate}
+            evaluation={evaluation}
+            onCandidateUpdated={setCandidate}
+            onEvaluated={setEvaluation}
+          />
         </TabsContent>
       </Tabs>
     </div>
