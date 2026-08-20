@@ -18,7 +18,7 @@ export function DimensionRadar({ scores }: DimensionRadarProps) {
   const data = scores.map((s) => ({ label: s.label, score: s.score }));
 
   return (
-    <ResponsiveContainer width="100%" height={320}>
+    <ResponsiveContainer width="100%" height={240}>
       <RechartsRadar data={data}>
         <PolarGrid />
         <PolarAngleAxis dataKey="label" className="text-xs" />
