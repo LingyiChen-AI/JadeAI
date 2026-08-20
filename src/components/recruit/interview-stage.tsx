@@ -256,122 +256,120 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
 
       {/* 整块内容限宽后一起居中。之前是左栏内部 mx-auto，于是在 1580px 宽的
           主区里内容只占 670px，左右各空 455px，加上侧栏就成了四段式，很散。 */}
-      {/* 满铺：两块直接顶到屏幕边，没有圆角卡片、没有外边距、不居中。
-          面试台是专注模式，本来就该占满整块屏幕，而不是在灰底上飘一张卡。 */}
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-white px-10 py-8 dark:bg-zinc-900">
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Badge variant="outline" className={color.chip}>
-              <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
-              {label}
-            </Badge>
-            <span className="text-xs text-zinc-400">
-              {current.difficulty} · {t('questions.minutes', { count: current.estimatedMinutes })}
-            </span>
-            <span className="ml-auto">
-              <SaveIndicator state={saveState} onRetry={() => void flush()} />
-            </span>
-          </div>
-
-          {/* 垂直空间给题干，不给输入框。面试时你在听人说话，
-              手上顶多记三五个关键词——不需要一个能写论文的框。 */}
-          <h1 className="mt-4 min-h-0 flex-1 overflow-y-auto text-[21px] font-semibold leading-[1.7] tracking-[-0.01em] xl:max-w-[46em]">
-            {current.question}
-          </h1>
-
-          <Textarea
-            value={draft}
-            onChange={(e) => handleDraftChange(e.target.value)}
-            placeholder={t('questions.answerPlaceholder')}
-            autoFocus
-            // 三行起步，写多了自己长，上限 30vh。field-sizing-content 会跟着内容走
-            className="mt-4 max-h-[30vh] min-h-[76px] shrink-0 bg-white text-[15px] leading-relaxed dark:bg-zinc-900"
-          />
-
-          <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => goTo(index - 1)}
-              disabled={index === 0}
-              className="cursor-pointer gap-1.5"
+      {/* 单栏满铺，没有侧栏。评分标准横着排在题干下面——横向三栏比竖着
+          一列好扫，也正好吃掉宽度，不用为了塞它专门留一条 330px 的边栏。 */}
+      {/* 两个区：上面读题（可滚），下面记录（钉底）。分区之后，读题区里
+          多出来的空白属于那个区，不是页面中间一个洞。 */}
+      <div className="min-h-0 flex-1 overflow-y-auto bg-white px-10 py-7 dark:bg-zinc-900">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Badge variant="outline" className={color.chip}>
+            <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
+            {label}
+          </Badge>
+          <span className="text-xs text-zinc-400">
+            {current.difficulty} · {t('questions.minutes', { count: current.estimatedMinutes })}
+          </span>
+          <span className="ml-auto flex items-center gap-3">
+            <SaveIndicator state={saveState} onRetry={() => void flush()} />
+            <button
+              type="button"
+              onClick={() => void handleRemove()}
+              aria-label={t('questions.remove')}
+              className="cursor-pointer text-zinc-300 hover:text-red-600 dark:text-zinc-600"
             >
-              <ChevronLeft className="h-4 w-4" />
-              {t('stage.prev')}
-            </Button>
-            <Button
-              onClick={() => (isLast ? void finish() : goTo(index + 1))}
-              className="cursor-pointer gap-1.5"
-            >
-              {isLast ? t('stage.recordFinish') : t('stage.recordNext')}
-              {!isLast && <ChevronRight className="h-4 w-4" />}
-            </Button>
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </span>
+        </div>
 
-            <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-400">
-              <Kbd>⌘↵</Kbd> {t('stage.shortcutNext')}
-              <Kbd>esc</Kbd> {t('stage.shortcutExit')}
-            </span>
-          </div>
-        </main>
+        {/* 题干单独限个字宽——满屏一行七十多个汉字读不下来 */}
+        <h1 className="mt-4 shrink-0 text-[21px] font-semibold leading-[1.7] tracking-[-0.01em] xl:max-w-[46em]">
+          {current.question}
+        </h1>
 
-        {/* 右栏分层：评分标准是面试中唯一真要一直瞟的，常驻；其余折叠 */}
-        <aside className="min-h-0 shrink-0 overflow-y-auto border-t bg-zinc-50 px-5 py-6 dark:border-zinc-800 dark:bg-zinc-950 lg:w-[330px] lg:border-l lg:border-t-0">
-          <p className="mb-2 text-[11px] uppercase tracking-wide text-zinc-400">
-            {t('questions.rubric')}
-          </p>
-          <div className="grid gap-2">
-            {(['excellent', 'pass', 'fail'] as const).map((level) => (
-              <div key={level} className="flex gap-2">
-                <span className={cn('w-0.5 shrink-0 rounded-full', RUBRIC_BAR[level])} />
-                <p className="text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  <span className="text-zinc-500 dark:text-zinc-400">
-                    {t(`questions.${level}`)}：
-                  </span>
+        <div className="mt-6 grid shrink-0 gap-3 sm:grid-cols-3">
+          {(['excellent', 'pass', 'fail'] as const).map((level) => (
+            <div key={level} className="overflow-hidden rounded-lg border dark:border-zinc-800">
+              <div className={cn('h-[3px]', RUBRIC_BAR[level])} />
+              <div className="px-3.5 py-3">
+                <p className="text-[11px] uppercase tracking-wide text-zinc-400">
+                  {t(`questions.${level}`)}
+                </p>
+                <p className="mt-1 text-[13.5px] leading-relaxed text-zinc-700 dark:text-zinc-300">
                   {current.rubric[level]}
                 </p>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
+        </div>
 
-          <div className="mt-3 divide-y border-t dark:divide-zinc-800 dark:border-zinc-800">
-            {current.followUps.length > 0 && (
-              <Fold title={t('questions.followUps')} count={current.followUps.length}>
-                <ul className="list-disc space-y-1 pl-4">
-                  {current.followUps.map((f, i) => (
-                    <li key={i}>{f}</li>
-                  ))}
-                </ul>
-              </Fold>
-            )}
-            {current.referencePoints.length > 0 && (
-              <Fold title={t('questions.referencePoints')} count={current.referencePoints.length}>
-                <ul className="list-disc space-y-1 pl-4">
-                  {current.referencePoints.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              </Fold>
-            )}
-            {current.referenceAnswer?.trim() && (
-              <Fold title={t('questions.referenceAnswer')}>
-                <p className="whitespace-pre-wrap">{current.referenceAnswer}</p>
-              </Fold>
-            )}
-            {current.intent && (
-              <Fold title={t('questions.intent')}>
-                <p>{current.intent}</p>
-              </Fold>
-            )}
-          </div>
+        {/* 追问、要点、参考答案、考察点：一行折叠条，需要时才展开 */}
+        <div className="mt-3 flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1">
+          {current.followUps.length > 0 && (
+            <Fold title={t('questions.followUps')} count={current.followUps.length}>
+              <ul className="list-disc space-y-1 pl-4">
+                {current.followUps.map((f, i) => (
+                  <li key={i}>{f}</li>
+                ))}
+              </ul>
+            </Fold>
+          )}
+          {current.referencePoints.length > 0 && (
+            <Fold title={t('questions.referencePoints')} count={current.referencePoints.length}>
+              <ul className="list-disc space-y-1 pl-4">
+                {current.referencePoints.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            </Fold>
+          )}
+          {current.referenceAnswer?.trim() && (
+            <Fold title={t('questions.referenceAnswer')}>
+              <p className="whitespace-pre-wrap">{current.referenceAnswer}</p>
+            </Fold>
+          )}
+          {current.intent && (
+            <Fold title={t('questions.intent')}>
+              <p>{current.intent}</p>
+            </Fold>
+          )}
+        </div>
 
-          <button
-            type="button"
-            onClick={() => void handleRemove()}
-            className="mt-4 inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-zinc-400 hover:text-red-600"
+      </div>
+
+      {/* 记录区。位置固定，不随题目长短跳动 */}
+      <div className="shrink-0 border-t bg-zinc-50 px-10 py-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <Textarea
+          value={draft}
+          onChange={(e) => handleDraftChange(e.target.value)}
+          placeholder={t('questions.answerPlaceholder')}
+          autoFocus
+          className="max-h-[30vh] min-h-[68px] bg-white text-[15px] leading-relaxed dark:bg-zinc-900"
+        />
+
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => goTo(index - 1)}
+            disabled={index === 0}
+            className="cursor-pointer gap-1.5"
           >
-            <Trash2 className="h-3.5 w-3.5" />
-            {t('questions.remove')}
-          </button>
-        </aside>
+            <ChevronLeft className="h-4 w-4" />
+            {t('stage.prev')}
+          </Button>
+          <Button
+            onClick={() => (isLast ? void finish() : goTo(index + 1))}
+            className="cursor-pointer gap-1.5"
+          >
+            {isLast ? t('stage.recordFinish') : t('stage.recordNext')}
+            {!isLast && <ChevronRight className="h-4 w-4" />}
+          </Button>
+
+          <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-400">
+            <Kbd>⌘↵</Kbd> {t('stage.shortcutNext')}
+            <Kbd>esc</Kbd> {t('stage.shortcutExit')}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -422,18 +420,18 @@ function Fold({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <div>
+    <div className={cn(open && 'w-full')}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full cursor-pointer items-center gap-1.5 py-2 text-[11px] uppercase tracking-wide text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+        className="flex cursor-pointer items-center gap-1 py-1.5 text-[11px] uppercase tracking-wide text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
       >
         <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-90')} />
         {title}
         {count !== undefined && <span className="tabular-nums">· {count}</span>}
       </button>
       {open && (
-        <div className="pb-2.5 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+        <div className="pb-2 pl-4 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
           {children}
         </div>
       )}
