@@ -83,7 +83,7 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* 必须带 sm: 前缀：DialogContent 基类里的 sm:max-w-lg 是个 variant，
           tailwind-merge 不会拿无前缀的 max-w-* 去覆盖它，写 max-w-2xl 是无效的 */}
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{job ? t('editJob') : t('createJob')}</DialogTitle>
         </DialogHeader>

@@ -153,7 +153,7 @@ function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => vo
   if (state === 'saved') {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-        <Check className="h-3.5 w-3.5 text-emerald-600" />
+        <Check className="h-3.5 w-3.5 text-brand" />
         {t('saved')}
       </span>
     );

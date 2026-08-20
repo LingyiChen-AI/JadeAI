@@ -92,14 +92,14 @@ export function ResumePanel({ candidate, onUpdated }: ResumePanelProps) {
         <div className="flex items-center justify-end gap-3">
           {!dirty && text.trim() && (
             <span className="inline-flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-              <Check className="h-3.5 w-3.5 text-emerald-600" />
+              <Check className="h-3.5 w-3.5 text-brand" />
               {t('resume.saved')}
             </span>
           )}
           <Button
             onClick={handleSaveText}
             disabled={saving || !dirty}
-            className="cursor-pointer gap-2"
+            className="cursor-pointer gap-2 bg-brand hover:bg-brand-hover"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {t('resume.savePaste')}
