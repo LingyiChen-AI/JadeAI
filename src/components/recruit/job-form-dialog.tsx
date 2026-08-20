@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { DimensionChips } from './dimension-chips';
-import { defaultDimensions } from '@/lib/recruit/dimensions';
+import { defaultDimensions, fillPresetDescriptions } from '@/lib/recruit/dimensions';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import {
   QUESTION_COUNT_DEFAULT,
@@ -51,8 +51,11 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     setTitle(job?.title ?? '');
     setJobDescription(job?.jobDescription ?? '');
     setQuestionCount(job?.questionCount ?? QUESTION_COUNT_DEFAULT);
+    const describe = (key: string) => tDim(`descriptions.${key}`);
     setDimensions(
-      job?.dimensions ?? defaultDimensions((key) => tDim(key), (key) => tDim(`descriptions.${key}`)),
+      job?.dimensions
+        ? fillPresetDescriptions(job.dimensions, describe)
+        : defaultDimensions((key) => tDim(key), describe),
     );
   }, [open, job, tDim]);
 

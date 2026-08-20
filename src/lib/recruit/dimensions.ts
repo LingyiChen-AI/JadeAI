@@ -33,3 +33,23 @@ export function defaultDimensions(
     custom: false,
   }));
 }
+
+const PRESET_KEY_SET = new Set<string>(PRESET_DIMENSION_KEYS);
+
+/**
+ * 给缺考察重点的预置维度补上默认文案。
+ *
+ * description 是后加的字段，之前建的岗位存的那份 dimensions 里根本没有这个键，
+ * 打开编辑弹窗只能看到一个空输入框——看上去就像预置维度压根没有默认值。
+ * 自定义维度不补：它的描述本来就只能用户自己写。
+ */
+export function fillPresetDescriptions(
+  dimensions: DimensionConfig[],
+  describeOf: (key: string) => string,
+): DimensionConfig[] {
+  return dimensions.map((d) =>
+    d.custom || d.description?.trim() || !PRESET_KEY_SET.has(d.key)
+      ? d
+      : { ...d, description: describeOf(d.key) },
+  );
+}
