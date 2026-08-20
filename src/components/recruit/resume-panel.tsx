@@ -1,13 +1,13 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Upload, Loader2, Check } from 'lucide-react';
+import { Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ResumeDropzone } from './resume-dropzone';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import { getAIHeaders } from '@/stores/settings-store';
 import type { RecruitCandidate } from '@/types/recruit';
@@ -20,7 +20,6 @@ interface ResumePanelProps {
 export function ResumePanel({ candidate, onUpdated }: ResumePanelProps) {
   const t = useTranslations('recruit');
   const { fingerprint } = useFingerprint();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [text, setText] = useState(candidate.resumeText);
   const [saving, setSaving] = useState(false);
@@ -46,8 +45,6 @@ export function ResumePanel({ candidate, onUpdated }: ResumePanelProps) {
       toast.error(t('errors.parseFailed'));
     } finally {
       setUploading(false);
-      // 清空 input，否则同一个文件重传第二次不会触发 change
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }
 
@@ -74,43 +71,12 @@ export function ResumePanel({ candidate, onUpdated }: ResumePanelProps) {
   }
 
   // 上传 PDF 时服务端已经把解析结果落库了，此时 text 与库里一致。
-  // 只置灰按钮而不给任何提示的话，「有内容却点不动」看起来就是坏的，
-  // 所以把「已保存」显式画出来。
+  // 只置灰按钮而不给任何提示的话，「有内容却点不动」看起来就是坏的。
   const dirty = text !== candidate.resumeText;
 
   return (
-    <div className="space-y-6">
-      <Card className="p-6">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/pdf,image/png,image/jpeg,image/webp"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleFile(file);
-          }}
-        />
-        <div className="flex flex-col items-center gap-3 py-6 text-center">
-          {uploading ? (
-            <>
-              <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
-              <p className="text-sm text-zinc-500">{t('resume.parsing')}</p>
-            </>
-          ) : (
-            <>
-              <Upload className="h-8 w-8 text-zinc-400" />
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                className="cursor-pointer gap-2 bg-brand hover:bg-brand-hover"
-              >
-                {t('resume.upload')}
-              </Button>
-              <p className="text-xs text-zinc-400">{t('resume.uploadHint')}</p>
-            </>
-          )}
-        </div>
-      </Card>
+    <div className="space-y-5">
+      <ResumeDropzone uploading={uploading} onFile={handleFile} />
 
       <div className="space-y-2">
         <Label htmlFor="resume-text">{t('resume.paste')}</Label>
@@ -119,7 +85,9 @@ export function ResumePanel({ candidate, onUpdated }: ResumePanelProps) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={t('resume.pastePlaceholder')}
-          rows={16}
+          // Textarea 组件带 field-sizing-content，rows 属性会被无视，
+          // 必须用 min-h 抬高下限。
+          className="min-h-[320px]"
         />
         <div className="flex items-center justify-end gap-3">
           {!dirty && text.trim() && (
