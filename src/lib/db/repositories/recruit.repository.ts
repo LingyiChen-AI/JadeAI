@@ -4,6 +4,8 @@ import { recruitJobs, recruitCandidates, recruitEvaluations } from '../schema';
 import type { CandidateStatRow } from '@/lib/recruit/job-stats';
 import { countAnswered } from '@/lib/recruit/answers';
 import { normalizeQuestions } from '@/lib/recruit/questions';
+// 岗位和候选人 id 都进 URL，短 id 才念得出来；存量 UUID 继续可用
+import { shortId } from '@/lib/recruit/short-id';
 import type {
   CandidateStatus,
   CandidateSummary,
@@ -24,7 +26,7 @@ export const recruitRepository = {
     dimensions: DimensionConfig[];
     questionCount: number;
   }) {
-    const id = crypto.randomUUID();
+    const id = shortId();
     await db.insert(recruitJobs).values({
       id,
       userId: data.userId,
@@ -97,7 +99,7 @@ export const recruitRepository = {
   // ── Candidates ──────────────────────────────────────────────────────────────
 
   async createCandidate(data: { jobId: string; name: string }) {
-    const id = crypto.randomUUID();
+    const id = shortId();
     await db.insert(recruitCandidates).values({
       id,
       jobId: data.jobId,
@@ -217,7 +219,7 @@ export const recruitRepository = {
     await db
       .delete(recruitEvaluations)
       .where(eq(recruitEvaluations.candidateId, data.candidateId));
-    const id = crypto.randomUUID();
+    const id = shortId();
     await db.insert(recruitEvaluations).values({
       id,
       candidateId: data.candidateId,

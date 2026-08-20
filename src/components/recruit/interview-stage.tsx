@@ -296,7 +296,8 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
             )}
             {regenerating ? t('questions.generating') : t('questions.regenerate')}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => void finish()} className="cursor-pointer">
+          {/* 流程的正常终点，也是这个角落里唯一你真会点的——给主操作的重量 */}
+          <Button size="sm" onClick={() => void finish()} className="cursor-pointer">
             {t('stage.finish')}
           </Button>
           <button
