@@ -922,6 +922,19 @@
     "candidateCount": "{count} 位候选人",
     "save": "保存",
     "cancel": "取消",
+    "overview": {
+      "stats": "{total} 位候选人 · {evaluated} 已评价",
+      "avgScore": "均分 {score}",
+      "expandJd": "展开全文",
+      "collapseJd": "收起",
+      "compare": "候选人对比",
+      "selectCandidate": "从左侧选择一位候选人"
+    },
+    "steps": {
+      "resume": "简历",
+      "questions": "面试题",
+      "evaluation": "评价"
+    },
     "dimensions": {
       "title": "考察维度",
       "hint": "权重决定该维度出几道题，以及在总分里占多大比例",
@@ -945,6 +958,7 @@
       "add": "添加候选人",
       "name": "姓名",
       "namePlaceholder": "候选人姓名",
+      "search": "搜索候选人",
       "empty": "还没有候选人",
       "status": "状态",
       "score": "总分",
@@ -988,6 +1002,10 @@
       "empty": "还没有生成面试题",
       "copyAll": "复制全部题目",
       "copied": "已复制到剪贴板",
+      "summary": "共 {count} 题 · 预计 {minutes} 分钟",
+      "expandAll": "全部展开",
+      "collapseAll": "全部收起",
+      "asked": "已问",
       "remove": "删除此题",
       "intent": "考察点",
       "rubric": "评分标准",
@@ -1003,6 +1021,7 @@
       "transcript": "面试记录",
       "transcriptPlaceholder": "把整场面试的问答记录粘贴到这里，AI 会自动对应到各道题目并打分",
       "transcriptHint": "不需要逐题整理，速记或完整记录都可以",
+      "transcriptCollapsed": "面试记录（{chars} 字）· 展开编辑",
       "generate": "生成评价",
       "regenerate": "重新评价",
       "generating": "正在分析面试记录，约需 30-60 秒…",

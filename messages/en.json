@@ -922,6 +922,19 @@
     "candidateCount": "{count} candidates",
     "save": "Save",
     "cancel": "Cancel",
+    "overview": {
+      "stats": "{total} candidates · {evaluated} evaluated",
+      "avgScore": "Avg {score}",
+      "expandJd": "Show full JD",
+      "collapseJd": "Collapse",
+      "compare": "Candidate comparison",
+      "selectCandidate": "Pick a candidate on the left"
+    },
+    "steps": {
+      "resume": "Resume",
+      "questions": "Questions",
+      "evaluation": "Evaluation"
+    },
     "dimensions": {
       "title": "Competencies to assess",
       "hint": "Weight decides how many questions a competency gets and how much it counts toward the total",
@@ -945,6 +958,7 @@
       "add": "Add candidate",
       "name": "Name",
       "namePlaceholder": "Candidate name",
+      "search": "Search candidates",
       "empty": "No candidates yet",
       "status": "Status",
       "score": "Score",
@@ -988,6 +1002,10 @@
       "empty": "No questions generated yet",
       "copyAll": "Copy all questions",
       "copied": "Copied to clipboard",
+      "summary": "{count} questions · {minutes} min",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "asked": "Asked",
       "remove": "Remove question",
       "intent": "What it probes",
       "rubric": "Scoring rubric",
@@ -1003,6 +1021,7 @@
       "transcript": "Interview transcript",
       "transcriptPlaceholder": "Paste the whole interview here — AI will map answers to questions and score them",
       "transcriptHint": "No need to organize by question; rough notes work",
+      "transcriptCollapsed": "Transcript ({chars} chars) · Edit",
       "generate": "Generate evaluation",
       "regenerate": "Re-evaluate",
       "generating": "Analyzing the transcript, this takes 30-60 seconds…",
