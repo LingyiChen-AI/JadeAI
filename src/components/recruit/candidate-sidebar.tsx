@@ -66,6 +66,9 @@ export function CandidateSidebar({ jobId }: { jobId: string }) {
   const [deleteJobOpen, setDeleteJobOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState('');
+  // 重命名中的候选人：null 表示对话框关闭
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -113,6 +116,51 @@ export function CandidateSidebar({ jobId }: { jobId: string }) {
       setAddOpen(false);
       await load();
       router.push(`/recruit/${jobId}/c/${data.candidate.id}`);
+    } catch {
+      toast.error(t('errors.saveFailed'));
+    }
+  }
+
+  async function handleRenameCandidate() {
+    if (!renaming) return;
+    const name = renaming.name.trim();
+    if (!name) return;
+    try {
+      const res = await fetch(`/api/recruit/candidates/${renaming.id}`, {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}),
+        },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error('rename failed');
+      setCandidates((prev) =>
+        prev.map((c) => (c.id === renaming.id ? { ...c, name } : c)),
+      );
+      setRenaming(null);
+      // 右侧工作台顶部也显示姓名，刷新一下让它跟着变
+      router.refresh();
+    } catch {
+      toast.error(t('errors.saveFailed'));
+    }
+  }
+
+  async function handleDeleteCandidate() {
+    if (!deleteCandidateId) return;
+    const id = deleteCandidateId;
+    try {
+      const res = await fetch(`/api/recruit/candidates/${id}`, {
+        method: 'DELETE',
+        headers: fingerprint ? { 'x-fingerprint': fingerprint } : {},
+      });
+      if (!res.ok) throw new Error('delete failed');
+      setCandidates((prev) => prev.filter((c) => c.id !== id));
+      setDeleteCandidateId(null);
+      // 删掉的正是当前正在看的那个，就退回岗位概览，否则右侧会停在死链上
+      if (pathname.endsWith(`/c/${id}`)) {
+        router.push(`/recruit/${jobId}`);
+      }
     } catch {
       toast.error(t('errors.saveFailed'));
     }
@@ -199,31 +247,69 @@ export function CandidateSidebar({ jobId }: { jobId: string }) {
             const href = `/recruit/${jobId}/c/${c.id}`;
             const active = pathname.endsWith(`/c/${c.id}`);
             return (
-              <Link
+              // 菜单不能放进 Link 里（点菜单会连带导航），所以用 div 包一层，
+              // Link 只覆盖姓名那一段
+              <div
                 key={c.id}
-                href={href}
                 className={cn(
-                  'flex cursor-pointer items-center gap-2 rounded-lg border-l-2 px-3 py-2.5 transition-colors',
+                  'group flex items-center gap-1 rounded-lg border-l-2 pr-1 transition-colors',
                   active
                     ? 'border-brand bg-brand/5'
                     : 'border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800',
                 )}
               >
-                <span className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_DOT[c.status])} />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">{c.name || '—'}</span>
-                {c.overallScore !== null && (
-                  <span className="shrink-0 text-sm tabular-nums text-zinc-600 dark:text-zinc-300">
-                    {c.overallScore}
+                <Link
+                  href={href}
+                  className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 py-2.5 pl-3"
+                >
+                  <span className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_DOT[c.status])} />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {c.name || '—'}
                   </span>
-                )}
-                {c.recommendation && (
-                  <Badge
-                    className={cn('shrink-0 px-1.5 py-0 text-[10px]', RECOMMENDATION_STYLE[c.recommendation])}
+                  {c.overallScore !== null && (
+                    <span className="shrink-0 text-sm tabular-nums text-zinc-600 dark:text-zinc-300">
+                      {c.overallScore}
+                    </span>
+                  )}
+                  {c.recommendation && (
+                    <Badge
+                      className={cn(
+                        'shrink-0 px-1.5 py-0 text-[10px]',
+                        RECOMMENDATION_STYLE[c.recommendation],
+                      )}
+                    >
+                      {t(`recommendation.${c.recommendation}`)}
+                    </Badge>
+                  )}
+                </Link>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className="shrink-0 cursor-pointer rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-200 focus-visible:opacity-100 dark:hover:bg-zinc-700"
+                    aria-label={c.name}
                   >
-                    {t(`recommendation.${c.recommendation}`)}
-                  </Badge>
-                )}
-              </Link>
+                    <MoreVertical className="h-3.5 w-3.5 text-zinc-400" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setRenaming({ id: c.id, name: c.name });
+                      }}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      {tc('rename')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => setDeleteCandidateId(c.id)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {t('candidates.delete')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             );
           })}
         </nav>
@@ -248,6 +334,58 @@ export function CandidateSidebar({ jobId }: { jobId: string }) {
             <AlertDialogCancel className="cursor-pointer">{tc('cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteJob}
+              className="cursor-pointer bg-red-600 hover:bg-red-700"
+            >
+              {tc('delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={renaming !== null} onOpenChange={(open) => !open && setRenaming(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{tc('rename')}</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={renaming?.name ?? ''}
+            onChange={(e) =>
+              setRenaming((prev) => (prev ? { ...prev, name: e.target.value } : prev))
+            }
+            placeholder={t('candidates.namePlaceholder')}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRenameCandidate();
+            }}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenaming(null)} className="cursor-pointer">
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={handleRenameCandidate}
+              disabled={!renaming?.name.trim()}
+              className="cursor-pointer bg-brand hover:bg-brand-hover"
+            >
+              {t('save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={deleteCandidateId !== null}
+        onOpenChange={(open) => !open && setDeleteCandidateId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('candidates.delete')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('candidates.deleteConfirm')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">{tc('cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCandidate}
               className="cursor-pointer bg-red-600 hover:bg-red-700"
             >
               {tc('delete')}
