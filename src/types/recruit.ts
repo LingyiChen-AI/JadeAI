@@ -25,6 +25,8 @@ export interface InterviewQuestion {
   referencePoints: string[];
   estimatedMinutes: number;
   difficulty: QuestionDifficulty;
+  /** 面试中记录的候选人回答。空表示这题还没记。 */
+  answer?: string;
 }
 
 export interface DimensionScore {
