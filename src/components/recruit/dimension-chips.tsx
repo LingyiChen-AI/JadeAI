@@ -133,8 +133,7 @@ export function DimensionChips({ value, onChange, questionCount }: DimensionChip
                 {d.label}
               </span>
               <Slider
-                variant="brand"
-                className="min-w-0 flex-1 cursor-pointer"
+                  className="min-w-0 flex-1 cursor-pointer"
                 min={1}
                 max={5}
                 step={1}

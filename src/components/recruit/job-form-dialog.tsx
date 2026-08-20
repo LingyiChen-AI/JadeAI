@@ -124,7 +124,6 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
               {t('questionCount')}：{questionCount}
             </Label>
             <Slider
-              variant="brand"
               className="cursor-pointer"
               min={QUESTION_COUNT_MIN}
               max={QUESTION_COUNT_MAX}

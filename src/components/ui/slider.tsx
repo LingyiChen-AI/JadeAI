@@ -11,15 +11,8 @@ function Slider({
   value,
   min = 0,
   max = 100,
-  variant = "default",
   ...props
-}: React.ComponentProps<typeof SliderPrimitive.Root> & {
-  /**
-   * "brand" 让滑块跟随主题色。默认的 `primary` 是近黑色，摆在一屏
-   * 主题色控件中间会显得格格不入。
-   */
-  variant?: "default" | "brand"
-}) {
+}: React.ComponentProps<typeof SliderPrimitive.Root>) {
   const _values = React.useMemo(
     () => value ?? defaultValue ?? [min, max],
     [value, defaultValue, min, max]
@@ -44,22 +37,14 @@ function Slider({
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
-          className={cn(
-            "absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full",
-            variant === "brand" ? "bg-brand" : "bg-primary"
-          )}
+          className="bg-brand absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
         />
       </SliderPrimitive.Track>
       {Array.from({ length: _values.length }, (_, index) => (
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
-          className={cn(
-            "bg-background block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none",
-            variant === "brand"
-              ? "border-brand ring-brand-ring"
-              : "border-primary ring-ring/50"
-          )}
+          className="border-brand bg-background ring-brand-ring block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none"
         />
       ))}
     </SliderPrimitive.Root>
