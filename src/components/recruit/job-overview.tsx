@@ -1,0 +1,105 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CandidateCompareTable } from './candidate-compare-table';
+import { useFingerprint } from '@/hooks/use-fingerprint';
+import { allocateQuestions } from '@/lib/recruit/scoring';
+import { cn } from '@/lib/utils';
+import type { CandidateSummary, DimensionConfig, RecruitJob } from '@/types/recruit';
+
+export function JobOverview({ jobId }: { jobId: string }) {
+  const t = useTranslations('recruit');
+  const { fingerprint, isLoading: fpLoading } = useFingerprint();
+  const [job, setJob] = useState<RecruitJob | null>(null);
+  const [candidates, setCandidates] = useState<CandidateSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [jdExpanded, setJdExpanded] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/recruit/jobs/${jobId}`, {
+        headers: fingerprint ? { 'x-fingerprint': fingerprint } : {},
+      });
+      if (!res.ok) throw new Error('load failed');
+      const data = await res.json();
+      setJob(data.job);
+      setCandidates(data.candidates);
+    } catch {
+      toast.error(t('errors.loadFailed'));
+    } finally {
+      setLoading(false);
+    }
+  }, [jobId, fingerprint, t]);
+
+  useEffect(() => {
+    if (fpLoading) return;
+    load();
+  }, [fpLoading, load]);
+
+  if (loading) return <Skeleton className="h-64 rounded-xl" />;
+  if (!job) return null;
+
+  const dimensions = job.dimensions as DimensionConfig[];
+  const allocation = allocateQuestions(dimensions, job.questionCount);
+  const evaluated = candidates.filter((c) => c.overallScore !== null);
+  // 均分只算已评价的人；一个都没评价时不显示，避免出现「均分 0」的误导
+  const avgScore =
+    evaluated.length > 0
+      ? Math.round(evaluated.reduce((s, c) => s + (c.overallScore as number), 0) / evaluated.length)
+      : null;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-zinc-500">
+        <span>{t('overview.stats', { total: candidates.length, evaluated: evaluated.length })}</span>
+        {avgScore !== null && (
+          <span className="text-zinc-700 dark:text-zinc-300">
+            {t('overview.avgScore', { score: avgScore })}
+          </span>
+        )}
+      </div>
+
+      <Card className="p-5">
+        <h2 className="mb-2 text-sm font-medium">{t('jobDescription')}</h2>
+        <p
+          className={cn(
+            'whitespace-pre-wrap text-sm text-zinc-600 dark:text-zinc-400',
+            !jdExpanded && 'line-clamp-3',
+          )}
+        >
+          {job.jobDescription}
+        </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setJdExpanded((v) => !v)}
+          className="mt-1 h-auto cursor-pointer px-0 text-xs text-brand hover:bg-transparent hover:text-brand-hover"
+        >
+          {jdExpanded ? t('overview.collapseJd') : t('overview.expandJd')}
+        </Button>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {dimensions.map((d) => (
+            <span
+              key={d.key}
+              className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+            >
+              {d.label} ×{d.weight} · {t('dimensions.perDimension', { count: allocation[d.key] ?? 0 })}
+            </span>
+          ))}
+        </div>
+      </Card>
+
+      {evaluated.length >= 2 && (
+        <CandidateCompareTable jobId={jobId} dimensions={dimensions} evaluated={evaluated} />
+      )}
+
+      <p className="text-center text-sm text-zinc-400">{t('overview.selectCandidate')}</p>
+    </div>
+  );
+}
