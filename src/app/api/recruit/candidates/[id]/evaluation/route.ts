@@ -5,6 +5,7 @@ import { extractJson } from '@/lib/ai/extract-json';
 import { evaluationOutputSchema } from '@/lib/ai/recruit-schema';
 import { buildEvaluationPrompt } from '@/lib/ai/recruit-prompts';
 import { computeOverallScore } from '@/lib/recruit/scoring';
+import { hasAnyAnswer } from '@/lib/recruit/answers';
 import { recruitRepository } from '@/lib/db/repositories/recruit.repository';
 import { requireOwnedCandidate } from '@/lib/recruit/access';
 import type {
@@ -28,7 +29,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!questions.length) {
       return NextResponse.json({ error: 'Generate questions first' }, { status: 400 });
     }
-    if (!candidate.transcript?.trim()) {
+    // 逐题记录和粘贴整段记录二选一即可——只逐题记的场景 transcript 会是空的。
+    if (!candidate.transcript?.trim() && !hasAnyAnswer(questions)) {
       return NextResponse.json({ error: 'Interview transcript is required' }, { status: 400 });
     }
 
