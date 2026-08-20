@@ -49,7 +49,6 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
   const [index, setIndex] = useState(0);
   const [draft, setDraft] = useState('');
   const [saveState, setSaveState] = useState<SaveState>('idle');
-  const [answerOpen, setAnswerOpen] = useState(false);
   const [elapsed, setElapsed] = useState(0);
 
   const questions = useMemo(() => candidate?.questions ?? [], [candidate?.questions]);
@@ -149,7 +148,6 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
       void flush();
       setIndex(clamped);
       setDraft(questionsRef.current[clamped]?.answer ?? '');
-      setAnswerOpen(false);
     },
     [flush],
   );
@@ -258,133 +256,121 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
 
       {/* 整块内容限宽后一起居中。之前是左栏内部 mx-auto，于是在 1580px 宽的
           主区里内容只占 670px，左右各空 455px，加上侧栏就成了四段式，很散。 */}
-      <div className="mx-auto flex w-full min-h-0 max-w-[1180px] flex-1 flex-col gap-5 px-5 py-5 lg:flex-row">
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border bg-white px-7 py-6 dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Badge variant="outline" className={color.chip}>
-              <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
-              {label}
-            </Badge>
-            <span className="text-xs text-zinc-400">
-              {current.difficulty} · {t('questions.minutes', { count: current.estimatedMinutes })}
-            </span>
-            <span className="ml-auto">
-              <SaveIndicator state={saveState} onRetry={() => void flush()} />
-            </span>
-          </div>
+      {/* 两张卡各自贴合内容、顶端对齐。之前让卡撑满高度、内容垂直居中，
+          结果是一大片空白被边框圈起来，看着像渲染坏了。 */}
+      <div className="mx-auto flex w-full min-h-0 max-w-[1140px] flex-1 flex-col items-start gap-5 overflow-y-auto px-5 py-6 lg:flex-row">
+        {/* 内容少时垂直居中，多时正常滚动。min-h-full + justify-center 是
+            标准解法——直接用 m-auto 在溢出时会把顶部裁掉。 */}
+        <main className="w-full min-w-0 flex-1 rounded-xl border bg-white px-8 py-7 dark:border-zinc-800 dark:bg-zinc-900">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className={color.chip}>
+                <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
+                {label}
+              </Badge>
+              <span className="text-xs text-zinc-400">
+                {current.difficulty} · {t('questions.minutes', { count: current.estimatedMinutes })}
+              </span>
+              <span className="ml-auto">
+                <SaveIndicator state={saveState} onRetry={() => void flush()} />
+              </span>
+            </div>
 
-          {/* 题干可能很长（十几行的场景真实存在），单独给它一段可滚区域，
-              不让它把答案框挤出屏幕 */}
-          <h1 className="mt-3 max-h-[38vh] shrink-0 overflow-y-auto text-[20px] font-semibold leading-[1.6] tracking-[-0.01em]">
-            {current.question}
-          </h1>
+            <h1 className="mt-4 text-[20px] font-semibold leading-[1.65] tracking-[-0.01em]">
+              {current.question}
+            </h1>
 
-          {/* 答案框吃掉剩下的全部高度。固定高度会在底部留一大片空白 */}
-          <Textarea
-            value={draft}
-            onChange={(e) => handleDraftChange(e.target.value)}
-            placeholder={t('questions.answerPlaceholder')}
-            autoFocus
-            className="mt-4 min-h-[160px] flex-1 resize-none border-2 border-brand bg-white text-[15px] leading-relaxed focus-visible:ring-0 dark:bg-zinc-900"
-          />
+            {/* 输入框跟着内容长，空的时候就该小。之前用 flex-1 撑满剩余高度，
+                结果全屏最抢眼的东西是一个 500px 高的空框。 */}
+            <Textarea
+              value={draft}
+              onChange={(e) => handleDraftChange(e.target.value)}
+              placeholder={t('questions.answerPlaceholder')}
+              autoFocus
+              className="mt-5 max-h-[40vh] min-h-[140px] bg-white text-[15px] leading-relaxed dark:bg-zinc-900"
+            />
 
-          <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => goTo(index - 1)}
-              disabled={index === 0}
-              className="cursor-pointer gap-1.5"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              {t('stage.prev')}
-            </Button>
-            <Button
-              onClick={() => (isLast ? void finish() : goTo(index + 1))}
-              className="cursor-pointer gap-1.5"
-            >
-              {isLast ? t('stage.recordFinish') : t('stage.recordNext')}
-              {!isLast && <ChevronRight className="h-4 w-4" />}
-            </Button>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => goTo(index - 1)}
+                disabled={index === 0}
+                className="cursor-pointer gap-1.5"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                {t('stage.prev')}
+              </Button>
+              <Button
+                onClick={() => (isLast ? void finish() : goTo(index + 1))}
+                className="cursor-pointer gap-1.5"
+              >
+                {isLast ? t('stage.recordFinish') : t('stage.recordNext')}
+                {!isLast && <ChevronRight className="h-4 w-4" />}
+              </Button>
 
-            <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-400">
-              <Kbd>⌘↵</Kbd> {t('stage.shortcutNext')}
-              <Kbd>esc</Kbd> {t('stage.shortcutExit')}
-            </span>
+              <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-400">
+                <Kbd>⌘↵</Kbd> {t('stage.shortcutNext')}
+                <Kbd>esc</Kbd> {t('stage.shortcutExit')}
+              </span>
+            </div>
           </div>
         </main>
 
-        <aside className="min-h-0 shrink-0 overflow-y-auto rounded-xl border bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 lg:w-[330px]">
-          {/* 考察点挪到这里。它是给面试官瞟的元信息，不是要念的，
-              压在题干下面就成了第二堵墙 */}
-          {current.intent && (
-            <Section title={t('questions.intent')}>
-              <p className="text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
-                {current.intent}
-              </p>
-            </Section>
-          )}
-
-          <Section title={t('questions.rubric')}>
-            <div className="grid gap-2">
-              {(['excellent', 'pass', 'fail'] as const).map((level) => (
-                <div key={level} className="flex gap-2">
-                  <span className={cn('w-0.5 shrink-0 rounded-full', RUBRIC_BAR[level])} />
-                  <p className="text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-                    <span className="text-zinc-500 dark:text-zinc-400">
-                      {t(`questions.${level}`)}：
-                    </span>
-                    {current.rubric[level]}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Section>
-
-          {current.followUps.length > 0 && (
-            <Section title={t('questions.followUps')}>
-              <ul className="list-disc space-y-1 pl-4 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-                {current.followUps.map((f, i) => (
-                  <li key={i}>{f}</li>
-                ))}
-              </ul>
-            </Section>
-          )}
-
-          {current.referencePoints.length > 0 && (
-            <Section title={t('questions.referencePoints')}>
-              <ul className="list-disc space-y-1 pl-4 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-                {current.referencePoints.map((r, i) => (
-                  <li key={i}>{r}</li>
-                ))}
-              </ul>
-            </Section>
-          )}
-
-          {/* 参考答案默认折叠——先听候选人怎么说 */}
-          {current.referenceAnswer?.trim() && (
-            <div className="mt-4 rounded-lg border dark:border-zinc-800">
-              <button
-                type="button"
-                onClick={() => setAnswerOpen((v) => !v)}
-                className="flex w-full cursor-pointer items-center gap-1.5 px-3 py-2 text-[11px] uppercase tracking-wide text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-              >
-                <ChevronRight
-                  className={cn('h-3.5 w-3.5 transition-transform', answerOpen && 'rotate-90')}
-                />
-                {t('questions.referenceAnswer')}
-              </button>
-              {answerOpen && (
-                <p className="whitespace-pre-wrap border-t px-3 py-2 text-[13px] leading-relaxed text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
-                  {current.referenceAnswer}
+        {/* 右栏分层：评分标准是面试中唯一真的要一直瞟的，常驻；
+            其余全部折叠。之前八段小字平铺，是一堵没人会读的墙。 */}
+        <aside className="w-full shrink-0 rounded-xl border bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 lg:w-[310px]">
+          <p className="mb-2 text-[11px] uppercase tracking-wide text-zinc-400">
+            {t('questions.rubric')}
+          </p>
+          <div className="grid gap-2">
+            {(['excellent', 'pass', 'fail'] as const).map((level) => (
+              <div key={level} className="flex gap-2">
+                <span className={cn('w-0.5 shrink-0 rounded-full', RUBRIC_BAR[level])} />
+                <p className="text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+                  <span className="text-zinc-500 dark:text-zinc-400">
+                    {t(`questions.${level}`)}：
+                  </span>
+                  {current.rubric[level]}
                 </p>
-              )}
-            </div>
-          )}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 divide-y border-t dark:divide-zinc-800 dark:border-zinc-800">
+            {current.followUps.length > 0 && (
+              <Fold title={t('questions.followUps')} count={current.followUps.length}>
+                <ul className="list-disc space-y-1 pl-4">
+                  {current.followUps.map((f, i) => (
+                    <li key={i}>{f}</li>
+                  ))}
+                </ul>
+              </Fold>
+            )}
+            {current.referencePoints.length > 0 && (
+              <Fold title={t('questions.referencePoints')} count={current.referencePoints.length}>
+                <ul className="list-disc space-y-1 pl-4">
+                  {current.referencePoints.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              </Fold>
+            )}
+            {current.referenceAnswer?.trim() && (
+              <Fold title={t('questions.referenceAnswer')}>
+                <p className="whitespace-pre-wrap">{current.referenceAnswer}</p>
+              </Fold>
+            )}
+            {current.intent && (
+              <Fold title={t('questions.intent')}>
+                <p>{current.intent}</p>
+              </Fold>
+            )}
+          </div>
 
           <button
             type="button"
             onClick={() => void handleRemove()}
-            className="mt-5 inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-zinc-400 hover:text-red-600"
+            className="mt-4 inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-zinc-400 hover:text-red-600"
           >
             <Trash2 className="h-3.5 w-3.5" />
             {t('questions.remove')}
@@ -428,11 +414,33 @@ function Kbd({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+/** 右栏的折叠条。默认收起，标题行只占 32px。 */
+function Fold({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count?: number;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="mb-4">
-      <p className="mb-1.5 text-[11px] uppercase tracking-wide text-zinc-400">{title}</p>
-      {children}
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full cursor-pointer items-center gap-1.5 py-2 text-[11px] uppercase tracking-wide text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+      >
+        <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-90')} />
+        {title}
+        {count !== undefined && <span className="tabular-nums">· {count}</span>}
+      </button>
+      {open && (
+        <div className="pb-2.5 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+          {children}
+        </div>
+      )}
     </div>
   );
 }

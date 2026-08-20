@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   ChevronLeft,
@@ -77,8 +77,6 @@ export function CandidateList({ jobId }: { jobId: string }) {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [jdExpanded, setJdExpanded] = useState(false);
-  const [jdClamped, setJdClamped] = useState(false);
-  const jdRef = useRef<HTMLParagraphElement>(null);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteJobOpen, setDeleteJobOpen] = useState(false);
@@ -107,13 +105,6 @@ export function CandidateList({ jobId }: { jobId: string }) {
     if (fpLoading) return;
     load();
   }, [fpLoading, load]);
-
-  useEffect(() => {
-    const el = jdRef.current;
-    if (!el) return;
-    // line-clamp 截断时 scrollHeight 会大于 clientHeight；+1 抵消亚像素误差
-    setJdClamped(el.scrollHeight > el.clientHeight + 1);
-  }, [job?.jobDescription, jdExpanded]);
 
   const sorted = useMemo(() => {
     const filtered = query.trim()
@@ -245,37 +236,41 @@ export function CandidateList({ jobId }: { jobId: string }) {
         </div>
       </div>
 
-      <Card className="p-4">
-        <p
-          ref={jdRef}
-          className={cn(
-            'whitespace-pre-wrap text-sm text-zinc-600 dark:text-zinc-400',
-            !jdExpanded && 'line-clamp-2',
-          )}
-        >
-          {job.jobDescription}
-        </p>
-        {(jdClamped || jdExpanded) && (
-          <button
-            type="button"
-            onClick={() => setJdExpanded((v) => !v)}
-            className="mt-1 cursor-pointer self-start text-xs text-brand hover:text-brand-hover"
-          >
-            {jdExpanded ? t('overview.collapseJd') : t('overview.expandJd')}
-          </button>
-        )}
-        <div className="mt-3 flex flex-wrap gap-1.5">
+      {/* JD 和维度收成一行摘要。这一页的任务是「找到人 → 点按钮」，
+          JD 你早就知道了，它不该占最大的面积。想看点「展开 JD」。 */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
+        <span>{t('overview.stats', { total: candidates.length, evaluated: evaluated.length })}</span>
+        <span className="text-zinc-300 dark:text-zinc-700">·</span>
+        <span>{t('dimensions.perDimension', { count: job.questionCount })}</span>
+        <span className="text-zinc-300 dark:text-zinc-700">·</span>
+        <span className="inline-flex flex-wrap items-center gap-1.5">
           {dimensions.map((d) => (
             <span
               key={d.key}
-              className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+              title={`${d.label} · ${t('dimensions.perDimension', { count: allocation[d.key] ?? 0 })}`}
+              className="inline-flex items-center gap-1"
             >
               <span className={cn('h-1.5 w-1.5 rounded-full', dimensionColor(d.key).dot)} />
-              {d.label} · {t('dimensions.perDimension', { count: allocation[d.key] ?? 0 })}
+              {d.label}
             </span>
           ))}
-        </div>
-      </Card>
+        </span>
+        <button
+          type="button"
+          onClick={() => setJdExpanded((v) => !v)}
+          className="cursor-pointer text-brand hover:text-brand-hover"
+        >
+          {jdExpanded ? t('overview.collapseJd') : t('overview.expandJd')}
+        </button>
+      </div>
+
+      {jdExpanded && (
+        <Card className="p-4">
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+            {job.jobDescription}
+          </p>
+        </Card>
+      )}
 
       <div className="flex gap-2">
         <div className="relative flex-1">
