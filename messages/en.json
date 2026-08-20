@@ -911,6 +911,11 @@
     "subtitle": "Upload a JD and resumes, generate questions, score the interview",
     "empty": "No roles yet — create one to get started",
     "createJob": "New role",
+    "stats": {
+      "candidates": "Candidates",
+      "interviewed": "Interviewed",
+      "passed": "Passed"
+    },
     "editJob": "Edit role",
     "deleteJob": "Delete role",
     "deleteJobConfirm": "Deleting this role also deletes every candidate and evaluation under it. This cannot be undone. Continue?",

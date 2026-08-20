@@ -85,9 +85,9 @@ export function ResumePanel({ candidate, onUpdated }: ResumePanelProps) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={t('resume.pastePlaceholder')}
-          // Textarea 组件带 field-sizing-content，rows 属性会被无视，
-          // 必须用 min-h 抬高下限。
-          className="min-h-[320px]"
+          // Textarea 带 field-sizing-content，rows 无效，必须用 min-h 抬下限。
+          // max-h 同样必要：简历动辄上千字，不封顶的话输入框会一路撑到几千像素。
+          className="max-h-[480px] min-h-[320px] overflow-y-auto"
         />
         <div className="flex items-center justify-end gap-3">
           {!dirty && text.trim() && (

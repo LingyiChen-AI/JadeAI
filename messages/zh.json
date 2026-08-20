@@ -911,6 +911,11 @@
     "subtitle": "上传 JD 与简历，生成面试题，面完打分",
     "empty": "还没有岗位，先创建一个",
     "createJob": "新建岗位",
+    "stats": {
+      "candidates": "候选人",
+      "interviewed": "已面",
+      "passed": "通过"
+    },
     "editJob": "编辑岗位",
     "deleteJob": "删除岗位",
     "deleteJobConfirm": "删除岗位会一并删除它下面的所有候选人和评价，无法恢复。确定继续吗？",

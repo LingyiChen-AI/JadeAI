@@ -1,6 +1,7 @@
 import { eq, desc } from 'drizzle-orm';
 import { db } from '../index';
 import { recruitJobs, recruitCandidates, recruitEvaluations } from '../schema';
+import type { CandidateStatRow } from '@/lib/recruit/job-stats';
 import type {
   CandidateStatus,
   CandidateSummary,
@@ -44,6 +45,29 @@ export const recruitRepository = {
       .from(recruitJobs)
       .where(eq(recruitJobs.userId, userId))
       .orderBy(desc(recruitJobs.createdAt));
+  },
+
+  /**
+   * 该用户名下所有候选人的「岗位 + 评价结论」明细，供岗位列表卡片统计用。
+   *
+   * 一次查询取全量再在 JS 里聚合：单个用户的候选人总量很小，
+   * 而聚合 SQL 在 SQLite 与 PG 之间要额外小心，不值得引方言分支。
+   */
+  async findCandidateStatsByUserId(userId: string): Promise<CandidateStatRow[]> {
+    const rows = await db
+      .select({
+        jobId: recruitCandidates.jobId,
+        recommendation: recruitEvaluations.recommendation,
+      })
+      .from(recruitCandidates)
+      .innerJoin(recruitJobs, eq(recruitJobs.id, recruitCandidates.jobId))
+      .leftJoin(recruitEvaluations, eq(recruitEvaluations.candidateId, recruitCandidates.id))
+      .where(eq(recruitJobs.userId, userId));
+
+    return rows.map((r: any) => ({
+      jobId: r.jobId as string,
+      recommendation: (r.recommendation ?? null) as Recommendation | null,
+    }));
   },
 
   async updateJob(

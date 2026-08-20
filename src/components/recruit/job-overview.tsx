@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { useRouter } from '@/i18n/routing';
+import { Button } from '@/components/ui/button';
+import { JobFormDialog } from './job-form-dialog';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CandidateCompareTable } from './candidate-compare-table';
@@ -13,11 +17,14 @@ import type { CandidateSummary, DimensionConfig, RecruitJob } from '@/types/recr
 
 export function JobOverview({ jobId }: { jobId: string }) {
   const t = useTranslations('recruit');
+  const tc = useTranslations('common');
+  const router = useRouter();
   const { fingerprint, isLoading: fpLoading } = useFingerprint();
   const [job, setJob] = useState<RecruitJob | null>(null);
   const [candidates, setCandidates] = useState<CandidateSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [jdExpanded, setJdExpanded] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const jdRef = useRef<HTMLParagraphElement>(null);
   const [jdClamped, setJdClamped] = useState(false);
 
@@ -80,7 +87,18 @@ export function JobOverview({ jobId }: { jobId: string }) {
       </div>
 
       <Card className="p-5">
-        <h2 className="mb-2 text-sm font-medium">{t('jobDescription')}</h2>
+        <div className="mb-2 flex flex-row items-center justify-between gap-2">
+          <h2 className="text-sm font-medium">{t('jobDescription')}</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditOpen(true)}
+            className="h-7 cursor-pointer gap-1.5 text-xs"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            {tc('edit')}
+          </Button>
+        </div>
         <p
           ref={jdRef}
           className={cn(
@@ -111,6 +129,19 @@ export function JobOverview({ jobId }: { jobId: string }) {
           ))}
         </div>
       </Card>
+
+      {job && (
+        <JobFormDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          job={job}
+          onSaved={(updated) => {
+            setJob(updated);
+            // 侧栏也显示岗位名，让它跟着刷新
+            router.refresh();
+          }}
+        />
+      )}
 
       {evaluated.length >= 2 && (
         <CandidateCompareTable jobId={jobId} dimensions={dimensions} evaluated={evaluated} />
