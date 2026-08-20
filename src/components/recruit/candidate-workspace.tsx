@@ -49,7 +49,7 @@ export function CandidateWorkspace({ jobId, candidateId }: CandidateWorkspacePro
     load();
   }, [fpLoading, load]);
 
-  if (loading) return <Skeleton className="h-96" />;
+  if (loading) return <Skeleton className="h-96 rounded-xl" />;
   if (!candidate || !job) return null;
 
   return (
@@ -57,20 +57,20 @@ export function CandidateWorkspace({ jobId, candidateId }: CandidateWorkspacePro
       <div>
         <Link
           href={`/recruit/${jobId}`}
-          className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="inline-flex cursor-pointer items-center text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
         >
           <ChevronLeft className="h-4 w-4" />
           {job.title}
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold">{candidate.name || '—'}</h1>
+        <h1 className="mt-2 text-2xl font-bold">{candidate.name || '—'}</h1>
         <p className="mt-1 text-sm text-zinc-500">{t(`status.${candidate.status}`)}</p>
       </div>
 
       <Tabs defaultValue="resume">
         <TabsList>
-          <TabsTrigger value="resume">{t('tabs.resume')}</TabsTrigger>
-          <TabsTrigger value="questions">{t('tabs.questions')}</TabsTrigger>
-          <TabsTrigger value="evaluation">{t('tabs.evaluation')}</TabsTrigger>
+          <TabsTrigger value="resume" className="cursor-pointer">{t('tabs.resume')}</TabsTrigger>
+          <TabsTrigger value="questions" className="cursor-pointer">{t('tabs.questions')}</TabsTrigger>
+          <TabsTrigger value="evaluation" className="cursor-pointer">{t('tabs.evaluation')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="resume" className="mt-6">

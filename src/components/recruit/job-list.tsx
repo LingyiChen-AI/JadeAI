@@ -40,34 +40,34 @@ export function JobList() {
   }, [fpLoading, load]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
+    <div>
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{t('title')}</h1>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-foreground">{t('title')}</h1>
           <p className="mt-1 text-sm text-zinc-500">{t('subtitle')}</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-1 h-4 w-4" />
+        <Button onClick={() => setDialogOpen(true)} className="cursor-pointer gap-2 bg-brand hover:bg-brand-hover">
+          <Plus className="h-4 w-4" />
           {t('createJob')}
         </Button>
       </div>
 
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-32" />
+            <Skeleton key={i} className="h-48 rounded-xl" />
           ))}
         </div>
       ) : jobs.length === 0 ? (
-        <Card className="flex flex-col items-center gap-3 p-12 text-center">
-          <Briefcase className="h-8 w-8 text-zinc-400" />
-          <p className="text-sm text-zinc-500">{t('empty')}</p>
-        </Card>
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 py-16">
+          <Briefcase className="mb-3 h-8 w-8 text-zinc-400" />
+          <p className="text-zinc-500 dark:text-zinc-400">{t('empty')}</p>
+        </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {jobs.map((job) => (
-            <Link key={job.id} href={`/recruit/${job.id}`}>
-              <Card className="h-full p-5 transition-colors hover:border-brand">
+            <Link key={job.id} href={`/recruit/${job.id}`} className="block">
+              <Card className="h-full cursor-pointer p-5 transition-colors hover:border-brand">
                 <h3 className="truncate font-medium">{job.title}</h3>
                 <p className="mt-2 line-clamp-2 text-xs text-zinc-500">{job.jobDescription}</p>
                 <p className="mt-4 text-xs text-zinc-400">

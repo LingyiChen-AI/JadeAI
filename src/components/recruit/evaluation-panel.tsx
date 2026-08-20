@@ -9,6 +9,16 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { DimensionRadar } from './dimension-radar';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import { getAIHeaders } from '@/stores/settings-store';
@@ -35,15 +45,25 @@ export function EvaluationPanel({
   onEvaluated,
 }: EvaluationPanelProps) {
   const t = useTranslations('recruit');
+  const tc = useTranslations('common');
   const { fingerprint } = useFingerprint();
   const [transcript, setTranscript] = useState(candidate.transcript);
   const [generating, setGenerating] = useState(false);
+  const [regenerateOpen, setRegenerateOpen] = useState(false);
 
   const hasQuestions = (candidate.questions ?? []).length > 0;
   const answeredCount = evaluation?.questionEvaluations.filter((q) => q.answered).length ?? 0;
 
-  async function handleGenerate() {
-    if (evaluation && !confirm(t('evaluation.regenerateConfirm'))) return;
+  function handleGenerate() {
+    if (evaluation) {
+      setRegenerateOpen(true);
+      return;
+    }
+    doGenerate();
+  }
+
+  async function doGenerate() {
+    setRegenerateOpen(false);
     setGenerating(true);
     try {
       // 先存记录再评价：接口从库里读 transcript，不从请求体读。
@@ -77,7 +97,9 @@ export function EvaluationPanel({
 
   if (!hasQuestions) {
     return (
-      <Card className="p-10 text-center text-sm text-zinc-500">{t('evaluation.needQuestions')}</Card>
+      <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 py-16">
+        <p className="text-zinc-500 dark:text-zinc-400">{t('evaluation.needQuestions')}</p>
+      </div>
     );
   }
 
@@ -94,11 +116,15 @@ export function EvaluationPanel({
           rows={12}
         />
         <div className="flex justify-end">
-          <Button onClick={handleGenerate} disabled={generating || !transcript.trim()}>
+          <Button
+            onClick={handleGenerate}
+            disabled={generating || !transcript.trim()}
+            className="cursor-pointer gap-2 bg-brand hover:bg-brand-hover"
+          >
             {generating ? (
-              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Sparkles className="mr-1 h-4 w-4" />
+              <Sparkles className="h-4 w-4" />
             )}
             {evaluation ? t('evaluation.regenerate') : t('evaluation.generate')}
           </Button>
@@ -106,11 +132,16 @@ export function EvaluationPanel({
       </div>
 
       {generating && (
-        <Card className="p-10 text-center text-sm text-zinc-500">{t('evaluation.generating')}</Card>
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 py-16">
+          <Loader2 className="mb-3 h-6 w-6 animate-spin text-zinc-400" />
+          <p className="text-zinc-500 dark:text-zinc-400">{t('evaluation.generating')}</p>
+        </div>
       )}
 
       {!generating && !evaluation && (
-        <Card className="p-10 text-center text-sm text-zinc-500">{t('evaluation.empty')}</Card>
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 py-16">
+          <p className="text-zinc-500 dark:text-zinc-400">{t('evaluation.empty')}</p>
+        </div>
       )}
 
       {!generating && evaluation && (
@@ -224,6 +255,21 @@ export function EvaluationPanel({
           </div>
         </div>
       )}
+
+      <AlertDialog open={regenerateOpen} onOpenChange={setRegenerateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tc('confirm')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('evaluation.regenerateConfirm')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">{tc('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={doGenerate} className="cursor-pointer bg-brand hover:bg-brand-hover">
+              {tc('confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

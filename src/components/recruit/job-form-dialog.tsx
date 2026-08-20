@@ -129,10 +129,14 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="cursor-pointer">
             {t('cancel')}
           </Button>
-          <Button onClick={handleSave} disabled={!canSave}>
+          <Button
+            onClick={handleSave}
+            disabled={!canSave}
+            className="cursor-pointer bg-brand hover:bg-brand-hover"
+          >
             {t('save')}
           </Button>
         </DialogFooter>

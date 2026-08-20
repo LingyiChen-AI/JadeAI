@@ -68,6 +68,7 @@ export function DimensionEditor({ value, onChange, questionCount }: DimensionEdi
               <Switch
                 checked={Boolean(selected)}
                 onCheckedChange={(on) => togglePreset(key, on)}
+                className="cursor-pointer"
               />
               <span className="w-24 shrink-0 text-sm">{t(key)}</span>
               {selected && (
@@ -113,7 +114,12 @@ export function DimensionEditor({ value, onChange, questionCount }: DimensionEdi
                 {t('perDimension', { count: allocation[d.key] ?? 0 })}
               </span>
             )}
-            <Button variant="ghost" size="icon-sm" onClick={() => removeCustom(d.key)}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => removeCustom(d.key)}
+              className="cursor-pointer"
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -132,8 +138,8 @@ export function DimensionEditor({ value, onChange, questionCount }: DimensionEdi
             }
           }}
         />
-        <Button type="button" variant="outline" onClick={addCustom}>
-          <Plus className="mr-1 h-4 w-4" />
+        <Button type="button" variant="outline" onClick={addCustom} className="cursor-pointer gap-2">
+          <Plus className="h-4 w-4" />
           {t('addCustom')}
         </Button>
       </div>

@@ -8,6 +8,16 @@ import { Link } from '@/i18n/routing';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import type { CandidateSummary, Recommendation } from '@/types/recruit';
 
@@ -26,31 +36,37 @@ interface CandidateTableProps {
 
 export function CandidateTable({ jobId, candidates, onDeleted }: CandidateTableProps) {
   const t = useTranslations('recruit');
+  const tc = useTranslations('common');
   const { fingerprint } = useFingerprint();
   const [sortByScore, setSortByScore] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // 未评价的排最后：没分数的人挤在有分数的人中间，横向对比就没法看了。
   const sorted = sortByScore
     ? [...candidates].sort((a, b) => (b.overallScore ?? -1) - (a.overallScore ?? -1))
     : candidates;
 
-  async function handleDelete(candidateId: string) {
-    if (!confirm(t('candidates.deleteConfirm'))) return;
+  async function handleDelete() {
+    if (!deleteId) return;
     try {
-      const res = await fetch(`/api/recruit/candidates/${candidateId}`, {
+      const res = await fetch(`/api/recruit/candidates/${deleteId}`, {
         method: 'DELETE',
         headers: fingerprint ? { 'x-fingerprint': fingerprint } : {},
       });
       if (!res.ok) throw new Error('delete failed');
-      onDeleted(candidateId);
+      onDeleted(deleteId);
     } catch {
       toast.error(t('errors.saveFailed'));
+    } finally {
+      setDeleteId(null);
     }
   }
 
   if (candidates.length === 0) {
     return (
-      <Card className="p-10 text-center text-sm text-zinc-500">{t('candidates.empty')}</Card>
+      <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 py-16">
+        <p className="text-zinc-500 dark:text-zinc-400">{t('candidates.empty')}</p>
+      </div>
     );
   }
 
@@ -63,7 +79,7 @@ export function CandidateTable({ jobId, candidates, onDeleted }: CandidateTableP
             <th className="px-4 py-3 font-medium">{t('candidates.status')}</th>
             <th className="px-4 py-3 font-medium">
               <button
-                className="inline-flex items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-100"
+                className="inline-flex cursor-pointer items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-100"
                 onClick={() => setSortByScore((v) => !v)}
               >
                 {t('candidates.score')}
@@ -80,7 +96,7 @@ export function CandidateTable({ jobId, candidates, onDeleted }: CandidateTableP
               <td className="px-4 py-3">
                 <Link
                   href={`/recruit/${jobId}/c/${c.id}`}
-                  className="font-medium hover:text-brand"
+                  className="cursor-pointer font-medium hover:text-brand"
                 >
                   {c.name || '—'}
                 </Link>
@@ -99,7 +115,12 @@ export function CandidateTable({ jobId, candidates, onDeleted }: CandidateTableP
                 )}
               </td>
               <td className="px-4 py-3">
-                <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(c.id)}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="cursor-pointer"
+                  onClick={() => setDeleteId(c.id)}
+                >
                   <Trash2 className="h-4 w-4 text-zinc-400" />
                 </Button>
               </td>
@@ -107,6 +128,21 @@ export function CandidateTable({ jobId, candidates, onDeleted }: CandidateTableP
           ))}
         </tbody>
       </table>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tc('delete')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('candidates.deleteConfirm')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">{tc('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="cursor-pointer bg-red-600 hover:bg-red-700">
+              {tc('delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

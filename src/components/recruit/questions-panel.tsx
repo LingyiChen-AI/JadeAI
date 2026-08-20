@@ -5,7 +5,16 @@ import { useTranslations } from 'next-intl';
 import { Sparkles, Copy, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { QuestionCard } from './question-card';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import { getAIHeaders } from '@/stores/settings-store';
@@ -19,15 +28,25 @@ interface QuestionsPanelProps {
 
 export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProps) {
   const t = useTranslations('recruit');
+  const tc = useTranslations('common');
   const { fingerprint } = useFingerprint();
   const [generating, setGenerating] = useState(false);
+  const [regenerateOpen, setRegenerateOpen] = useState(false);
 
   const dimensions: DimensionConfig[] = candidate.dimensionsOverride ?? job.dimensions;
   const questions = candidate.questions ?? [];
   const hasResume = Boolean(candidate.resumeText?.trim());
 
-  async function handleGenerate() {
-    if (questions.length > 0 && !confirm(t('questions.regenerateConfirm'))) return;
+  function handleGenerate() {
+    if (questions.length > 0) {
+      setRegenerateOpen(true);
+      return;
+    }
+    doGenerate();
+  }
+
+  async function doGenerate() {
+    setRegenerateOpen(false);
     setGenerating(true);
     try {
       const res = await fetch(`/api/recruit/candidates/${candidate.id}/questions`, {
@@ -88,24 +107,32 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
   }
 
   if (!hasResume) {
-    return <Card className="p-10 text-center text-sm text-zinc-500">{t('questions.needResume')}</Card>;
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 py-16">
+        <p className="text-zinc-500 dark:text-zinc-400">{t('questions.needResume')}</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
-          <Button onClick={handleGenerate} disabled={generating}>
+          <Button
+            onClick={handleGenerate}
+            disabled={generating}
+            className="cursor-pointer gap-2 bg-brand hover:bg-brand-hover"
+          >
             {generating ? (
-              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Sparkles className="mr-1 h-4 w-4" />
+              <Sparkles className="h-4 w-4" />
             )}
             {questions.length > 0 ? t('questions.regenerate') : t('questions.generate')}
           </Button>
           {questions.length > 0 && (
-            <Button variant="outline" onClick={handleCopyAll}>
-              <Copy className="mr-1 h-4 w-4" />
+            <Button variant="outline" onClick={handleCopyAll} className="cursor-pointer gap-2">
+              <Copy className="h-4 w-4" />
               {t('questions.copyAll')}
             </Button>
           )}
@@ -113,11 +140,16 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
       </div>
 
       {generating && (
-        <Card className="p-10 text-center text-sm text-zinc-500">{t('questions.generating')}</Card>
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 py-16">
+          <Loader2 className="mb-3 h-6 w-6 animate-spin text-zinc-400" />
+          <p className="text-zinc-500 dark:text-zinc-400">{t('questions.generating')}</p>
+        </div>
       )}
 
       {!generating && questions.length === 0 && (
-        <Card className="p-10 text-center text-sm text-zinc-500">{t('questions.empty')}</Card>
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 py-16">
+          <p className="text-zinc-500 dark:text-zinc-400">{t('questions.empty')}</p>
+        </div>
       )}
 
       {!generating &&
@@ -130,6 +162,21 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
             onRemove={() => handleRemove(q.id)}
           />
         ))}
+
+      <AlertDialog open={regenerateOpen} onOpenChange={setRegenerateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tc('confirm')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('questions.regenerateConfirm')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">{tc('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={doGenerate} className="cursor-pointer bg-brand hover:bg-brand-hover">
+              {tc('confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

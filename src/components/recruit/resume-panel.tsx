@@ -94,7 +94,12 @@ export function ResumePanel({ candidate, onUpdated }: ResumePanelProps) {
           ) : (
             <>
               <Upload className="h-8 w-8 text-zinc-400" />
-              <Button onClick={() => fileInputRef.current?.click()}>{t('resume.upload')}</Button>
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                className="cursor-pointer gap-2 bg-brand hover:bg-brand-hover"
+              >
+                {t('resume.upload')}
+              </Button>
               <p className="text-xs text-zinc-400">{t('resume.uploadHint')}</p>
             </>
           )}
@@ -111,7 +116,11 @@ export function ResumePanel({ candidate, onUpdated }: ResumePanelProps) {
           rows={16}
         />
         <div className="flex justify-end">
-          <Button onClick={handleSaveText} disabled={saving || text === candidate.resumeText}>
+          <Button
+            onClick={handleSaveText}
+            disabled={saving || text === candidate.resumeText}
+            className="cursor-pointer gap-2"
+          >
             {t('resume.savePaste')}
           </Button>
         </div>

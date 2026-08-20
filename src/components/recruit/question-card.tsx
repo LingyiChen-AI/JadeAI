@@ -40,7 +40,13 @@ export function QuestionCard({ index, question, dimensions, onRemove }: Question
             {index + 1}. {question.question}
           </p>
         </div>
-        <Button variant="ghost" size="icon-sm" onClick={onRemove} title={t('remove')}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onRemove}
+          title={t('remove')}
+          className="cursor-pointer"
+        >
           <Trash2 className="h-4 w-4 text-zinc-400" />
         </Button>
       </div>

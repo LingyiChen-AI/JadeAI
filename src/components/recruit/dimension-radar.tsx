@@ -23,7 +23,7 @@ export function DimensionRadar({ scores }: DimensionRadarProps) {
         <PolarGrid />
         <PolarAngleAxis dataKey="label" className="text-xs" />
         <PolarRadiusAxis angle={30} domain={[0, 100]} />
-        <Radar dataKey="score" stroke="#ec4899" fill="#ec4899" fillOpacity={0.3} />
+        <Radar dataKey="score" stroke="var(--brand)" fill="var(--brand)" fillOpacity={0.3} />
       </RechartsRadar>
     </ResponsiveContainer>
   );
