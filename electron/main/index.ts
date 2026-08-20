@@ -158,7 +158,14 @@ async function bootServerInto(window: BrowserWindow): Promise<void> {
       settings.patch({ serverPort: running.port });
     }
     const { locale } = settings.get();
-    await window.loadURL(`${running.origin}/${locale}`);
+    // Open the workspace, not the marketing homepage. `/${locale}` is the
+    // landing page — a hero, a GitHub star button, and a nav that only lists
+    // what the website sells (功能特色 / 模板库 / 模拟面试). Someone who already
+    // installed the app has nothing to gain there, and the app-wide nav —
+    // which is where 工作台 / 模板 / 面试模拟 / 招聘 live — only renders inside
+    // /dashboard and friends, so landing on the homepage made whole modules
+    // look missing from the desktop build.
+    await window.loadURL(`${running.origin}/${locale}/dashboard`);
   } catch (error) {
     if (generation !== bootGeneration) return;
     console.error('[startup] failed to bring up the Next server:', error);
