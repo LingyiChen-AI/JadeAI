@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CandidateCompareTable } from './candidate-compare-table';
@@ -19,6 +18,8 @@ export function JobOverview({ jobId }: { jobId: string }) {
   const [candidates, setCandidates] = useState<CandidateSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [jdExpanded, setJdExpanded] = useState(false);
+  const jdRef = useRef<HTMLParagraphElement>(null);
+  const [jdClamped, setJdClamped] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -40,6 +41,13 @@ export function JobOverview({ jobId }: { jobId: string }) {
     if (fpLoading) return;
     load();
   }, [fpLoading, load]);
+
+  useEffect(() => {
+    const el = jdRef.current;
+    if (!el) return;
+    // line-clamp 截断时 scrollHeight 会大于 clientHeight；+1 抵消亚像素误差
+    setJdClamped(el.scrollHeight > el.clientHeight + 1);
+  }, [job?.jobDescription, jdExpanded]);
 
   if (loading) return <Skeleton className="h-64 rounded-xl" />;
   if (!job) return null;
@@ -67,6 +75,7 @@ export function JobOverview({ jobId }: { jobId: string }) {
       <Card className="p-5">
         <h2 className="mb-2 text-sm font-medium">{t('jobDescription')}</h2>
         <p
+          ref={jdRef}
           className={cn(
             'whitespace-pre-wrap text-sm text-zinc-600 dark:text-zinc-400',
             !jdExpanded && 'line-clamp-3',
@@ -74,14 +83,15 @@ export function JobOverview({ jobId }: { jobId: string }) {
         >
           {job.jobDescription}
         </p>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setJdExpanded((v) => !v)}
-          className="mt-1 h-auto cursor-pointer px-0 text-xs text-brand hover:bg-transparent hover:text-brand-hover"
-        >
-          {jdExpanded ? t('overview.collapseJd') : t('overview.expandJd')}
-        </Button>
+        {(jdClamped || jdExpanded) && (
+          <button
+            type="button"
+            onClick={() => setJdExpanded((v) => !v)}
+            className="mt-1 self-start cursor-pointer text-xs text-brand hover:text-brand-hover"
+          >
+            {jdExpanded ? t('overview.collapseJd') : t('overview.expandJd')}
+          </button>
+        )}
 
         <div className="mt-4 flex flex-wrap gap-2">
           {dimensions.map((d) => (
