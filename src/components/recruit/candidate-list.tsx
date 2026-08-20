@@ -527,7 +527,13 @@ function CandidateCard({
   );
 }
 
-/** 阶段色是这个模块的视觉身份：灰=待简历、琥珀=待出题、绿=面试中、墨=已评价 */
+/**
+ * 阶段色是这个模块的视觉身份：灰=待简历、琥珀=待出题、主题色=面试中、深主题色=已评价。
+ *
+ * 已评价原先用的是 zinc-900，换主题色之后满屏就它一块是黑的。改成 brand-hover
+ * （同色相更深的一档）：既跟着主题走，又比「面试中」重一级——面试中的色带是
+ * 按进度截断的，已评价是整条实心，两者不会看混。
+ */
 const STAGE_LOOK: Record<CandidateStage, { bar: string; mono: string }> = {
   need_resume: {
     bar: 'bg-zinc-300 dark:bg-zinc-600',
@@ -542,8 +548,8 @@ const STAGE_LOOK: Record<CandidateStage, { bar: string; mono: string }> = {
     mono: 'bg-brand/10 text-brand',
   },
   done: {
-    bar: 'bg-zinc-900 dark:bg-zinc-100',
-    mono: 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100',
+    bar: 'bg-brand-hover',
+    mono: 'bg-brand text-brand-foreground',
   },
 };
 
