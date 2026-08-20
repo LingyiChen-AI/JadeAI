@@ -931,6 +931,8 @@
     "list": {
         "back": "招聘岗位",
         "backToCandidates": "候选人",
+        "jobSettings": "岗位设置",
+        "summary": "{total} 位候选人 · {interviewing} 位面试中 · {questions} 题",
         "searchPlaceholder": "搜索候选人",
         "progress": "已记 {done}/{total}",
         "noQuestions": "还没生成题目",

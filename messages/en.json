@@ -931,6 +931,8 @@
     "list": {
         "back": "Roles",
         "backToCandidates": "Candidates",
+        "jobSettings": "Role settings",
+        "summary": "{total} candidates · {interviewing} in progress · {questions} questions",
         "searchPlaceholder": "Search candidates",
         "progress": "{done}/{total} recorded",
         "noQuestions": "No questions yet",

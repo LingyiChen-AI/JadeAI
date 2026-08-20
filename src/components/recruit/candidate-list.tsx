@@ -9,6 +9,7 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
+  Settings2,
   FileUp,
   Sparkles,
   Play,
@@ -18,7 +19,6 @@ import { toast } from 'sonner';
 import { Link, useRouter } from '@/i18n/routing';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -49,22 +49,9 @@ import { CandidateCompareTable } from './candidate-compare-table';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import { sortCandidatesForSidebar } from '@/lib/recruit/summary';
 import { stageFromSummary, type CandidateStage } from '@/lib/recruit/candidate-stage';
-import { dimensionColor } from '@/lib/recruit/dimension-colors';
-import { allocateQuestions } from '@/lib/recruit/scoring';
 import { cn } from '@/lib/utils';
-import type {
-  CandidateSummary,
-  DimensionConfig,
-  RecruitJob,
-  Recommendation,
-} from '@/types/recruit';
+import type { CandidateSummary, DimensionConfig, RecruitJob } from '@/types/recruit';
 
-const RECOMMENDATION_STYLE: Record<Recommendation, string> = {
-  strong_hire: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
-  hire: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
-  hold: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
-  no_hire: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
-};
 
 export function CandidateList({ jobId }: { jobId: string }) {
   const t = useTranslations('recruit');
@@ -117,6 +104,11 @@ export function CandidateList({ jobId }: { jobId: string }) {
   // 点一下「展开全文」就会把所有候选人详情重拉一遍。
   const evaluated = useMemo(
     () => candidates.filter((c) => c.overallScore !== null),
+    [candidates],
+  );
+
+  const interviewingCount = useMemo(
+    () => candidates.filter((c) => stageFromSummary(c) === 'interviewing').length,
     [candidates],
   );
 
@@ -195,7 +187,7 @@ export function CandidateList({ jobId }: { jobId: string }) {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-5xl space-y-4 px-4 py-8">
+      <div className="mx-auto max-w-7xl space-y-4 px-4 py-8">
         <Skeleton className="h-28 rounded-xl" />
         <Skeleton className="h-64 rounded-xl" />
       </div>
@@ -204,10 +196,9 @@ export function CandidateList({ jobId }: { jobId: string }) {
   if (!job) return null;
 
   const dimensions = job.dimensions as DimensionConfig[];
-  const allocation = allocateQuestions(dimensions, job.questionCount);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 px-4 py-8">
+    <div className="mx-auto max-w-7xl space-y-5 px-4 py-8">
       <div>
         <Link
           href="/recruit"
@@ -216,52 +207,53 @@ export function CandidateList({ jobId }: { jobId: string }) {
           <ChevronLeft className="h-3.5 w-3.5" />
           {t('list.back')}
         </Link>
-        <div className="mt-1 flex items-start justify-between gap-2">
-          <h1 className="min-w-0 truncate text-2xl font-bold">{job.title}</h1>
+
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">{job.title}</h1>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditOpen(true)}
+            className="cursor-pointer gap-1.5"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            {t('list.jobSettings')}
+          </Button>
+          <Button size="sm" onClick={() => setAddOpen(true)} className="cursor-pointer gap-1.5">
+            <Plus className="h-4 w-4" />
+            {t('candidates.add')}
+          </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger className="mt-1 cursor-pointer rounded-md p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+            <DropdownMenuTrigger className="cursor-pointer rounded-md p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800">
               <MoreVertical className="h-4 w-4 text-zinc-400" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem className="cursor-pointer" onClick={() => setEditOpen(true)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                {t('editJob')}
-              </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer" onClick={() => setDeleteJobOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 {t('deleteJob')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
-      </div>
 
-      {/* JD 和维度收成一行摘要。这一页的任务是「找到人 → 点按钮」，
-          JD 你早就知道了，它不该占最大的面积。想看点「展开 JD」。 */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
-        <span>{t('overview.stats', { total: candidates.length, evaluated: evaluated.length })}</span>
-        <span className="text-zinc-300 dark:text-zinc-700">·</span>
-        <span>{t('dimensions.perDimension', { count: job.questionCount })}</span>
-        <span className="text-zinc-300 dark:text-zinc-700">·</span>
-        <span className="inline-flex flex-wrap items-center gap-1.5">
-          {dimensions.map((d) => (
-            <span
-              key={d.key}
-              title={`${d.label} · ${t('dimensions.perDimension', { count: allocation[d.key] ?? 0 })}`}
-              className="inline-flex items-center gap-1"
-            >
-              <span className={cn('h-1.5 w-1.5 rounded-full', dimensionColor(d.key).dot)} />
-              {d.label}
-            </span>
-          ))}
-        </span>
-        <button
-          type="button"
-          onClick={() => setJdExpanded((v) => !v)}
-          className="cursor-pointer text-brand hover:text-brand-hover"
-        >
-          {jdExpanded ? t('overview.collapseJd') : t('overview.expandJd')}
-        </button>
+        {/* 摘要只留三个数。之前这里排着八个维度色点——维度色在题目列表里
+            用来判断题型，在候选人页只是彩纸屑。 */}
+        <p className="mt-1.5 text-xs text-zinc-500">
+          {t('list.summary', {
+            total: candidates.length,
+            interviewing: interviewingCount,
+            questions: job.questionCount,
+          })}
+          <button
+            type="button"
+            onClick={() => setJdExpanded((v) => !v)}
+            className="ml-2 cursor-pointer text-brand hover:text-brand-hover"
+          >
+            {jdExpanded ? t('overview.collapseJd') : t('overview.expandJd')}
+          </button>
+        </p>
       </div>
 
       {jdExpanded && (
@@ -272,8 +264,9 @@ export function CandidateList({ jobId }: { jobId: string }) {
         </Card>
       )}
 
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+      {/* 搜索框只在人多的时候出现。一个候选人的时候摆个搜索框是滑稽的。 */}
+      {candidates.length > 8 && (
+        <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
           <Input
             value={query}
@@ -282,30 +275,28 @@ export function CandidateList({ jobId }: { jobId: string }) {
             className="h-9 pl-8 text-sm"
           />
         </div>
-        <Button onClick={() => setAddOpen(true)} className="h-9 shrink-0 cursor-pointer gap-1.5">
-          <Plus className="h-4 w-4" />
-          {t('candidates.add')}
-        </Button>
-      </div>
-
-      {sorted.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-zinc-200 py-14 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-          {t('candidates.empty')}
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-xl border dark:border-zinc-800">
-          {sorted.map((c, i) => (
-            <CandidateRow
-              key={c.id}
-              jobId={jobId}
-              candidate={c}
-              first={i === 0}
-              onRename={() => setRenaming({ id: c.id, name: c.name })}
-              onDelete={() => setDeleteCandidateId(c.id)}
-            />
-          ))}
-        </div>
       )}
+
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(232px,1fr))] gap-3.5">
+        {sorted.map((c) => (
+          <CandidateCard
+            key={c.id}
+            jobId={jobId}
+            candidate={c}
+            onRename={() => setRenaming({ id: c.id, name: c.name })}
+            onDelete={() => setDeleteCandidateId(c.id)}
+          />
+        ))}
+        {/* 末尾这张虚线卡是「只有一个候选人时页面不空」的关键 */}
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="flex min-h-[106px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-zinc-200 text-sm text-zinc-500 transition-colors hover:border-brand hover:text-brand dark:border-zinc-700 dark:text-zinc-400"
+        >
+          <Plus className="h-5 w-5" />
+          {t('candidates.add')}
+        </button>
+      </div>
 
       {evaluated.length >= 2 && (
         <CandidateCompareTable jobId={jobId} dimensions={dimensions} evaluated={evaluated} />
@@ -418,19 +409,17 @@ export function CandidateList({ jobId }: { jobId: string }) {
 }
 
 /**
- * 一行一个候选人。右侧的主按钮随所处阶段变化——一行一个动作，
- * 不用先进工作台再去找 Tab。
+ * 一张卡就是一份档案。顶部色带表明走到哪一步（面试中时长度即进度），
+ * 底部整条就是主按钮——一张卡一个动作，点哪都对。
  */
-function CandidateRow({
+function CandidateCard({
   jobId,
   candidate: c,
-  first,
   onRename,
   onDelete,
 }: {
   jobId: string;
   candidate: CandidateSummary;
-  first: boolean;
   onRename: () => void;
   onDelete: () => void;
 }) {
@@ -438,69 +427,111 @@ function CandidateRow({
   const tc = useTranslations('common');
 
   const stage = stageFromSummary(c);
+  const look = STAGE_LOOK[stage];
   const action = ACTIONS[stage];
+  const href = `/recruit/${jobId}/c/${c.id}/${action.to}`;
+
   const label =
     stage === 'interviewing'
       ? t('actions.continueInterview', { done: c.answeredCount, total: c.questionCount })
       : t(`actions.${action.key}`);
 
-  return (
-    <div
-      className={cn(
-        'flex items-center gap-3 bg-white px-4 py-3 dark:bg-zinc-900',
-        !first && 'border-t dark:border-zinc-800',
-      )}
-    >
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{c.name || '—'}</span>
+  const sub =
+    stage === 'done'
+      ? c.recommendation && t(`recommendation.${c.recommendation}`)
+      : stage === 'interviewing'
+        ? t('questions.recorded', { done: c.answeredCount, total: c.questionCount })
+        : stage === 'need_questions'
+          ? t('list.noQuestions')
+          : t('list.noResume');
 
-      {c.overallScore !== null && (
-        <span className="shrink-0 text-sm font-semibold tabular-nums">{c.overallScore}</span>
-      )}
-      {c.recommendation && (
-        <Badge className={cn('shrink-0 px-1.5 py-0 text-[10px]', RECOMMENDATION_STYLE[c.recommendation])}>
-          {t(`recommendation.${c.recommendation}`)}
-        </Badge>
-      )}
-      {stage === 'interviewing' && (
-        <span className="hidden shrink-0 text-xs text-zinc-400 sm:inline">
-          {t('list.progress', { done: c.answeredCount, total: c.questionCount })}
+  // 面试中：色带长度就是进度。其余阶段铺满，色带只表明阶段。
+  const fill =
+    stage === 'interviewing' && c.questionCount > 0
+      ? Math.max(4, Math.round((c.answeredCount / c.questionCount) * 100))
+      : 100;
+
+  return (
+    <div className="flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="h-[3px] bg-zinc-100 dark:bg-zinc-800">
+        <div className={cn('h-full', look.bar)} style={{ width: `${fill}%` }} />
+      </div>
+
+      <div className="flex items-center gap-3 px-4 pb-4 pt-4">
+        <span
+          className={cn(
+            'grid h-9 w-9 shrink-0 place-items-center rounded-[10px] text-[15px] font-bold tracking-tight',
+            look.mono,
+          )}
+        >
+          {(c.name || '?').trim().charAt(0)}
         </span>
-      )}
+        <Link href={href} className="min-w-0 flex-1 cursor-pointer">
+          <span className="block truncate text-[15px] font-semibold tracking-tight">
+            {c.name || '—'}
+          </span>
+          <span className="block truncate text-[11.5px] text-zinc-500">{sub}</span>
+        </Link>
+        {c.overallScore !== null && (
+          <span className="shrink-0 text-2xl font-bold tabular-nums tracking-tighter">
+            {c.overallScore}
+          </span>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="-mr-1 shrink-0 cursor-pointer rounded-md p-1 text-zinc-300 hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-600 dark:hover:bg-zinc-800"
+            aria-label={c.name}
+          >
+            <MoreVertical className="h-3.5 w-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem className="cursor-pointer" onClick={onRename}>
+              <Pencil className="mr-2 h-4 w-4" />
+              {tc('rename')}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onClick={onDelete}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('candidates.delete')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <Link
-        href={`/recruit/${jobId}/c/${c.id}/${action.to}`}
+        href={href}
         className={cn(
-          'inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+          'mt-auto flex cursor-pointer items-center justify-center gap-1.5 border-t py-3 text-[13px] font-medium transition-colors',
           action.solid
-            ? 'bg-brand text-brand-foreground hover:bg-brand-hover'
-            : 'border text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800',
+            ? 'border-brand bg-brand text-brand-foreground hover:bg-brand-hover'
+            : 'text-zinc-600 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800',
         )}
       >
         <action.Icon className="h-3.5 w-3.5" />
         {label}
       </Link>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="shrink-0 cursor-pointer rounded-md p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          aria-label={c.name}
-        >
-          <MoreVertical className="h-3.5 w-3.5 text-zinc-400" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem className="cursor-pointer" onClick={onRename}>
-            <Pencil className="mr-2 h-4 w-4" />
-            {tc('rename')}
-          </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer" onClick={onDelete}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            {t('candidates.delete')}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
     </div>
   );
 }
+
+/** 阶段色是这个模块的视觉身份：灰=待简历、琥珀=待出题、绿=面试中、墨=已评价 */
+const STAGE_LOOK: Record<CandidateStage, { bar: string; mono: string }> = {
+  need_resume: {
+    bar: 'bg-zinc-300 dark:bg-zinc-600',
+    mono: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
+  },
+  need_questions: {
+    bar: 'bg-amber-500',
+    mono: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400',
+  },
+  interviewing: {
+    bar: 'bg-brand',
+    mono: 'bg-brand/10 text-brand',
+  },
+  done: {
+    bar: 'bg-zinc-900 dark:bg-zinc-100',
+    mono: 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100',
+  },
+};
 
 const ACTIONS: Record<
   CandidateStage,
