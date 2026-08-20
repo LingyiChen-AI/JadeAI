@@ -68,8 +68,10 @@ export function DimensionChips({ value, onChange, questionCount }: DimensionChip
               onClick={() => togglePreset(key)}
               className={cn(
                 'inline-flex cursor-pointer items-center gap-1 rounded-full border px-3 py-1.5 text-sm transition-colors',
+                // 选中用主题色淡底而不是实心填充：八个维度全选时实心色块会糊成一片，
+                // 也和下面自定义维度的淡底样式对不上
                 selected
-                  ? 'border-brand bg-brand text-white'
+                  ? 'border-brand bg-brand/10 text-brand'
                   : 'border-zinc-200 text-zinc-600 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300',
               )}
             >
@@ -98,16 +100,19 @@ export function DimensionChips({ value, onChange, questionCount }: DimensionChip
           ))}
       </div>
 
-      {/* 权重：只为已选中的维度展开，两列排布 */}
+      {/* 权重：只为已选中的维度展开。两列排布——八个维度排一列要占 250px 高，
+          弹窗就得滚。grid 的列宽是固定的 1fr，滑块 min-w-0 才不会被两侧
+          定宽的文字挤成一条线 */}
       {value.length > 0 && (
-        <div className="space-y-2.5 rounded-lg border bg-zinc-50 p-4 dark:bg-zinc-900">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-2.5 rounded-lg border bg-zinc-50 p-4 sm:grid-cols-2 dark:bg-zinc-900">
           {value.map((d) => (
             <div key={d.key} className="flex items-center gap-3">
-              <span className="w-20 shrink-0 truncate text-xs text-zinc-600 dark:text-zinc-400">
+              <span className="w-16 shrink-0 truncate text-xs text-zinc-600 dark:text-zinc-400">
                 {d.label}
               </span>
               <Slider
-                className="flex-1 cursor-pointer"
+                variant="brand"
+                className="min-w-0 flex-1 cursor-pointer"
                 min={1}
                 max={5}
                 step={1}

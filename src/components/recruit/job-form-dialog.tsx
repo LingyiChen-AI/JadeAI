@@ -81,7 +81,9 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+      {/* 必须带 sm: 前缀：DialogContent 基类里的 sm:max-w-lg 是个 variant，
+          tailwind-merge 不会拿无前缀的 max-w-* 去覆盖它，写 max-w-2xl 是无效的 */}
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{job ? t('editJob') : t('createJob')}</DialogTitle>
         </DialogHeader>
@@ -104,7 +106,9 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
               placeholder={t('jobDescriptionPlaceholder')}
-              rows={8}
+              // Textarea 是 field-sizing-content，rows 不起作用，只能用 min/max-h：
+              // 不封顶的话一份长 JD 会把整个弹窗撑到几千像素
+              className="max-h-[240px] min-h-[160px] overflow-y-auto"
             />
           </div>
 
@@ -113,6 +117,8 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
               {t('questionCount')}：{questionCount}
             </Label>
             <Slider
+              variant="brand"
+              className="cursor-pointer"
               min={QUESTION_COUNT_MIN}
               max={QUESTION_COUNT_MAX}
               step={1}
