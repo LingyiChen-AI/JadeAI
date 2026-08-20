@@ -256,11 +256,9 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
     return (
       <div className={cn(shell, 'items-center justify-center gap-4')}>
         <p className="text-sm text-zinc-500">{t('stage.empty')}</p>
-        <Button
-          onClick={() => router.push(`/recruit/${jobId}/c/${candidateId}/prep`)}
-          className="cursor-pointer"
-        >
-          {t('stage.goPrep')}
+        <Button onClick={() => setRegenerateOpen(true)} className="cursor-pointer gap-1.5">
+          <Sparkles className="h-4 w-4" />
+          {t('questions.generate')}
         </Button>
       </div>
     );

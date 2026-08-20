@@ -1014,6 +1014,17 @@
       "motivation": "Motivation & stability",
       "leadership": "Leadership"
     },
+      "addFlow": {
+        "createTitle": "Add candidate",
+        "resumeLabel": "Resume",
+        "stepCreate": "Create candidate",
+        "stepResume": "Parse resume",
+        "stepQuestions": "Generate questions",
+        "submit": "Create & generate questions",
+        "needResumeFirst": "Upload a resume file or paste the text first",
+        "reupload": "Replace resume",
+        "reuploadSubmit": "Save & regenerate questions"
+      },
     "candidates": {
       "title": "Candidates",
       "add": "Add candidate",

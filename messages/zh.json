@@ -1014,6 +1014,17 @@
       "motivation": "稳定性与动机",
       "leadership": "领导力"
     },
+      "addFlow": {
+        "createTitle": "添加候选人",
+        "resumeLabel": "简历",
+        "stepCreate": "创建候选人",
+        "stepResume": "解析简历",
+        "stepQuestions": "生成面试题",
+        "submit": "创建并生成面试题",
+        "needResumeFirst": "先上传简历文件或粘贴简历文本",
+        "reupload": "重传简历",
+        "reuploadSubmit": "保存并重新出题"
+      },
     "candidates": {
       "title": "候选人",
       "add": "添加候选人",

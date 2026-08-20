@@ -10,6 +10,8 @@ import {
   Pencil,
   Trash2,
   Settings2,
+  Upload,
+  Loader2,
   FileUp,
   Sparkles,
   Play,
@@ -45,8 +47,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { JobFormDialog } from './job-form-dialog';
+import { CandidateDialog } from './candidate-dialog';
 import { CandidateCompareTable } from './candidate-compare-table';
 import { useFingerprint } from '@/hooks/use-fingerprint';
+import { getAIHeaders } from '@/stores/settings-store';
 import { sortCandidatesForSidebar } from '@/lib/recruit/summary';
 import { stageFromSummary, type CandidateStage } from '@/lib/recruit/candidate-stage';
 import { cn } from '@/lib/utils';
@@ -68,7 +72,10 @@ export function CandidateList({ jobId }: { jobId: string }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteJobOpen, setDeleteJobOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [newName, setNewName] = useState('');
+  /** 非 null 表示给已有候选人重传简历，复用同一个弹窗 */
+  const [resumeFor, setResumeFor] = useState<CandidateSummary | null>(null);
+  /** 正在就地出题的候选人 id */
+  const [generatingFor, setGeneratingFor] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
@@ -112,26 +119,22 @@ export function CandidateList({ jobId }: { jobId: string }) {
     [candidates],
   );
 
-  async function handleAddCandidate() {
-    const name = newName.trim();
-    if (!name) return;
+  /** 有简历但没题目：就地出题，完了直接进面试台 */
+  async function handleGenerate(id: string) {
+    setGeneratingFor(id);
     try {
-      const res = await fetch(`/api/recruit/jobs/${jobId}/candidates`, {
+      const res = await fetch(`/api/recruit/candidates/${id}/questions`, {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
           ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}),
+          ...getAIHeaders(),
         },
-        body: JSON.stringify({ name }),
       });
-      if (!res.ok) throw new Error('create failed');
-      const data = await res.json();
-      setNewName('');
-      setAddOpen(false);
-      // 新人一定是「没简历」，直接送进准备页，省一次点击
-      router.push(`/recruit/${jobId}/c/${data.candidate.id}/prep`);
+      if (!res.ok) throw new Error('generate failed');
+      router.push(`/recruit/${jobId}/c/${id}/stage`);
     } catch {
-      toast.error(t('errors.saveFailed'));
+      toast.error(t('errors.generateFailed'));
+      setGeneratingFor(null);
     }
   }
 
@@ -285,6 +288,12 @@ export function CandidateList({ jobId }: { jobId: string }) {
             candidate={c}
             onRename={() => setRenaming({ id: c.id, name: c.name })}
             onDelete={() => setDeleteCandidateId(c.id)}
+            onResume={() => {
+              setResumeFor(c);
+              setAddOpen(true);
+            }}
+            onGenerate={() => void handleGenerate(c.id)}
+            generating={generatingFor === c.id}
           />
         ))}
         {/* 末尾这张虚线卡是「只有一个候选人时页面不空」的关键 */}
@@ -377,33 +386,16 @@ export function CandidateList({ jobId }: { jobId: string }) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('candidates.add')}</DialogTitle>
-          </DialogHeader>
-          <Input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder={t('candidates.namePlaceholder')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAddCandidate();
-            }}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)} className="cursor-pointer">
-              {t('cancel')}
-            </Button>
-            <Button
-              onClick={handleAddCandidate}
-              disabled={!newName.trim()}
-              className="cursor-pointer"
-            >
-              {t('save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CandidateDialog
+        jobId={jobId}
+        open={addOpen}
+        onOpenChange={(o) => {
+          setAddOpen(o);
+          if (!o) setResumeFor(null);
+        }}
+        candidate={resumeFor}
+        onDone={load}
+      />
     </div>
   );
 }
@@ -417,11 +409,19 @@ function CandidateCard({
   candidate: c,
   onRename,
   onDelete,
+  onResume,
+  onGenerate,
+  generating,
 }: {
   jobId: string;
   candidate: CandidateSummary;
   onRename: () => void;
   onDelete: () => void;
+  /** 缺简历时打开弹窗补 */
+  onResume: () => void;
+  /** 有简历但没题目时就地出题 */
+  onGenerate: () => void;
+  generating: boolean;
 }) {
   const t = useTranslations('recruit');
   const tc = useTranslations('common');
@@ -429,7 +429,7 @@ function CandidateCard({
   const stage = stageFromSummary(c);
   const look = STAGE_LOOK[stage];
   const action = ACTIONS[stage];
-  const href = `/recruit/${jobId}/c/${c.id}/${action.to}`;
+  const href = action.to ? `/recruit/${jobId}/c/${c.id}/${action.to}` : '';
 
   const label =
     stage === 'interviewing'
@@ -485,13 +485,10 @@ function CandidateCard({
             <MoreVertical className="h-3.5 w-3.5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {/* 有题目之后主按钮直奔面试台，准备页就没有入口了——
-                重新出题、改简历都在那儿，必须留一条路回去 */}
-            <DropdownMenuItem asChild className="cursor-pointer">
-              <Link href={`/recruit/${jobId}/c/${c.id}/prep`}>
-                <Sparkles className="mr-2 h-4 w-4" />
-                {t('prep.title')}
-              </Link>
+            {/* 传错文件是真实场景，没有这个入口就没法改简历了 */}
+            <DropdownMenuItem className="cursor-pointer" onClick={onResume}>
+              <Upload className="mr-2 h-4 w-4" />
+              {t('addFlow.reupload')}
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer" onClick={onRename}>
               <Pencil className="mr-2 h-4 w-4" />
@@ -505,18 +502,27 @@ function CandidateCard({
         </DropdownMenu>
       </div>
 
-      <Link
-        href={href}
-        className={cn(
-          'mt-auto flex cursor-pointer items-center justify-center gap-1.5 border-t py-3 text-[13px] font-medium transition-colors',
-          action.solid
-            ? 'border-brand bg-brand text-brand-foreground hover:bg-brand-hover'
-            : 'text-zinc-600 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800',
-        )}
-      >
-        <action.Icon className="h-3.5 w-3.5" />
-        {label}
-      </Link>
+      {/* 准备页没了：缺简历开弹窗、缺题目就地生成，只有后两个阶段才是跳转 */}
+      {action.to ? (
+        <Link href={href} className={cn(ACT_CLASS, action.solid && ACT_SOLID)}>
+          <action.Icon className="h-3.5 w-3.5" />
+          {label}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={stage === 'need_resume' ? onResume : onGenerate}
+          disabled={generating}
+          className={cn(ACT_CLASS, action.solid && ACT_SOLID, 'w-full')}
+        >
+          {generating ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <action.Icon className="h-3.5 w-3.5" />
+          )}
+          {generating ? t('questions.generating') : label}
+        </button>
+      )}
     </div>
   );
 }
@@ -541,12 +547,17 @@ const STAGE_LOOK: Record<CandidateStage, { bar: string; mono: string }> = {
   },
 };
 
+const ACT_CLASS =
+  'mt-auto flex cursor-pointer items-center justify-center gap-1.5 border-t py-3 text-[13px] font-medium transition-colors disabled:opacity-60 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800';
+const ACT_SOLID = 'border-brand bg-brand text-brand-foreground hover:bg-brand-hover dark:border-brand';
+
+/** to 为空表示就地处理，不跳页 */
 const ACTIONS: Record<
   CandidateStage,
   { key: string; to: string; Icon: typeof Play; solid: boolean }
 > = {
-  need_resume: { key: 'uploadResume', to: 'prep', Icon: FileUp, solid: false },
-  need_questions: { key: 'generateQuestions', to: 'prep', Icon: Sparkles, solid: false },
+  need_resume: { key: 'uploadResume', to: '', Icon: FileUp, solid: false },
+  need_questions: { key: 'generateQuestions', to: '', Icon: Sparkles, solid: false },
   interviewing: { key: 'startInterview', to: 'stage', Icon: Play, solid: true },
   done: { key: 'viewReport', to: 'report', Icon: FileText, solid: false },
 };
