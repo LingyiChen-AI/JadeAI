@@ -1,0 +1,173 @@
+'use client';
+
+import { useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { Trash2, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import type { DimensionConfig, InterviewQuestion } from '@/types/recruit';
+
+const RUBRIC_BAR = {
+  excellent: 'bg-emerald-500',
+  pass: 'bg-amber-500',
+  fail: 'bg-red-500',
+} as const;
+
+export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
+interface QuestionDetailProps {
+  question: InterviewQuestion;
+  index: number;
+  dimensions: DimensionConfig[];
+  saveState: SaveState;
+  /** 答案变化时调用，父组件负责防抖与落库 */
+  onAnswerChange: (questionId: string, answer: string) => void;
+  /** 立即保存待存内容——保存失败后点「重试」用 */
+  onFlush: () => void;
+  onRemove: () => void;
+}
+
+export function QuestionDetail({
+  question,
+  index,
+  dimensions,
+  saveState,
+  onAnswerChange,
+  onFlush,
+  onRemove,
+}: QuestionDetailProps) {
+  const t = useTranslations('recruit.questions');
+  const label = dimensions.find((d) => d.key === question.dimension)?.label ?? question.dimension;
+  // 父组件用 key={question.id} 渲染本组件，切题即重挂载，
+  // 所以草稿用 useState 初始化就够，不需要 effect 同步。
+  // 切题时冲刷未保存内容的责任在父组件的 onSelect 里。
+  const [draft, setDraft] = useState(question.answer ?? '');
+
+  return (
+    <div className="min-w-0 flex-1 rounded-xl border bg-white p-5 dark:bg-zinc-900">
+      <h3 className="text-[15px] font-semibold leading-relaxed">
+        {index + 1}. {question.question}
+      </h3>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Badge variant="outline">{label}</Badge>
+        <span className="text-xs text-zinc-400">
+          {question.difficulty} · {t('minutes', { count: question.estimatedMinutes })}
+        </span>
+      </div>
+
+      <Section title={t('intent')}>
+        <p className="text-sm text-zinc-700 dark:text-zinc-300">{question.intent}</p>
+      </Section>
+
+      <Section title={t('rubric')}>
+        <div className="grid gap-1.5">
+          {(['excellent', 'pass', 'fail'] as const).map((level) => (
+            <div key={level} className="flex gap-2">
+              <span className={cn('w-0.5 shrink-0 rounded-full', RUBRIC_BAR[level])} />
+              <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                <span className="text-zinc-500 dark:text-zinc-400">{t(level)}：</span>
+                {question.rubric[level]}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {question.followUps.length > 0 && (
+        <Section title={t('followUps')}>
+          <ul className="list-disc space-y-0.5 pl-4 text-sm text-zinc-700 dark:text-zinc-300">
+            {question.followUps.map((f, i) => (
+              <li key={i}>{f}</li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {question.referencePoints.length > 0 && (
+        <Section title={t('referencePoints')}>
+          <ul className="list-disc space-y-0.5 pl-4 text-sm text-zinc-700 dark:text-zinc-300">
+            {question.referencePoints.map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      <div className="mt-5 border-t pt-4">
+        <Label htmlFor="answer" className="text-sm font-medium">
+          {t('answer')}
+        </Label>
+        <Textarea
+          id="answer"
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            onAnswerChange(question.id, e.target.value);
+          }}
+          placeholder={t('answerPlaceholder')}
+          // Textarea 带 field-sizing-content，rows 无效，必须用 min-h
+          className="mt-2 min-h-[160px]"
+        />
+
+        <div className="mt-2 flex items-center justify-between">
+          <SaveIndicator state={saveState} onRetry={onFlush} />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            className="cursor-pointer gap-2 text-zinc-400 hover:text-red-600"
+          >
+            <Trash2 className="h-4 w-4" />
+            {t('remove')}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => void }) {
+  const t = useTranslations('recruit.questions');
+  if (state === 'saving') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-zinc-400">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        {t('saving')}
+      </span>
+    );
+  }
+  if (state === 'saved') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+        <Check className="h-3.5 w-3.5 text-emerald-600" />
+        {t('saved')}
+      </span>
+    );
+  }
+  if (state === 'error') {
+    return (
+      <button
+        type="button"
+        onClick={onRetry}
+        className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-red-600"
+      >
+        <AlertCircle className="h-3.5 w-3.5" />
+        {t('saveRetry')}
+      </button>
+    );
+  }
+  return <span />;
+}
+
+/** 小标题弱化、正文正常，四个区块才有层次。 */
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-4">
+      <p className="mb-1 text-[11px] uppercase tracking-wide text-zinc-400">{title}</p>
+      {children}
+    </div>
+  );
+}
