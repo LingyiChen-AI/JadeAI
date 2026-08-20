@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Trash2, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Trash2, Loader2, Check, AlertCircle, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { dimensionColor } from '@/lib/recruit/dimension-colors';
 import type { DimensionConfig, InterviewQuestion } from '@/types/recruit';
 
 const RUBRIC_BAR = {
@@ -45,6 +46,7 @@ export function QuestionDetail({
   // 所以草稿用 useState 初始化就够，不需要 effect 同步。
   // 切题时冲刷未保存内容的责任在父组件的 onSelect 里。
   const [draft, setDraft] = useState(question.answer ?? '');
+  const [answerOpen, setAnswerOpen] = useState(false);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border bg-white dark:bg-zinc-900">
@@ -54,7 +56,10 @@ export function QuestionDetail({
         {index + 1}. {question.question}
       </h3>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Badge variant="outline">{label}</Badge>
+        {/* 和左侧列表里的小圆点同色 */}
+        <Badge variant="outline" className={dimensionColor(question.dimension).chip}>
+          {label}
+        </Badge>
         <span className="text-xs text-zinc-400">
           {question.difficulty} · {t('minutes', { count: question.estimatedMinutes })}
         </span>
@@ -77,6 +82,28 @@ export function QuestionDetail({
           ))}
         </div>
       </Section>
+
+      {/* 参考答案只有客观题才有，开放题模型会留空。默认收起——
+          面试时先听候选人怎么说，需要对照再展开。 */}
+      {question.referenceAnswer?.trim() && (
+        <div className="mt-3.5 rounded-lg border border-zinc-200 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={() => setAnswerOpen((v) => !v)}
+            className="flex w-full cursor-pointer items-center gap-1.5 px-3 py-2 text-[11px] uppercase tracking-wide text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+          >
+            <ChevronRight
+              className={cn('h-3.5 w-3.5 transition-transform', answerOpen && 'rotate-90')}
+            />
+            {t('referenceAnswer')}
+          </button>
+          {answerOpen && (
+            <p className="whitespace-pre-wrap border-t px-3 py-2 text-sm text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
+              {question.referenceAnswer}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* 追问和要点都是短列表，并排放省掉一屏的一半高度 */}
       {(question.followUps.length > 0 || question.referencePoints.length > 0) && (

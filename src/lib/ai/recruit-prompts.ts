@@ -1,25 +1,32 @@
 import { allocateQuestions } from '@/lib/recruit/scoring';
+import { resolveDimensionGuide } from '@/lib/recruit/dimension-guides';
 import type { DimensionConfig, InterviewQuestion } from '@/types/recruit';
 
 const LANGUAGE_RULE = `IMPORTANT: Detect the primary language of the job description. You MUST respond entirely in that language. If the JD is in Chinese, all output (questions, rubrics, comments) must be in Chinese.`;
 
 const JSON_RULE = `CRITICAL: You are a JSON API. Your entire response must be a single valid JSON object starting with { and ending with }. Do NOT use markdown syntax. Do NOT wrap in code fences. Do NOT add any text before or after the JSON.`;
 
-const QUESTIONS_SYSTEM = `You are a seasoned hiring interviewer. Given a job description, a candidate's resume, and the competencies to assess, design a personalized interview question set.
+const QUESTIONS_SYSTEM = `You are a senior interviewer at a top-tier technology company, known for questions that separate people who actually did the work from people who can describe it. You are writing the questions for ONE competency only — the one named in the user message.
 
 ${LANGUAGE_RULE}
 
-Rules:
-- Follow the per-dimension question counts given in the user message EXACTLY. If it says 6 questions for 专业技能, produce exactly 6 questions whose "dimension" field is that dimension's key.
-- Ground every question in this specific candidate's resume and this specific JD. Never produce generic questions that could be asked of anyone.
-- "intent" states what the question is really probing for — not a restatement of the question.
-- "rubric" describes what an excellent / passing / failing answer looks like, concretely enough that a non-expert interviewer can judge.
-- "followUps" are 2-3 probing directions to prevent rehearsed answers.
-- "referencePoints" are the points a strong answer should cover.
+Depth bar — this matters more than any other rule:
+- Every question must name something specific from THIS résumé: a project, a system, a technology, a number, a transition. A question that could be pasted into any other interview is a failure.
+- Never ask for a definition, a comparison of two technologies in the abstract, or anything answerable from documentation. Ask what they decided, what it cost, what broke, what they would do differently.
+- Aim high: at least one third of the questions must be "hard" — the kind where a candidate who only used the tool superficially will run out of things to say within a minute.
+- No warm-ups, no "tell me about yourself", no "what are your strengths".
+
+Field rules:
+- "dimension" must be exactly the dimension key given in the user message, on every question.
+- "intent" states what the question really discriminates between — a strong candidate and a plausible-sounding weak one. Not a restatement of the question.
+- "rubric" describes an excellent / passing / failing answer concretely enough that an interviewer who is not an expert in this area can still tell them apart.
+- "followUps" are 2-3 pointed probes for when the first answer is rehearsed or vague.
+- "referencePoints" are the specific points a strong answer should hit.
+- "referenceAnswer" is a model answer, 3-6 sentences, ONLY for questions that have a determinate technical answer. For open-ended, behavioural, or experience questions there is no correct answer — return an empty string. Do not pad it with generic advice.
 - "estimatedMinutes" is an integer; "difficulty" is one of easy / medium / hard.
 
 Return JSON with this exact shape:
-{"questions":[{"dimension":"","question":"","intent":"","rubric":{"excellent":"","pass":"","fail":""},"followUps":[],"referencePoints":[],"estimatedMinutes":5,"difficulty":"medium"}]}
+{"questions":[{"dimension":"","question":"","intent":"","rubric":{"excellent":"","pass":"","fail":""},"followUps":[],"referencePoints":[],"referenceAnswer":"","estimatedMinutes":5,"difficulty":"medium"}]}
 
 ${JSON_RULE}`;
 
@@ -50,17 +57,45 @@ export interface QuestionsPromptInput {
   questionCount: number;
 }
 
-export function buildQuestionsPrompt(input: QuestionsPromptInput): {
+/**
+ * 按权重把题数分给各维度。出题按维度分开、并发去请求，
+ * 调用方拿这个结果决定每一路要几道题。
+ */
+export function planQuestionGeneration(
+  input: QuestionsPromptInput,
+): { dimension: DimensionConfig; count: number }[] {
+  const allocation = allocateQuestions(input.dimensions, input.questionCount);
+  return input.dimensions
+    .map((dimension) => ({ dimension, count: allocation[dimension.key] ?? 0 }))
+    .filter((task) => task.count > 0);
+}
+
+export interface DimensionQuestionsPromptInput extends Omit<QuestionsPromptInput, 'questionCount'> {
+  dimension: DimensionConfig;
+  count: number;
+}
+
+/**
+ * 单个维度的出题 prompt。
+ *
+ * 一次让模型出完所有维度的话，它会把注意力摊平，八个维度出来的题
+ * 长得像同一道题换了主语。拆开之后每一路只盯着一个考察点，
+ * 而且那个维度的描述能整段进 prompt，问法才真的有区别。
+ */
+export function buildDimensionQuestionsPrompt(input: DimensionQuestionsPromptInput): {
   system: string;
   prompt: string;
-  allocation: Record<string, number>;
 } {
-  const allocation = allocateQuestions(input.dimensions, input.questionCount);
+  const guide = resolveDimensionGuide(input.dimension);
+  const guideBlock = guide ? `\nHow to probe this competency:\n${guide}\n` : '';
 
-  // 逐维度写死题数——不这么做的话，用户配的权重对模型毫无约束力。
-  const allocationLines = input.dimensions
-    .map((d) => `- ${d.label} (key: ${d.key}): ${allocation[d.key] ?? 0} questions`)
-    .join('\n');
+  // 把别的维度列出来，让模型知道哪些角度不归它管，避免几路问出重复的题。
+  const others = input.dimensions
+    .filter((d) => d.key !== input.dimension.key)
+    .map((d) => d.label);
+  const othersBlock = others.length
+    ? `\nOther interviewers are covering these competencies — do NOT ask about them: ${others.join(', ')}\n`
+    : '';
 
   const prompt = `Job title: ${input.jobTitle}
 
@@ -70,14 +105,13 @@ ${input.jobDescription}
 Candidate resume:
 ${input.resumeText}
 
-Competencies to assess and the exact number of questions for each:
-${allocationLines}
-
-Total questions: ${input.questionCount}
+Competency to assess: ${input.dimension.label} (key: ${input.dimension.key})
+${guideBlock}${othersBlock}
+Produce exactly ${input.count} question${input.count === 1 ? '' : 's'}, all with "dimension" set to "${input.dimension.key}".
 
 Respond with JSON only.`;
 
-  return { system: QUESTIONS_SYSTEM, prompt, allocation };
+  return { system: QUESTIONS_SYSTEM, prompt };
 }
 
 export interface EvaluationPromptInput {
@@ -101,7 +135,10 @@ What it probes: ${q.intent}
 Excellent answer: ${q.rubric.excellent}
 Passing answer: ${q.rubric.pass}
 Failing answer: ${q.rubric.fail}
-Reference points: ${q.referencePoints.join('; ')}`;
+Reference points: ${q.referencePoints.join('; ')}${
+        // 客观题带了参考答案，拿它当基准比只看 rubric 判得准
+        q.referenceAnswer?.trim() ? `\nReference answer: ${q.referenceAnswer.trim()}` : ''
+      }`;
 
       // 面试中逐题记下来的答案是确定的，直接给模型，省得它从整段速记里
       // 猜哪句对应哪题——那正是归错题的来源。

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildQuestionsPrompt, buildEvaluationPrompt } from './recruit-prompts';
+import {
+  buildDimensionQuestionsPrompt,
+  planQuestionGeneration,
+  buildEvaluationPrompt,
+} from './recruit-prompts';
+import { PRESET_DIMENSION_GUIDES } from '@/lib/recruit/dimension-guides';
 import type { DimensionConfig, InterviewQuestion } from '@/types/recruit';
 
 const DIMENSIONS: DimensionConfig[] = [
@@ -7,53 +12,106 @@ const DIMENSIONS: DimensionConfig[] = [
   { key: 'logic', label: '逻辑思维', weight: 2, custom: false },
 ];
 
-describe('buildQuestionsPrompt', () => {
-  it('把每个维度分到几题写进 prompt', () => {
-    const { prompt } = buildQuestionsPrompt({
-      jobTitle: '高级前端工程师',
-      jobDescription: 'JD 正文',
-      resumeText: '简历正文',
+describe('planQuestionGeneration', () => {
+  it('按权重把题数分给各维度', () => {
+    const tasks = planQuestionGeneration({
+      jobTitle: 'T',
+      jobDescription: 'JD',
+      resumeText: 'R',
       dimensions: DIMENSIONS,
       questionCount: 10,
     });
     // 3:2 权重、共 10 题 -> 专业技能 6 题、逻辑思维 4 题
-    expect(prompt).toContain('专业技能');
-    expect(prompt).toMatch(/专业技能[^\n]*6/);
-    expect(prompt).toMatch(/逻辑思维[^\n]*4/);
+    expect(tasks).toEqual([
+      { dimension: DIMENSIONS[0], count: 6 },
+      { dimension: DIMENSIONS[1], count: 4 },
+    ]);
   });
 
-  it('返回的 allocation 与写进 prompt 的一致，供调用方校验模型输出', () => {
-    const { allocation } = buildQuestionsPrompt({
+  it('分到 0 题的维度不生成请求', () => {
+    const tasks = planQuestionGeneration({
       jobTitle: 'T',
       jobDescription: 'JD',
       resumeText: 'R',
       dimensions: DIMENSIONS,
-      questionCount: 10,
-    });
-    expect(allocation).toEqual({ professional: 6, logic: 4 });
-  });
-
-  it('JD 和简历正文都进了 prompt', () => {
-    const { prompt } = buildQuestionsPrompt({
-      jobTitle: '后端工程师',
-      jobDescription: '需要熟悉分布式事务',
-      resumeText: '在某厂做过订单系统',
-      dimensions: DIMENSIONS,
       questionCount: 5,
+    });
+    expect(tasks.every((t) => t.count > 0)).toBe(true);
+  });
+});
+
+describe('buildDimensionQuestionsPrompt', () => {
+  const base = {
+    jobTitle: '后端工程师',
+    jobDescription: '需要熟悉分布式事务',
+    resumeText: '在某厂做过订单系统',
+    dimensions: DIMENSIONS,
+  };
+
+  it('JD、简历、维度和题数都进了 prompt', () => {
+    const { prompt } = buildDimensionQuestionsPrompt({
+      ...base,
+      dimension: DIMENSIONS[0],
+      count: 6,
     });
     expect(prompt).toContain('需要熟悉分布式事务');
     expect(prompt).toContain('在某厂做过订单系统');
+    expect(prompt).toContain('professional');
+    expect(prompt).toContain('exactly 6 questions');
   });
 
-  it('system prompt 要求输出纯 JSON', () => {
-    const { system } = buildQuestionsPrompt({
-      jobTitle: 'T',
-      jobDescription: 'JD',
-      resumeText: 'R',
-      dimensions: DIMENSIONS,
-      questionCount: 5,
+  it('用户填的维度描述整段进 prompt', () => {
+    const { prompt } = buildDimensionQuestionsPrompt({
+      ...base,
+      dimension: { ...DIMENSIONS[0], description: '重点问 Kafka 消息重复消费怎么处理' },
+      count: 2,
+    });
+    expect(prompt).toContain('重点问 Kafka 消息重复消费怎么处理');
+  });
+
+  it('没填描述时退回预置指引', () => {
+    const { prompt } = buildDimensionQuestionsPrompt({
+      ...base,
+      dimension: DIMENSIONS[0],
+      count: 2,
+    });
+    expect(prompt).toContain(PRESET_DIMENSION_GUIDES.professional);
+  });
+
+  it('告诉模型别人负责哪些维度，避免出重复的题', () => {
+    const { prompt } = buildDimensionQuestionsPrompt({
+      ...base,
+      dimension: DIMENSIONS[0],
+      count: 2,
+    });
+    expect(prompt).toContain('逻辑思维');
+    expect(prompt).toContain('do NOT ask about them');
+  });
+
+  it('自定义维度没有预置指引时不留空指引段', () => {
+    const custom: DimensionConfig = {
+      key: '产品 sense',
+      label: '产品 sense',
+      weight: 1,
+      custom: true,
+    };
+    const { prompt } = buildDimensionQuestionsPrompt({
+      ...base,
+      dimensions: [custom],
+      dimension: custom,
+      count: 1,
+    });
+    expect(prompt).not.toContain('How to probe this competency');
+  });
+
+  it('system prompt 要求纯 JSON，且带参考答案字段', () => {
+    const { system } = buildDimensionQuestionsPrompt({
+      ...base,
+      dimension: DIMENSIONS[0],
+      count: 1,
     });
     expect(system).toContain('JSON');
+    expect(system).toContain('referenceAnswer');
   });
 });
 
@@ -153,5 +211,43 @@ describe('buildEvaluationPrompt', () => {
     });
     expect(system).toContain('recorded answer');
     expect(system).toContain('do not search the transcript');
+  });
+});
+
+describe('buildEvaluationPrompt 与参考答案', () => {
+  const q: InterviewQuestion = {
+    id: 'q1',
+    dimension: 'logic',
+    question: '题干',
+    intent: '意图',
+    rubric: { excellent: 'a', pass: 'b', fail: 'c' },
+    followUps: [],
+    referencePoints: [],
+    estimatedMinutes: 5,
+    difficulty: 'medium',
+  };
+
+  it('客观题的参考答案进 prompt，供打分时对照', () => {
+    const { prompt } = buildEvaluationPrompt({
+      jobTitle: 'T',
+      jobDescription: 'JD',
+      resumeText: 'R',
+      dimensions: DIMENSIONS,
+      questions: [{ ...q, referenceAnswer: 'MVCC 靠 undo log 和 read view' }],
+      transcript: 'x',
+    });
+    expect(prompt).toContain('Reference answer: MVCC 靠 undo log 和 read view');
+  });
+
+  it('开放题没有参考答案时不留空行', () => {
+    const { prompt } = buildEvaluationPrompt({
+      jobTitle: 'T',
+      jobDescription: 'JD',
+      resumeText: 'R',
+      dimensions: DIMENSIONS,
+      questions: [{ ...q, referenceAnswer: '  ' }],
+      transcript: 'x',
+    });
+    expect(prompt).not.toContain('Reference answer:');
   });
 });

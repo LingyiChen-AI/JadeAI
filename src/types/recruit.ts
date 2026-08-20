@@ -5,6 +5,11 @@ export interface DimensionConfig {
   /** 相对权重，正整数。决定该维度出几道题、以及在总分里占多大比例。 */
   weight: number;
   custom: boolean;
+  /**
+   * 这个维度要考察什么、该怎么问。出题时原样进 prompt，可以理解为
+   * 「这一类题目的提示词」。老数据里没有这个字段，读的时候要兜底。
+   */
+  description?: string;
 }
 
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
@@ -23,6 +28,10 @@ export interface InterviewQuestion {
   };
   followUps: string[];
   referencePoints: string[];
+  /**
+   * 参考答案。只有有确定技术答案的题目才有，开放题/行为题留空。
+   */
+  referenceAnswer?: string;
   estimatedMinutes: number;
   difficulty: QuestionDifficulty;
   /** 面试中记录的候选人回答。空表示这题还没记。 */

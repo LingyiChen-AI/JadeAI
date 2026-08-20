@@ -4,23 +4,20 @@ import { useTranslations } from 'next-intl';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { countAnswered } from '@/lib/recruit/answers';
-import type { InterviewQuestion } from '@/types/recruit';
-
-const DIFFICULTY_DOT: Record<string, string> = {
-  easy: 'bg-emerald-500',
-  medium: 'bg-amber-500',
-  hard: 'bg-red-500',
-};
+import { dimensionColor } from '@/lib/recruit/dimension-colors';
+import type { DimensionConfig, InterviewQuestion } from '@/types/recruit';
 
 interface QuestionListProps {
   questions: InterviewQuestion[];
+  dimensions: DimensionConfig[];
   selectedId: string | null;
   onSelect: (id: string) => void;
 }
 
-export function QuestionList({ questions, selectedId, onSelect }: QuestionListProps) {
+export function QuestionList({ questions, dimensions, selectedId, onSelect }: QuestionListProps) {
   const t = useTranslations('recruit.questions');
   const done = countAnswered(questions);
+  const labelOf = (key: string) => dimensions.find((d) => d.key === key)?.label ?? key;
 
   return (
     <div className="flex w-full min-h-0 flex-col gap-2 lg:w-[300px] lg:flex-none">
@@ -52,8 +49,14 @@ export function QuestionList({ questions, selectedId, onSelect }: QuestionListPr
                 {answered ? <Check className="h-2.5 w-2.5" /> : i + 1}
               </span>
               <span className="min-w-0 flex-1 truncate">{q.question}</span>
+              {/* 小圆点是维度色，和详情里的维度标签同色——扫一眼列表就知道
+                  哪几道是同一类题。难度在详情里有，不值得再占一个颜色通道。 */}
               <span
-                className={cn('h-1.5 w-1.5 shrink-0 rounded-full', DIFFICULTY_DOT[q.difficulty])}
+                title={labelOf(q.dimension)}
+                className={cn(
+                  'h-1.5 w-1.5 shrink-0 rounded-full',
+                  dimensionColor(q.dimension).dot,
+                )}
               />
             </button>
           );

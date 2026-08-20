@@ -51,7 +51,9 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     setTitle(job?.title ?? '');
     setJobDescription(job?.jobDescription ?? '');
     setQuestionCount(job?.questionCount ?? QUESTION_COUNT_DEFAULT);
-    setDimensions(job?.dimensions ?? defaultDimensions((key) => tDim(key)));
+    setDimensions(
+      job?.dimensions ?? defaultDimensions((key) => tDim(key), (key) => tDim(`descriptions.${key}`)),
+    );
   }, [open, job, tDim]);
 
   const canSave = title.trim() && jobDescription.trim() && dimensions.length > 0 && !saving;
@@ -83,7 +85,12 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* 必须带 sm: 前缀：DialogContent 基类里的 sm:max-w-lg 是个 variant，
           tailwind-merge 不会拿无前缀的 max-w-* 去覆盖它，写 max-w-2xl 是无效的 */}
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-4xl">
+      <DialogContent
+        className="max-h-[85vh] overflow-y-auto sm:max-w-4xl"
+        // Radix 打开时会聚焦第一个可聚焦元素，且对 input 会连带 select() 全选。
+        // 编辑岗位时那就是「岗位名称」，一进来整个标题反白，手一抖就没了。
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{job ? t('editJob') : t('createJob')}</DialogTitle>
         </DialogHeader>

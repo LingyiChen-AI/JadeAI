@@ -170,6 +170,9 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
           `   ${t('questions.pass')}：${q.rubric.pass}`,
           `   ${t('questions.fail')}：${q.rubric.fail}`,
           q.followUps.length ? `   ${t('questions.followUps')}：${q.followUps.join('；')}` : '',
+          q.referenceAnswer?.trim()
+            ? `   ${t('questions.referenceAnswer')}：${q.referenceAnswer.trim()}`
+            : '',
         ]
           .filter(Boolean)
           .join('\n');
@@ -233,6 +236,7 @@ export function QuestionsPanel({ job, candidate, onUpdated }: QuestionsPanelProp
         <div className="flex min-h-[420px] flex-col gap-4 lg:h-[calc(100vh-20.5rem)] lg:flex-row lg:items-stretch">
           <QuestionList
             questions={questions}
+            dimensions={dimensions}
             selectedId={selectedId}
             // 切题前先把防抖窗口里未落库的输入冲刷掉。QuestionDetail 带
             // key={id} 会整体重挂载，指望它自己在卸载时保存是不可靠的。

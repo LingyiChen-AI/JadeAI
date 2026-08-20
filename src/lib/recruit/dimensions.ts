@@ -19,12 +19,17 @@ export type PresetDimensionKey = (typeof PRESET_DIMENSION_KEYS)[number];
 
 /**
  * 新建岗位时的默认勾选：专业技能最重，逻辑与沟通次之。
- * labelOf 由调用方传入（客户端用 next-intl 的 t 函数）。
+ * labelOf / describeOf 由调用方传入（客户端用 next-intl 的 t 函数）。
  */
-export function defaultDimensions(labelOf: (key: string) => string): DimensionConfig[] {
-  return [
-    { key: 'professional', label: labelOf('professional'), weight: 3, custom: false },
-    { key: 'logic', label: labelOf('logic'), weight: 2, custom: false },
-    { key: 'communication', label: labelOf('communication'), weight: 2, custom: false },
-  ];
+export function defaultDimensions(
+  labelOf: (key: string) => string,
+  describeOf: (key: string) => string,
+): DimensionConfig[] {
+  return (['professional', 'logic', 'communication'] as const).map((key, i) => ({
+    key,
+    label: labelOf(key),
+    description: describeOf(key),
+    weight: i === 0 ? 3 : 2,
+    custom: false,
+  }));
 }

@@ -21,6 +21,12 @@ export const dimensionConfigSchema = z.object({
   label: z.string().min(1),
   weight: z.number().int().positive(),
   custom: z.boolean(),
+  // 加这个字段之前建的岗位，库里那条 JSON 没有 description。
+  // 设成必填的话，老岗位一存就 400。
+  description: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => v ?? '')
+    .pipe(z.string().max(2000)),
 });
 
 /** 岗位维度配置：至少勾一个，key 不许重复。 */
@@ -82,6 +88,10 @@ const rawQuestionSchema = z.object({
     .transform((v) => v ?? { excellent: '', pass: '', fail: '' }),
   followUps: stringArray,
   referencePoints: stringArray,
+  // 只有客观题才该有参考答案，开放题模型会留空或整个漏掉。
+  referenceAnswer: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => v ?? ''),
   estimatedMinutes: z
     .union([z.number(), z.string(), z.null(), z.undefined()])
     .transform((v) => {
