@@ -171,7 +171,7 @@ export function EvaluationPanel({
       {!generating && evaluation && (
         <div className="space-y-5">
           {/* 报告头：总分、作答数、结论一行放完 */}
-          <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <Card className="flex flex-row flex-wrap items-center justify-between gap-4 p-5">
             <div className="flex items-baseline gap-3">
               <span className="text-4xl font-semibold tabular-nums">{evaluation.overallScore}</span>
               <div className="text-xs text-zinc-500">
