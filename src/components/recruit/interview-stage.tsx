@@ -256,69 +256,65 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
 
       {/* 整块内容限宽后一起居中。之前是左栏内部 mx-auto，于是在 1580px 宽的
           主区里内容只占 670px，左右各空 455px，加上侧栏就成了四段式，很散。 */}
-      {/* 两张卡各自贴合内容、顶端对齐。之前让卡撑满高度、内容垂直居中，
-          结果是一大片空白被边框圈起来，看着像渲染坏了。 */}
-      <div className="mx-auto flex w-full min-h-0 max-w-[1140px] flex-1 flex-col items-start gap-5 overflow-y-auto px-5 py-6 lg:flex-row">
-        {/* 内容少时垂直居中，多时正常滚动。min-h-full + justify-center 是
-            标准解法——直接用 m-auto 在溢出时会把顶部裁掉。 */}
-        <main className="w-full min-w-0 flex-1 rounded-xl border bg-white px-8 py-7 dark:border-zinc-800 dark:bg-zinc-900">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className={color.chip}>
-                <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
-                {label}
-              </Badge>
-              <span className="text-xs text-zinc-400">
-                {current.difficulty} · {t('questions.minutes', { count: current.estimatedMinutes })}
-              </span>
-              <span className="ml-auto">
-                <SaveIndicator state={saveState} onRetry={() => void flush()} />
-              </span>
-            </div>
+      {/* 满铺：两块直接顶到屏幕边，没有圆角卡片、没有外边距、不居中。
+          面试台是专注模式，本来就该占满整块屏幕，而不是在灰底上飘一张卡。 */}
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-white px-10 py-8 dark:bg-zinc-900">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Badge variant="outline" className={color.chip}>
+              <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
+              {label}
+            </Badge>
+            <span className="text-xs text-zinc-400">
+              {current.difficulty} · {t('questions.minutes', { count: current.estimatedMinutes })}
+            </span>
+            <span className="ml-auto">
+              <SaveIndicator state={saveState} onRetry={() => void flush()} />
+            </span>
+          </div>
 
-            <h1 className="mt-4 text-[20px] font-semibold leading-[1.65] tracking-[-0.01em]">
-              {current.question}
-            </h1>
+          {/* 题干限个字宽，但是靠左的——满屏一行七十多个汉字读不下来。
+              没有边框，右边多出来的白就是白，不是「空卡片」。 */}
+          <h1 className="mt-4 max-h-[34vh] shrink-0 overflow-y-auto text-[21px] font-semibold leading-[1.65] tracking-[-0.01em] xl:max-w-[46em]">
+            {current.question}
+          </h1>
 
-            {/* 输入框跟着内容长，空的时候就该小。之前用 flex-1 撑满剩余高度，
-                结果全屏最抢眼的东西是一个 500px 高的空框。 */}
-            <Textarea
-              value={draft}
-              onChange={(e) => handleDraftChange(e.target.value)}
-              placeholder={t('questions.answerPlaceholder')}
-              autoFocus
-              className="mt-5 max-h-[40vh] min-h-[140px] bg-white text-[15px] leading-relaxed dark:bg-zinc-900"
-            />
+          {/* 写字的地方吃掉下面全部高度 */}
+          <Textarea
+            value={draft}
+            onChange={(e) => handleDraftChange(e.target.value)}
+            placeholder={t('questions.answerPlaceholder')}
+            autoFocus
+            className="mt-6 min-h-[180px] flex-1 resize-none bg-white text-[15px] leading-relaxed dark:bg-zinc-900"
+          />
 
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => goTo(index - 1)}
-                disabled={index === 0}
-                className="cursor-pointer gap-1.5"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                {t('stage.prev')}
-              </Button>
-              <Button
-                onClick={() => (isLast ? void finish() : goTo(index + 1))}
-                className="cursor-pointer gap-1.5"
-              >
-                {isLast ? t('stage.recordFinish') : t('stage.recordNext')}
-                {!isLast && <ChevronRight className="h-4 w-4" />}
-              </Button>
+          <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => goTo(index - 1)}
+              disabled={index === 0}
+              className="cursor-pointer gap-1.5"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              {t('stage.prev')}
+            </Button>
+            <Button
+              onClick={() => (isLast ? void finish() : goTo(index + 1))}
+              className="cursor-pointer gap-1.5"
+            >
+              {isLast ? t('stage.recordFinish') : t('stage.recordNext')}
+              {!isLast && <ChevronRight className="h-4 w-4" />}
+            </Button>
 
-              <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-400">
-                <Kbd>⌘↵</Kbd> {t('stage.shortcutNext')}
-                <Kbd>esc</Kbd> {t('stage.shortcutExit')}
-              </span>
-            </div>
+            <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-400">
+              <Kbd>⌘↵</Kbd> {t('stage.shortcutNext')}
+              <Kbd>esc</Kbd> {t('stage.shortcutExit')}
+            </span>
           </div>
         </main>
 
-        {/* 右栏分层：评分标准是面试中唯一真的要一直瞟的，常驻；
-            其余全部折叠。之前八段小字平铺，是一堵没人会读的墙。 */}
-        <aside className="w-full shrink-0 rounded-xl border bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 lg:w-[310px]">
+        {/* 右栏分层：评分标准是面试中唯一真要一直瞟的，常驻；其余折叠 */}
+        <aside className="min-h-0 shrink-0 overflow-y-auto border-t bg-zinc-50 px-5 py-6 dark:border-zinc-800 dark:bg-zinc-950 lg:w-[330px] lg:border-l lg:border-t-0">
           <p className="mb-2 text-[11px] uppercase tracking-wide text-zinc-400">
             {t('questions.rubric')}
           </p>
