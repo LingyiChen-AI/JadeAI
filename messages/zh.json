@@ -1069,7 +1069,7 @@
     "questions": {
       "generate": "生成面试题",
       "regenerate": "重新生成",
-      "generating": "正在生成面试题，约需 30-60 秒…",
+      "generating": "正在生成面试题…",
       "needResume": "请先上传或粘贴候选人简历",
       "empty": "还没有生成面试题",
       "copyAll": "复制全部题目",
@@ -1108,7 +1108,7 @@
       "transcriptCollapsed": "面试记录（{chars} 字）· 展开编辑",
       "generate": "生成评价",
       "regenerate": "重新评价",
-      "generating": "正在分析面试记录，约需 30-60 秒…",
+      "generating": "正在分析面试记录…",
       "needQuestions": "请先生成面试题",
       "needTranscript": "请先粘贴面试记录",
       "empty": "还没有评价",

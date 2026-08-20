@@ -1069,7 +1069,7 @@
     "questions": {
       "generate": "Generate questions",
       "regenerate": "Regenerate",
-      "generating": "Generating questions, this takes 30-60 seconds…",
+      "generating": "Generating questions…",
       "needResume": "Add the candidate's resume first",
       "empty": "No questions generated yet",
       "copyAll": "Copy all questions",
@@ -1108,7 +1108,7 @@
       "transcriptCollapsed": "Transcript ({chars} chars) · Edit",
       "generate": "Generate evaluation",
       "regenerate": "Re-evaluate",
-      "generating": "Analyzing the transcript, this takes 30-60 seconds…",
+      "generating": "Analyzing the transcript…",
       "needQuestions": "Generate the questions first",
       "needTranscript": "Paste the interview transcript first",
       "empty": "No evaluation yet",
