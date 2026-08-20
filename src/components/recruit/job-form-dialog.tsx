@@ -81,7 +81,7 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[70vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{job ? t('editJob') : t('createJob')}</DialogTitle>
         </DialogHeader>

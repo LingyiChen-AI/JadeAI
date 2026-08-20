@@ -100,7 +100,7 @@ export function DimensionChips({ value, onChange, questionCount }: DimensionChip
 
       {/* 权重：只为已选中的维度展开，两列排布 */}
       {value.length > 0 && (
-        <div className="grid gap-x-6 gap-y-3 rounded-lg border bg-zinc-50 p-4 sm:grid-cols-2 dark:bg-zinc-900">
+        <div className="space-y-2.5 rounded-lg border bg-zinc-50 p-4 dark:bg-zinc-900">
           {value.map((d) => (
             <div key={d.key} className="flex items-center gap-3">
               <span className="w-20 shrink-0 truncate text-xs text-zinc-600 dark:text-zinc-400">
