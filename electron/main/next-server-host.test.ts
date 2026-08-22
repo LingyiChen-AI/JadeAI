@@ -11,6 +11,7 @@ import {
   resolveNodeExecutable,
   resolveServerPort,
   waitForHealthy,
+  PREFERRED_SERVER_PORT,
 } from './next-server-host';
 
 describe('allocateLoopbackPort', () => {
@@ -308,8 +309,30 @@ describe('resolveServerPort', () => {
     expect(allocate).not.toHaveBeenCalled();
   });
 
+  // A fixed port below every OS's ephemeral range: the kernel can never hand it
+  // to another process's outbound connection, so it stays ours between launches.
+  it('uses the preferred port on a first launch', async () => {
+    const allocate = vi.fn();
+    const port = await resolveServerPort(null, {
+      isLoopbackPortBindable: vi.fn().mockResolvedValue(true),
+      allocateLoopbackPort: allocate,
+    });
+    expect(port).toBe(PREFERRED_SERVER_PORT);
+    expect(allocate).not.toHaveBeenCalled();
+  });
+
+  it('walks past the preferred port when something already holds it', async () => {
+    const port = await resolveServerPort(null, {
+      isLoopbackPortBindable: vi
+        .fn()
+        .mockImplementation(async (p: number) => p === PREFERRED_SERVER_PORT + 2),
+      allocateLoopbackPort: vi.fn(),
+    });
+    expect(port).toBe(PREFERRED_SERVER_PORT + 2);
+  });
+
   // Failing to start is worse than losing web storage for one session.
-  it('allocates a fresh port when the stored one is taken', async () => {
+  it('falls back to an OS-assigned port when the whole preferred range is taken', async () => {
     const port = await resolveServerPort(41234, {
       isLoopbackPortBindable: vi.fn().mockResolvedValue(false),
       allocateLoopbackPort: vi.fn().mockResolvedValue(51000),
@@ -317,14 +340,20 @@ describe('resolveServerPort', () => {
     expect(port).toBe(51000);
   });
 
-  it('allocates on a first launch, without probing', async () => {
-    const probe = vi.fn();
-    const port = await resolveServerPort(null, {
+  it('keeps an existing install on its stored port, API key and all', async () => {
+    const probe = vi.fn().mockResolvedValue(true);
+    const port = await resolveServerPort(41234, {
       isLoopbackPortBindable: probe,
-      allocateLoopbackPort: vi.fn().mockResolvedValue(51000),
+      allocateLoopbackPort: vi.fn(),
     });
-    expect(port).toBe(51000);
-    expect(probe).not.toHaveBeenCalled();
+    expect(port).toBe(41234);
+    expect(probe).toHaveBeenCalledTimes(1); // 没去试首选端口
+  });
+
+  it('preferred port sits below every OS ephemeral range and above the dev-server crowd', () => {
+    expect(PREFERRED_SERVER_PORT).toBeGreaterThanOrEqual(30000);
+    // Linux 的临时端口从 32768 起，整段扫描都必须留在它下面
+    expect(PREFERRED_SERVER_PORT + 10).toBeLessThan(32768);
   });
 });
 
