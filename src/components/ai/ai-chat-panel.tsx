@@ -216,7 +216,7 @@ export function AIChatContent({ resumeId, hideTitle }: AIChatContentProps) {
   const setPendingAiMessage = useEditorStore((s) => s.setPendingAiMessage);
   useEffect(() => {
     if (pendingAiMessage && sessionsLoaded && activeSessionId) {
-      sendMessage({ text: pendingAiMessage });
+      void sendMessage({ text: pendingAiMessage });
       setPendingAiMessage(null);
     }
   }, [pendingAiMessage, sessionsLoaded, activeSessionId, sendMessage, setPendingAiMessage]);

@@ -10,6 +10,8 @@ interface ResumeStore {
   isDirty: boolean;
   isSaving: boolean;
   _saveTimeout: ReturnType<typeof setTimeout> | null;
+  /** 正在飞的那次 PUT。用来串行化，避免两次保存乱序落库 */
+  _savePromise: Promise<void> | null;
 
   setResume: (resume: Resume) => void;
   updateSection: (sectionId: string, content: Partial<SectionContent>) => void;
@@ -21,6 +23,7 @@ interface ResumeStore {
   setTemplate: (template: string) => void;
   setTitle: (title: string) => void;
   save: () => Promise<void>;
+  flushSave: () => Promise<void>;
   _scheduleSave: () => void;
   reset: () => void;
 }
@@ -31,6 +34,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   isDirty: false,
   isSaving: false,
   _saveTimeout: null,
+  _savePromise: null,
 
   setResume: (resume) => {
     // Cancel any pending autosave to prevent stale data overwriting server changes (e.g., from AI tool calls)
@@ -150,11 +154,15 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   },
 
   save: async () => {
+    // 已经有一次在飞就先等它落地。两次 PUT 并行的话，先发的那次可能后到，
+    // 于是旧内容盖掉新内容——防抖保存和 flushSave 撞在一起时正好会这样。
+    const inFlight = get()._savePromise;
+    if (inFlight) await inFlight;
+
     const { currentResume, sections, isDirty } = get();
     if (!currentResume || !isDirty) return;
 
-    set({ isSaving: true });
-    try {
+    const request = (async () => {
       const fingerprint = typeof window !== 'undefined'
         ? localStorage.getItem('jade_fingerprint')
         : null;
@@ -179,13 +187,42 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
           })),
         }),
       });
+    })();
 
-      set({ isDirty: false });
+    set({ isSaving: true, _savePromise: request });
+    try {
+      await request;
+      // 只有这期间没再改过才清 dirty。每个 setter 都会换掉 sections /
+      // currentResume 的引用，比引用就够了。无条件清的话，保存期间敲的字
+      // 会被当成「已保存」——下次 flushSave 直接跳过，AI 还是读到旧的。
+      const after = get();
+      if (after.sections === sections && after.currentResume === currentResume) {
+        set({ isDirty: false });
+      }
     } catch (error) {
       console.error('Failed to save resume:', error);
     } finally {
-      set({ isSaving: false });
+      set({ isSaving: false, _savePromise: null });
     }
+  },
+
+  /**
+   * 立刻把未保存的改动写回服务端，等写完再返回。
+   *
+   * 所有 AI 功能（对话、JD 匹配、求职信、语法检查、翻译、模拟面试）在服务端都是
+   * 拿 resumeId 回库里读简历的，客户端不上传正文。所以只要防抖保存还没触发，
+   * AI 看到的就是上一版——间隔最长能调到 5 秒，关掉自动保存更是永远不会写。
+   * 这就是 issue #96：手动改完立刻问 AI，AI 在旧简历上改。
+   *
+   * 不看 autoSave 开关：用户主动把简历交给 AI 处理，本身就意味着要用当前这一版。
+   */
+  flushSave: async () => {
+    const { _saveTimeout } = get();
+    if (_saveTimeout) {
+      clearTimeout(_saveTimeout);
+      set({ _saveTimeout: null });
+    }
+    await get().save();
   },
 
   _scheduleSave: () => {
@@ -217,6 +254,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
       isDirty: false,
       isSaving: false,
       _saveTimeout: null,
+      _savePromise: null,
     });
   },
 }));
