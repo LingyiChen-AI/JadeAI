@@ -27,6 +27,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useEditorStore } from '@/stores/editor-store';
+import { useResumeStore } from '@/stores/resume-store';
 import { getAIHeaders } from '@/stores/settings-store';
 
 interface GrammarIssue {
@@ -276,6 +277,8 @@ export function GrammarCheckDialog({ open, onOpenChange, resumeId }: GrammarChec
     setError('');
 
     try {
+      // 服务端按 resumeId 回库读简历，先把未保存的改动落库，否则检查的是上一版
+      await useResumeStore.getState().flushSave();
       const res = await fetch('/api/ai/grammar-check', {
         method: 'POST',
         headers: getAuthHeaders(),

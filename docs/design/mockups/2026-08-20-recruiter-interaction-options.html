@@ -1,0 +1,779 @@
+<title>招聘模块 · 交互方案调研</title>
+
+<style>
+  :root {
+    --ground: #fafafa;
+    --surface: #ffffff;
+    --surface-2: #f4f4f5;
+    --surface-3: #ebebed;
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --text: #18181b;
+    --text-2: #52525b;
+    --muted: #71717a;
+    --faint: #a1a1aa;
+    --brand: #00a878;
+    --brand-soft: #e6f6f0;
+    --ok: #10b981;
+    --warn: #f59e0b;
+    --bad: #ef4444;
+    --d-prof: #6366f1;
+    --d-logic: #8b5cf6;
+    --d-comm: #0ea5e9;
+    --d-stress: #f43f5e;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 12px 40px -12px rgb(0 0 0 / 0.18);
+    --r: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #161618; --surface: #212124; --surface-2: #29292d; --surface-3: #323238;
+      --border: #35353a; --border-strong: #45454b;
+      --text: #fafafa; --text-2: #d4d4d8; --muted: #a1a1aa; --faint: #71717a;
+      --brand: #14c08d; --brand-soft: #123a30;
+      --shadow: 0 1px 2px rgb(0 0 0 / 0.4); --shadow-lg: 0 12px 40px -12px rgb(0 0 0 / 0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #161618; --surface: #212124; --surface-2: #29292d; --surface-3: #323238;
+    --border: #35353a; --border-strong: #45454b;
+    --text: #fafafa; --text-2: #d4d4d8; --muted: #a1a1aa; --faint: #71717a;
+    --brand: #14c08d; --brand-soft: #123a30;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4); --shadow-lg: 0 12px 40px -12px rgb(0 0 0 / 0.6);
+  }
+  :root[data-theme="light"] {
+    --ground: #fafafa; --surface: #ffffff; --surface-2: #f4f4f5; --surface-3: #ebebed;
+    --border: #e4e4e7; --border-strong: #d4d4d8;
+    --text: #18181b; --text-2: #52525b; --muted: #71717a; --faint: #a1a1aa;
+    --brand: #00a878; --brand-soft: #e6f6f0;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.05); --shadow-lg: 0 12px 40px -12px rgb(0 0 0 / 0.18);
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--text);
+    font: 15px/1.65 -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 96px; }
+
+  /* ── 页头 ─────────────────────────────────────────────── */
+  .masthead { padding: 56px 0 28px; }
+  .masthead h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+  .masthead .sub { margin: 10px 0 0; color: var(--muted); max-width: 62ch; }
+
+  .thesis {
+    margin-top: 28px; padding: 18px 20px;
+    border: 1px solid var(--border); border-left: 3px solid var(--brand);
+    border-radius: var(--r); background: var(--surface);
+  }
+  .thesis h2 { margin: 0 0 8px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .thesis p { margin: 0; color: var(--text-2); }
+  .thesis strong { color: var(--text); }
+
+  /* ── 方案切换 ─────────────────────────────────────────── */
+  .switcher {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin: 28px 0 0; padding: 10px 0;
+    background: color-mix(in srgb, var(--ground) 92%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .switcher button {
+    font: inherit; font-size: 13.5px; cursor: pointer;
+    padding: 8px 15px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
+    transition: all .14s;
+  }
+  .switcher button:hover { border-color: var(--border-strong); color: var(--text); }
+  .switcher button[aria-selected="true"] {
+    background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 500;
+  }
+  .switcher .spacer { flex: 1; }
+  .switcher .theme { border-radius: 8px; padding: 8px 12px; }
+
+  /* ── 方案区块 ─────────────────────────────────────────── */
+  .plan { display: none; padding-top: 34px; }
+  .plan.on { display: block; }
+
+  .plan-head { display: grid; grid-template-columns: 1fr; gap: 18px; margin-bottom: 22px; }
+  @media (min-width: 900px) { .plan-head { grid-template-columns: 1.15fr 1fr; gap: 32px; } }
+
+  .eyebrow { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brand); font-weight: 600; }
+  .plan-head h2 { margin: 6px 0 10px; font-size: 25px; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+  .plan-head .claim { margin: 0; color: var(--text-2); }
+
+  .tradeoff { display: grid; gap: 10px; align-content: start; }
+  .tradeoff div { padding: 11px 14px; border-radius: 8px; font-size: 13.5px; line-height: 1.6; }
+  .tradeoff .win { background: var(--brand-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--brand) 25%, transparent); }
+  .tradeoff .cost { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+  .tradeoff b { display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; opacity: .7; }
+
+  /* ── 模拟画面外框 ─────────────────────────────────────── */
+  .frame {
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    background: var(--surface); box-shadow: var(--shadow-lg); margin-bottom: 14px;
+  }
+  .frame-bar {
+    display: flex; align-items: center; gap: 7px;
+    padding: 9px 13px; background: var(--surface-2); border-bottom: 1px solid var(--border);
+  }
+  .frame-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); display: block; }
+  .frame-bar span { margin-left: 8px; font-size: 11.5px; color: var(--faint); }
+  .caption { margin: 0 0 30px; font-size: 12.5px; color: var(--muted); }
+
+  /* ── 通用小部件 ───────────────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 13px; border-radius: 8px; font-size: 13px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-2); white-space: nowrap;
+  }
+  .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 500; }
+  .btn.big { padding: 11px 22px; font-size: 14.5px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 9px; border-radius: 999px; font-size: 11.5px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text-2);
+  }
+  .chip.prof { color: var(--d-prof); border-color: color-mix(in srgb, var(--d-prof) 32%, transparent); background: color-mix(in srgb, var(--d-prof) 9%, transparent); }
+  .chip.logic { color: var(--d-logic); border-color: color-mix(in srgb, var(--d-logic) 32%, transparent); background: color-mix(in srgb, var(--d-logic) 9%, transparent); }
+  .chip.comm { color: var(--d-comm); border-color: color-mix(in srgb, var(--d-comm) 32%, transparent); background: color-mix(in srgb, var(--d-comm) 9%, transparent); }
+  .chip.stress { color: var(--d-stress); border-color: color-mix(in srgb, var(--d-stress) 32%, transparent); background: color-mix(in srgb, var(--d-stress) 9%, transparent); }
+  .kbd {
+    font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    padding: 4px 6px; border-radius: 5px; border: 1px solid var(--border-strong);
+    background: var(--surface-2); color: var(--muted);
+  }
+  .lbl { font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--faint); }
+  .ghost-line { height: 7px; border-radius: 4px; background: var(--surface-3); }
+
+  /* ── 功能覆盖表 ───────────────────────────────────────── */
+  .cover { border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); overflow: hidden; }
+  .cover h3 { margin: 0; padding: 13px 18px; font-size: 13px; border-bottom: 1px solid var(--border); background: var(--surface-2); font-weight: 600; }
+  .cover ul { margin: 0; padding: 14px 18px; list-style: none; display: grid; gap: 9px; }
+  @media (min-width: 760px) { .cover ul { grid-template-columns: 1fr 1fr; column-gap: 30px; } }
+  .cover li { display: flex; gap: 9px; font-size: 13.5px; color: var(--text-2); line-height: 1.55; }
+  .cover li::before { content: "✓"; color: var(--brand); font-weight: 700; flex: none; }
+  .cover li b { color: var(--text); font-weight: 600; }
+
+  /* ══ A · 面试台 ═══════════════════════════════════════ */
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); }
+  .modes > div { background: var(--surface); padding: 14px 16px; }
+  .modes .now { background: var(--brand-soft); }
+  .modes h4 { margin: 0 0 3px; font-size: 13px; display: flex; align-items: center; gap: 7px; }
+  .modes p { margin: 0; font-size: 11.5px; color: var(--muted); }
+  .modes .num { width: 18px; height: 18px; border-radius: 50%; background: var(--surface-3); color: var(--muted); font-size: 10.5px; display: grid; place-items: center; flex: none; }
+  .modes .now .num { background: var(--brand); color: #fff; }
+
+  .stage { background: var(--ground); padding: 0; }
+  .stage-top { display: flex; align-items: center; gap: 14px; padding: 12px 22px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .stage-top .who { font-weight: 600; font-size: 14px; }
+  .progress-rail { flex: 1; display: flex; gap: 3px; }
+  .progress-rail i { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-3); display: block; }
+  .progress-rail i.done { background: var(--brand); }
+  .progress-rail i.now { background: var(--d-prof); }
+
+  .stage-body { display: grid; grid-template-columns: 1fr; }
+  @media (min-width: 860px) { .stage-body { grid-template-columns: 1.45fr 0.85fr; } }
+  .stage-main { padding: 30px 34px 24px; }
+  .stage-main .qmeta { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .stage-main .qmeta .n { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .stage-main .q {
+    margin: 0 0 22px; font-size: 21px; line-height: 1.55; font-weight: 600;
+    letter-spacing: -0.01em; text-wrap: pretty;
+  }
+  .capture { border: 2px solid var(--brand); border-radius: 10px; background: var(--surface); padding: 13px 15px; }
+  .capture .lbl { margin-bottom: 7px; display: block; }
+  .capture .typed { font-size: 14px; color: var(--text-2); line-height: 1.7; }
+  .capture .cursor { display: inline-block; width: 2px; height: 15px; background: var(--brand); vertical-align: -2px; }
+  .stage-foot { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .stage-foot .hint { font-size: 12px; color: var(--muted); margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .stage-side { border-left: 1px solid var(--border); background: var(--surface); padding: 22px; }
+  .stage-side section { margin-bottom: 18px; }
+  .stage-side section:last-child { margin-bottom: 0; }
+  .stage-side .lbl { display: block; margin-bottom: 7px; }
+  .rub { display: grid; gap: 7px; }
+  .rub div { display: flex; gap: 8px; font-size: 12.5px; line-height: 1.55; color: var(--text-2); }
+  .rub i { width: 2px; border-radius: 2px; flex: none; }
+  .stage-side ul { margin: 0; padding-left: 16px; font-size: 12.5px; color: var(--text-2); line-height: 1.7; }
+  .folded { display: flex; align-items: center; gap: 7px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 7px; font-size: 12px; color: var(--muted); }
+
+  /* ══ B · 文档流 ══════════════════════════════════════ */
+  .doc { display: grid; grid-template-columns: 1fr; background: var(--ground); }
+  @media (min-width: 860px) { .doc { grid-template-columns: 200px 1fr; } }
+  .toc { border-right: 1px solid var(--border); background: var(--surface); padding: 20px 16px; }
+  .toc .lbl { display: block; margin-bottom: 11px; }
+  .toc a { display: flex; align-items: center; gap: 8px; padding: 5px 9px; border-radius: 6px; font-size: 12.5px; color: var(--text-2); text-decoration: none; margin-bottom: 1px; }
+  .toc a.on { background: var(--brand-soft); color: var(--text); font-weight: 500; }
+  .toc a .tick { margin-left: auto; font-size: 10px; color: var(--brand); }
+  .toc hr { border: 0; border-top: 1px solid var(--border); margin: 12px 0; }
+
+  .scroll { padding: 24px 30px; display: grid; gap: 14px; }
+  .docsec { border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
+  .docsec > header { display: flex; align-items: center; gap: 9px; padding: 11px 16px; border-bottom: 1px solid var(--border); }
+  .docsec > header h4 { margin: 0; font-size: 13.5px; font-weight: 600; }
+  .docsec > header .btn { margin-left: auto; }
+  .docsec .body { padding: 15px 16px; }
+  .qcard .stem { font-size: 14.5px; font-weight: 600; line-height: 1.6; margin: 0 0 10px; }
+  .qcard .inline-rub { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .ansbox { border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); padding: 10px 12px; font-size: 13px; color: var(--text-2); }
+  .ansbox.filled { border-color: color-mix(in srgb, var(--brand) 45%, transparent); background: var(--surface); }
+  .ansbox .lbl { display: block; margin-bottom: 6px; }
+
+  /* ══ C · 漏斗看板 ════════════════════════════════════ */
+  .funnel-top { display: flex; align-items: center; gap: 0; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; }
+  .funnel-top .step { display: flex; align-items: baseline; gap: 7px; padding-right: 20px; margin-right: 20px; border-right: 1px solid var(--border); }
+  .funnel-top .step:last-child { border-right: 0; }
+  .funnel-top .n { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .funnel-top .t { font-size: 11.5px; color: var(--muted); }
+  .funnel-top .step.hi .n { color: var(--brand); }
+
+  .board { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 10px; padding: 16px; background: var(--ground); overflow-x: auto; }
+  .col > .lbl { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; }
+  .col > .lbl .c { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .ccard { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 10px 11px; margin-bottom: 8px; box-shadow: var(--shadow); }
+  .ccard.drag { border-color: var(--brand); box-shadow: 0 8px 22px -8px color-mix(in srgb, var(--brand) 55%, transparent); transform: rotate(-1.4deg); }
+  .ccard .nm { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .ccard .meta { font-size: 11px; color: var(--muted); margin-top: 5px; display: flex; align-items: center; gap: 6px; }
+  .ccard .bar { height: 3px; border-radius: 2px; background: var(--surface-3); margin-top: 8px; overflow: hidden; }
+  .ccard .bar span { display: block; height: 100%; background: var(--brand); }
+  .drop { border: 1px dashed var(--border-strong); border-radius: 9px; height: 54px; display: grid; place-items: center; font-size: 11px; color: var(--faint); }
+
+  .drawer-demo { position: relative; }
+  .drawer {
+    position: absolute; inset: 0 0 0 32%;
+    background: var(--surface); border-left: 1px solid var(--border-strong);
+    box-shadow: -20px 0 50px -20px rgb(0 0 0 / 0.25);
+    padding: 18px 22px; overflow: hidden;
+  }
+  .drawer .dh { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .drawer .dh h4 { margin: 0; font-size: 16px; }
+  .rail { display: grid; gap: 0; }
+  .rail .node { display: grid; grid-template-columns: 22px 1fr; gap: 12px; }
+  .rail .gut { display: grid; grid-template-rows: 22px 1fr; justify-items: center; }
+  .rail .bead { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border-strong); background: var(--surface); display: grid; place-items: center; font-size: 9px; color: var(--muted); }
+  .rail .bead.ok { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .rail .bead.now { border-color: var(--brand); color: var(--brand); font-weight: 700; }
+  .rail .line { width: 2px; background: var(--border); height: 100%; min-height: 14px; }
+  .rail .node:last-child .line { background: transparent; }
+  .rail .cnt { padding-bottom: 14px; }
+  .rail .cnt h5 { margin: 1px 0 5px; font-size: 13px; }
+  .rail .cnt p { margin: 0; font-size: 12px; color: var(--muted); }
+
+  /* ══ D · 时间线 ══════════════════════════════════════ */
+  .tl-wrap { background: var(--ground); display: grid; grid-template-columns: 1fr; }
+  @media (min-width: 860px) { .tl-wrap { grid-template-columns: 1fr 232px; } }
+  .tl { padding: 22px 26px; display: grid; gap: 16px; align-content: start; }
+  .turn { display: grid; gap: 6px; max-width: 82%; }
+  .turn.ask { justify-self: start; }
+  .turn.said { justify-self: end; text-align: left; }
+  .turn .who { font-size: 11px; color: var(--faint); display: flex; align-items: center; gap: 6px; }
+  .turn.said .who { justify-content: flex-end; }
+  .bubble { padding: 12px 15px; border-radius: 12px; font-size: 14px; line-height: 1.6; }
+  .turn.ask .bubble { background: var(--surface); border: 1px solid var(--border); border-top-left-radius: 4px; }
+  .turn.said .bubble { background: var(--brand-soft); border: 1px solid color-mix(in srgb, var(--brand) 22%, transparent); border-top-right-radius: 4px; color: var(--text); }
+  .turn .under { display: flex; gap: 10px; font-size: 11.5px; color: var(--faint); align-items: center; }
+  .composer { border-top: 1px solid var(--border); background: var(--surface); padding: 12px 26px; display: flex; align-items: center; gap: 10px; }
+  .composer .box { flex: 1; border: 1px solid var(--border-strong); border-radius: 9px; padding: 9px 12px; font-size: 13px; color: var(--faint); }
+  .tl-side { border-left: 1px solid var(--border); background: var(--surface); padding: 18px; }
+  .tl-side .lbl { display: block; margin-bottom: 9px; }
+  .tl-side .qrow { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 12px; color: var(--text-2); }
+  .tl-side .qrow .t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tl-side .qrow.now { color: var(--text); font-weight: 600; }
+
+  /* ── 结尾 ─────────────────────────────────────────────── */
+  .verdict { margin-top: 40px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); padding: 22px 24px; }
+  .verdict h3 { margin: 0 0 12px; font-size: 16px; }
+  .verdict table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .verdict th, .verdict td { text-align: left; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .verdict th { font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+  .verdict tr:last-child td { border-bottom: 0; }
+  .verdict td:first-child { font-weight: 600; white-space: nowrap; padding-right: 20px; }
+  .scrollx { overflow-x: auto; }
+</style>
+
+<div class="wrap">
+  <div class="masthead">
+    <h1>招聘模块 · 交互方案调研</h1>
+    <p class="sub">四种互不相同的交互模型。不参考现有实现，功能一个不少。</p>
+
+    <div class="thesis">
+      <h2>先说诊断</h2>
+      <p>
+        现在别扭的根源不是布局细节，是<strong>一套骨架在服务三种完全不同的场景</strong>：
+        面试<strong>前</strong>配置密集、可以慢；面试<strong>中</strong>双手忙、眼睛在候选人身上、看屏幕的时间很短；
+        面试<strong>后</strong>是阅读和决策。现在这三件事共用「左栏候选人 + 步骤 Tab + 双栏」，
+        于是每一件都只有六十分。另外步骤条长得像向导（编号 + 对勾）却不代表顺序也不代表进度，
+        题目用「列表 + 详情」这种文件浏览器的形态，而面试实际是线性推进的。下面四个方案，各自从不同角度拆这个矛盾。
+      </p>
+    </div>
+  </div>
+
+  <div class="switcher" role="tablist">
+    <button role="tab" aria-selected="true" data-go="a">A · 面试台</button>
+    <button role="tab" aria-selected="false" data-go="b">B · 单页文档</button>
+    <button role="tab" aria-selected="false" data-go="c">C · 漏斗看板</button>
+    <button role="tab" aria-selected="false" data-go="d">D · 面试时间线</button>
+    <span class="spacer"></span>
+    <button class="theme" id="theme">◐ 深色</button>
+  </div>
+
+  <!-- ══════════════════════ A ══════════════════════ -->
+  <section class="plan on" id="plan-a">
+    <div class="plan-head">
+      <div>
+        <span class="eyebrow">方案 A</span>
+        <h2>面试台 · 把「准备 / 实战 / 复盘」拆成三个形态</h2>
+        <p class="claim">
+          不再用 Tab 切换视图，而是切换<strong>模式</strong>。准备是一页配置表单；
+          点「开始面试」进入专门的面试台：一次一道题、题干放大、答案框紧贴题干下方、
+          键盘推进；面完直接进复盘报告。三个界面长得完全不一样，因为它们要干的事本来就完全不一样。
+        </p>
+      </div>
+      <div class="tradeoff">
+        <div class="win"><b>解决</b>面试中不用找东西。题干、评分标准、答案框在同一屏同一视线内，按一下键就是下一题。</div>
+        <div class="cost"><b>代价</b>多一次模式切换。只想改一道题时也要进面试台，需要一个「随时退出」的出口。</div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="frame-bar"><i></i><i></i><i></i><span>golang 开发工程师 · 张三</span></div>
+
+      <div class="modes">
+        <div><h4><span class="num">1</span>准备</h4><p>简历 · 维度权重 · 生成题目</p></div>
+        <div class="now"><h4><span class="num">2</span>面试台</h4><p>逐题推进 · 记录回答</p></div>
+        <div><h4><span class="num">3</span>复盘</h4><p>评分 · 评价 · 录用建议</p></div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-top">
+          <span class="who">张三</span>
+          <div class="progress-rail">
+            <i class="done"></i><i class="done"></i><i class="now"></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <span class="lbl">3 / 8 · 已用 22 分钟</span>
+          <span class="btn">结束面试</span>
+        </div>
+
+        <div class="stage-body">
+          <div class="stage-main">
+            <div class="qmeta">
+              <span class="chip prof"><span class="dot" style="background:var(--d-prof)"></span>专业技能</span>
+              <span class="chip">hard</span>
+              <span class="n">建议 8 分钟</span>
+            </div>
+            <p class="q">你简历里说用 Golang 重写了订单服务，为什么不直接优化原来的 Java 服务？</p>
+
+            <div class="capture">
+              <span class="lbl">候选人回答</span>
+              <div class="typed">说是 Java 那版 GC 停顿在大促时能到 400ms，堆内存也压不下来。重写后 P99 从 380 降到 90，机器从 40 台减到 12 台<span class="cursor"></span></div>
+            </div>
+
+            <div class="stage-foot">
+              <span class="btn">上一题</span>
+              <span class="btn primary">记录并下一题</span>
+              <span class="hint"><span class="kbd">⌘↵</span> 下一题 <span class="kbd">⌥?</span> 追问 <span class="kbd">esc</span> 退出</span>
+            </div>
+          </div>
+
+          <div class="stage-side">
+            <section>
+              <span class="lbl">评分标准</span>
+              <div class="rub">
+                <div><i style="background:var(--ok)"></i>优秀：给得出量化对比和迁移方案</div>
+                <div><i style="background:var(--warn)"></i>合格：说得清动机</div>
+                <div><i style="background:var(--bad)"></i>不合格：只说 Go 性能好</div>
+              </div>
+            </section>
+            <section>
+              <span class="lbl">追问</span>
+              <ul><li>当时 QPS 多少</li><li>迁移期怎么双写</li></ul>
+            </section>
+            <section>
+              <span class="lbl">参考答案</span>
+              <div class="folded">› 展开（客观题才有）</div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">面试台模式。左边一栏放候选人列表？没有——面试中只有一个人，屏幕全给他。</p>
+
+    <div class="cover">
+      <h3>功能覆盖</h3>
+      <ul>
+        <li><b>岗位</b>增删改、JD、题目数量、维度权重与描述 → 全在「准备」页</li>
+        <li><b>候选人</b>增删改名、搜索、切换 → 岗位页的候选人列表，进面试台前选</li>
+        <li><b>简历</b>上传解析 / 粘贴文本 → 「准备」页第一块</li>
+        <li><b>出题</b>生成、重新生成、复制全部 → 「准备」页底部按钮，生成完直接进面试台</li>
+        <li><b>逐题答案</b>→ 面试台的核心，答案框常驻</li>
+        <li><b>删除单题</b>→ 面试台右上角「⋯」，或准备页的题目预览</li>
+        <li><b>整段面试记录</b>→ 复盘页顶部，和逐题答案二选一</li>
+        <li><b>评价</b>总分、雷达、逐题打分、优势风险、录用建议 → 复盘页</li>
+        <li><b>候选人对比</b>→ 岗位页，≥2 人已评价时出现</li>
+        <li><b>进度</b>顶部色带，颜色即维度</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ══════════════════════ B ══════════════════════ -->
+  <section class="plan" id="plan-b">
+    <div class="plan-head">
+      <div>
+        <span class="eyebrow">方案 B</span>
+        <h2>单页文档 · 一个候选人就是一份从头滚到尾的文档</h2>
+        <p class="claim">
+          删掉步骤 Tab，也删掉题目的「列表 + 详情」。一个候选人对应一份长文档：
+          简历 → 八道题（全部展开，每道题自带答案框）→ 评价。
+          左侧一条粘性目录负责跳转。面试时就是一路往下滚，<strong>没有任何隐藏状态</strong>。
+        </p>
+      </div>
+      <div class="tradeoff">
+        <div class="win"><b>解决</b>零隐藏。⌘F 能搜到全文，天然可打印/导出给同事，不存在「我刚才填的在哪个 Tab 里」。</div>
+        <div class="cost"><b>代价</b>长。十几道题要滚很久，面试中靠滚动定位比按一下键慢。</div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="frame-bar"><i></i><i></i><i></i><span>golang 开发工程师 · 张三</span></div>
+      <div class="doc">
+        <nav class="toc">
+          <span class="lbl">张三</span>
+          <a href="#"><span class="dot" style="background:var(--brand)"></span>简历<span class="tick">✓</span></a>
+          <hr>
+          <a href="#"><span class="dot" style="background:var(--d-prof)"></span>1 订单服务重写<span class="tick">✓</span></a>
+          <a href="#"><span class="dot" style="background:var(--d-prof)"></span>2 Kafka 幂等<span class="tick">✓</span></a>
+          <a href="#" class="on"><span class="dot" style="background:var(--d-logic)"></span>3 1% 请求超时</a>
+          <a href="#"><span class="dot" style="background:var(--d-logic)"></span>4 机器成本估算</a>
+          <a href="#"><span class="dot" style="background:var(--d-comm)"></span>5 讲给新同学</a>
+          <a href="#"><span class="dot" style="background:var(--d-stress)"></span>6 线上事故</a>
+          <hr>
+          <a href="#"><span class="dot" style="background:var(--faint)"></span>评价</a>
+        </nav>
+
+        <div class="scroll">
+          <div class="docsec">
+            <header>
+              <span class="dot" style="background:var(--brand)"></span>
+              <h4>简历</h4>
+              <span class="btn">已保存 · 展开</span>
+            </header>
+          </div>
+
+          <div class="docsec qcard">
+            <header>
+              <span class="chip prof"><span class="dot" style="background:var(--d-prof)"></span>专业技能</span>
+              <h4 style="font-weight:400;color:var(--muted);font-size:12px">第 2 题 · hard · 6 分钟</h4>
+              <span class="btn">删除</span>
+            </header>
+            <div class="body">
+              <p class="stem">Kafka 消费端出现重复消费，你在那个项目里是怎么保证幂等的？</p>
+              <div class="inline-rub">
+                <span>优秀：讲得出具体存储和边界</span><span>合格：知道要幂等</span><span>不合格：只说加锁</span>
+                <span style="color:var(--brand)">› 参考答案</span>
+              </div>
+              <div class="ansbox filled">
+                <span class="lbl">回答 · 已保存</span>
+                用业务唯一键落去重表加唯一索引，消费前先插入，冲突就跳过。
+              </div>
+            </div>
+          </div>
+
+          <div class="docsec qcard" style="border-color:var(--brand)">
+            <header>
+              <span class="chip logic"><span class="dot" style="background:var(--d-logic)"></span>逻辑思维</span>
+              <h4 style="font-weight:400;color:var(--muted);font-size:12px">第 3 题 · hard · 7 分钟</h4>
+              <span class="btn">删除</span>
+            </header>
+            <div class="body">
+              <p class="stem">线上只有 1% 的请求超时，其余都正常，你按什么顺序排查？</p>
+              <div class="inline-rub">
+                <span>优秀：按可能性 × 验证成本排</span><span>合格：有章法</span><span>不合格：乱猜</span>
+              </div>
+              <div class="ansbox"><span class="lbl">回答</span>在这里记…</div>
+            </div>
+          </div>
+
+          <div class="docsec">
+            <div class="body" style="display:flex;gap:12px;align-items:center">
+              <div style="flex:1"><div class="ghost-line" style="width:40%"></div><div class="ghost-line" style="width:64%;margin-top:8px"></div></div>
+              <span class="btn primary">生成评价</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">目录里的小圆点就是维度色；打过勾的是已记录回答的题。</p>
+
+    <div class="cover">
+      <h3>功能覆盖</h3>
+      <ul>
+        <li><b>岗位</b>配置 → 顶部「岗位设置」抽屉，不占文档正文</li>
+        <li><b>候选人</b>切换 → 目录顶部的候选人下拉，或岗位页返回</li>
+        <li><b>简历</b>→ 文档第一节，折叠态只占一行</li>
+        <li><b>出题 / 重新生成 / 复制全部</b>→ 题目区首行的操作条</li>
+        <li><b>逐题答案</b>→ 每张题卡自带，滚到哪填到哪</li>
+        <li><b>删除单题</b>→ 题卡右上角</li>
+        <li><b>整段面试记录</b>→ 评价节顶部</li>
+        <li><b>评价全套</b>→ 文档最后一节，就地展开</li>
+        <li><b>候选人对比</b>→ 岗位页</li>
+        <li><b>额外收益</b>整份文档可直接打印成 PDF 交给同事</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ══════════════════════ C ══════════════════════ -->
+  <section class="plan" id="plan-c">
+    <div class="plan-head">
+      <div>
+        <span class="eyebrow">方案 C</span>
+        <h2>漏斗看板 · 招聘本来就是漏斗，界面就长成漏斗</h2>
+        <p class="claim">
+          岗位内不再是候选人列表，而是五列看板：待传简历 / 待出题 / 待面试 / 待评价 / 已决策。
+          卡片是候选人，拖过去就推进状态。点开候选人从右侧滑出抽屉，
+          抽屉里是一条纵向流程。<strong>面试官关心的从来是「谁卡住了」，不是「谁排在第几」。</strong>
+        </p>
+      </div>
+      <div class="tradeoff">
+        <div class="win"><b>解决</b>同时推进十几个候选人时，一眼看清全局和卡点。状态不用手动改，拖动即状态。</div>
+        <div class="cost"><b>代价</b>单人深度操作被挤进抽屉，宽度受限；只招一两个人时看板显得小题大做。</div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="frame-bar"><i></i><i></i><i></i><span>golang 开发工程师</span></div>
+      <div class="funnel-top">
+        <div class="step"><span class="n">12</span><span class="t">候选人</span></div>
+        <div class="step"><span class="n">9</span><span class="t">已出题</span></div>
+        <div class="step"><span class="n">5</span><span class="t">已面</span></div>
+        <div class="step hi"><span class="n">2</span><span class="t">通过</span></div>
+        <div class="step"><span class="n">78</span><span class="t">平均分</span></div>
+      </div>
+      <div class="board">
+        <div class="col">
+          <span class="lbl">待传简历<span class="c">3</span></span>
+          <div class="ccard"><div class="nm">李四</div><div class="meta">2 天前加入</div></div>
+          <div class="ccard"><div class="nm">王五</div><div class="meta">今天</div></div>
+        </div>
+        <div class="col">
+          <span class="lbl">待出题<span class="c">2</span></span>
+          <div class="ccard"><div class="nm">赵六</div><div class="meta">简历已解析</div></div>
+        </div>
+        <div class="col">
+          <span class="lbl">待面试<span class="c">4</span></span>
+          <div class="ccard"><div class="nm">张三</div><div class="meta">14 题 · 79 分钟</div><div class="bar"><span style="width:38%"></span></div></div>
+          <div class="ccard drag"><div class="nm">孙七</div><div class="meta">8 题</div><div class="bar"><span style="width:0"></span></div></div>
+        </div>
+        <div class="col">
+          <span class="lbl">待评价<span class="c">1</span></span>
+          <div class="drop">拖到这里</div>
+        </div>
+        <div class="col">
+          <span class="lbl">已决策<span class="c">2</span></span>
+          <div class="ccard"><div class="nm"><span class="dot" style="background:var(--ok)"></span>周八</div><div class="meta">86 · 推荐录用</div></div>
+          <div class="ccard"><div class="nm"><span class="dot" style="background:var(--bad)"></span>吴九</div><div class="meta">52 · 不推荐</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame drawer-demo" style="min-height:330px">
+      <div class="frame-bar"><i></i><i></i><i></i><span>点开候选人 · 抽屉</span></div>
+      <div class="board" style="grid-template-columns:repeat(3,1fr);min-height:290px">
+        <div class="col"><span class="lbl">待传简历</span><div class="ccard"><div class="nm">李四</div></div></div>
+        <div class="col"><span class="lbl">待出题</span></div>
+        <div class="col"><span class="lbl">待面试</span></div>
+      </div>
+      <div class="drawer">
+        <div class="dh">
+          <h4>张三</h4>
+          <span class="chip">待面试</span>
+          <span class="btn" style="margin-left:auto">重命名</span>
+          <span class="btn">删除</span>
+        </div>
+        <div class="rail">
+          <div class="node">
+            <div class="gut"><div class="bead ok">✓</div><div class="line"></div></div>
+            <div class="cnt"><h5>简历</h5><p>已解析 · 3 段经历 · 点开查看</p></div>
+          </div>
+          <div class="node">
+            <div class="gut"><div class="bead ok">✓</div><div class="line"></div></div>
+            <div class="cnt"><h5>面试题</h5><p>14 题 · 专业 6 · 逻辑 4 · 沟通 3 · 抗压 1</p></div>
+          </div>
+          <div class="node">
+            <div class="gut"><div class="bead now">3</div><div class="line"></div></div>
+            <div class="cnt">
+              <h5>面试中 · 已记 5 / 14</h5>
+              <p style="margin-bottom:8px">逐题记录回答</p>
+              <span class="btn primary">进入面试台</span>
+            </div>
+          </div>
+          <div class="node">
+            <div class="gut"><div class="bead">4</div><div class="line"></div></div>
+            <div class="cnt"><h5>评价</h5><p>还需要至少一条回答</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">抽屉里是纵向流程，每一节点开就地展开；深度操作（逐题记录）跳全屏。</p>
+
+    <div class="cover">
+      <h3>功能覆盖</h3>
+      <ul>
+        <li><b>岗位</b>配置 → 看板右上角「岗位设置」</li>
+        <li><b>候选人</b>增删改名 → 卡片右键 / 抽屉顶部；搜索 → 看板顶部</li>
+        <li><b>状态流转</b>→ 拖动，不需要手动改状态字段</li>
+        <li><b>简历 / 出题 / 评价</b>→ 抽屉里的四个节点，就地展开</li>
+        <li><b>逐题答案</b>→ 抽屉里跳全屏面试台（可与方案 A 复用）</li>
+        <li><b>整段面试记录</b>→ 抽屉「评价」节点内</li>
+        <li><b>候选人对比</b>→ 「已决策」列多选后对比，位置比现在更自然</li>
+        <li><b>漏斗数字</b>顶部一行，替代现在岗位卡片上的统计</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ══════════════════════ D ══════════════════════ -->
+  <section class="plan" id="plan-d">
+    <div class="plan-head">
+      <div>
+        <span class="eyebrow">方案 D</span>
+        <h2>面试时间线 · 一场面试就是一条对话</h2>
+        <p class="claim">
+          题目和回答交替排成一条时间线，像聊天记录。左边是 AI 出的题，右边是你记下的回答。
+          底部一个常驻输入框，回车即记录、自动推出下一题。
+          面完之后，<strong>这条时间线本身就是面试记录</strong>，不需要另外再粘贴一遍。
+        </p>
+      </div>
+      <div class="tradeoff">
+        <div class="win"><b>解决</b>和面试的真实节奏同构。答案永远贴着题，不会记串行；面试记录天然生成。</div>
+        <div class="cost"><b>代价</b>跳题、回改弱一点；评分标准要靠侧栏或悬浮，不能常驻在题干旁边。</div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="frame-bar"><i></i><i></i><i></i><span>张三 · 面试进行中 22:14</span></div>
+      <div class="tl-wrap">
+        <div>
+          <div class="tl">
+            <div class="turn ask">
+              <span class="who"><span class="dot" style="background:var(--d-prof)"></span>第 2 题 · 专业技能 · hard</span>
+              <div class="bubble">Kafka 消费端出现重复消费，你在那个项目里是怎么保证幂等的？</div>
+              <div class="under"><span>› 评分标准</span><span>› 追问 2 条</span><span>› 参考答案</span></div>
+            </div>
+
+            <div class="turn said">
+              <span class="who">张三 · 已保存</span>
+              <div class="bubble">用业务唯一键落一张去重表加唯一索引，消费前先插入，冲突就跳过。也提到 Redis SETNX 兜短窗口。</div>
+            </div>
+
+            <div class="turn ask">
+              <span class="who"><span class="dot" style="background:var(--d-logic)"></span>第 3 题 · 逻辑思维 · hard</span>
+              <div class="bubble">线上只有 1% 的请求超时，其余都正常，你按什么顺序排查？</div>
+              <div class="under"><span>› 评分标准</span><span>› 追问 1 条</span></div>
+            </div>
+          </div>
+
+          <div class="composer">
+            <span class="btn">跳过</span>
+            <div class="box">记下张三的回答…</div>
+            <span class="btn primary">记录并出下一题 ⌘↵</span>
+          </div>
+        </div>
+
+        <aside class="tl-side">
+          <span class="lbl">题目 3 / 14</span>
+          <div class="qrow"><span class="dot" style="background:var(--d-prof)"></span><span class="t">订单服务重写</span><span>✓</span></div>
+          <div class="qrow"><span class="dot" style="background:var(--d-prof)"></span><span class="t">Kafka 幂等</span><span>✓</span></div>
+          <div class="qrow now"><span class="dot" style="background:var(--d-logic)"></span><span class="t">1% 请求超时</span></div>
+          <div class="qrow"><span class="dot" style="background:var(--d-logic)"></span><span class="t">机器成本估算</span></div>
+          <div class="qrow"><span class="dot" style="background:var(--d-comm)"></span><span class="t">讲给新同学</span></div>
+          <div class="qrow"><span class="dot" style="background:var(--d-stress)"></span><span class="t">线上事故</span></div>
+          <hr style="border:0;border-top:1px solid var(--border);margin:14px 0">
+          <span class="lbl">当前题评分标准</span>
+          <div class="rub">
+            <div><i style="background:var(--ok)"></i>按可能性 × 验证成本排</div>
+            <div><i style="background:var(--warn)"></i>有章法</div>
+            <div><i style="background:var(--bad)"></i>乱猜</div>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <p class="caption">面完点「结束」，整条时间线就是评估用的面试记录——现在那个「粘贴整段面试记录」的框可以删掉。</p>
+
+    <div class="cover">
+      <h3>功能覆盖</h3>
+      <ul>
+        <li><b>岗位</b>配置 → 独立设置页，和面试完全分开</li>
+        <li><b>候选人</b>增删改名、搜索 → 岗位页；一个候选人一条时间线</li>
+        <li><b>简历</b>→ 时间线第一条「系统消息」，可展开</li>
+        <li><b>出题</b>→ 生成后题目按顺序排队，逐条推出</li>
+        <li><b>逐题答案</b>→ 就是时间线上的「回答」气泡</li>
+        <li><b>删除单题</b>→ 题目气泡的「⋯」，或侧栏右键</li>
+        <li><b>整段面试记录</b>→ 不再需要手动粘贴，时间线即记录（仍保留导入口给线下面试）</li>
+        <li><b>评价</b>→ 时间线末尾追加一条「评估报告」，接着往下读</li>
+        <li><b>跳题 / 回改</b>→ 右侧题目栏点任意一题跳过去</li>
+        <li><b>候选人对比</b>→ 岗位页</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="verdict">
+    <h3>怎么选</h3>
+    <div class="scrollx">
+      <table>
+        <tr><th>如果你…</th><th>选</th><th>因为</th></tr>
+        <tr>
+          <td>自己一个人面，面试中最看重顺手</td>
+          <td>A</td>
+          <td>面试台是四个里唯一为「双手忙、看屏幕时间短」专门设计的形态</td>
+        </tr>
+        <tr>
+          <td>希望结果能直接发给同事看</td>
+          <td>B</td>
+          <td>整份文档结构即导出结构，零隐藏状态，打印即成品</td>
+        </tr>
+        <tr>
+          <td>同时推进十几个候选人</td>
+          <td>C</td>
+          <td>漏斗是招聘的真实心智，拖动即状态，卡点一眼可见</td>
+        </tr>
+        <tr>
+          <td>想让「记录」这件事本身消失</td>
+          <td>D</td>
+          <td>时间线即面试记录，省掉「粘贴整段记录」这一步和它带来的归错题问题</td>
+        </tr>
+      </table>
+    </div>
+    <p style="margin:16px 0 0;color:var(--text-2);font-size:13.5px">
+      A 和 C 不互斥：C 的抽屉里那个「进入面试台」就是 A。如果拿不定主意，
+      <strong>C 做岗位层 + A 做候选人层</strong>是最完整的组合，代价是要实现两套界面。
+    </p>
+  </div>
+</div>
+
+<script>
+  const tabs = [...document.querySelectorAll('.switcher [data-go]')];
+  tabs.forEach((t) => {
+    t.addEventListener('click', () => {
+      tabs.forEach((x) => x.setAttribute('aria-selected', String(x === t)));
+      document.querySelectorAll('.plan').forEach((p) => {
+        p.classList.toggle('on', p.id === 'plan-' + t.dataset.go);
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+
+  const themeBtn = document.getElementById('theme');
+  themeBtn.addEventListener('click', () => {
+    const now = document.documentElement.getAttribute('data-theme');
+    const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const next = now ? (now === 'dark' ? 'light' : 'dark') : prefersDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    themeBtn.textContent = next === 'dark' ? '◐ 浅色' : '◐ 深色';
+  });
+</script>

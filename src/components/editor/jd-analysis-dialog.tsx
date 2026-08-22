@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useEditorStore } from '@/stores/editor-store';
+import { useResumeStore } from '@/stores/resume-store';
 import { getAIHeaders } from '@/stores/settings-store';
 import { setPendingOptimizeMessage } from '@/lib/pending-optimize';
 
@@ -322,6 +323,8 @@ export function JdAnalysisDialog({ open, onOpenChange, resumeId }: JdAnalysisDia
     setError('');
 
     try {
+      // 服务端按 resumeId 回库读简历，先把未保存的改动落库，否则匹配的是上一版
+      await useResumeStore.getState().flushSave();
       const res = await fetch('/api/ai/jd-analysis', {
         method: 'POST',
         headers: getAuthHeaders(),

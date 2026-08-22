@@ -43,6 +43,13 @@
       "when": 1774583932715,
       "tag": "0005_confused_garia",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787135946275,
+      "tag": "0006_flawless_the_initiative",
+      "breakpoints": true
     }
   ]
 }

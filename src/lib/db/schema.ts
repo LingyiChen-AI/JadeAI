@@ -108,3 +108,9 @@ export {
   interviewMessages,
   interviewReports,
 } from './schema-interview';
+
+export {
+  recruitJobs,
+  recruitCandidates,
+  recruitEvaluations,
+} from './schema-recruit';

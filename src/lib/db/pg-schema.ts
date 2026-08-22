@@ -157,3 +157,44 @@ export const interviewReports = pgTable('interview_reports', {
   improvementPlan: text('improvement_plan').notNull(),
   createdAt: integer('created_at').notNull().default(epochNow),
 });
+
+// ── Recruiter-side tables ──
+
+export const recruitJobs = pgTable('recruit_jobs', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').notNull(),
+  title: text('title').notNull(),
+  jobDescription: text('job_description').notNull(),
+  dimensions: text('dimensions').notNull().default('[]'),
+  questionCount: integer('question_count').notNull().default(10),
+  createdAt: integer('created_at').notNull().default(epochNow),
+  updatedAt: integer('updated_at').notNull().default(epochNow),
+});
+
+export const recruitCandidates = pgTable('recruit_candidates', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  jobId: text('job_id').notNull(),
+  name: text('name').notNull().default(''),
+  status: text('status').notNull().default('pending'),
+  resumeText: text('resume_text').notNull().default(''),
+  resumeData: text('resume_data'),
+  dimensionsOverride: text('dimensions_override'),
+  questions: text('questions'),
+  transcript: text('transcript').notNull().default(''),
+  createdAt: integer('created_at').notNull().default(epochNow),
+  updatedAt: integer('updated_at').notNull().default(epochNow),
+});
+
+export const recruitEvaluations = pgTable('recruit_evaluations', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  candidateId: text('candidate_id').notNull().unique(),
+  overallScore: integer('overall_score').notNull(),
+  dimensionScores: text('dimension_scores').notNull(),
+  questionEvaluations: text('question_evaluations').notNull(),
+  recommendation: text('recommendation').notNull(),
+  recommendationReason: text('recommendation_reason').notNull().default(''),
+  strengths: text('strengths').notNull().default('[]'),
+  concerns: text('concerns').notNull().default('[]'),
+  overallComment: text('overall_comment').notNull().default(''),
+  createdAt: integer('created_at').notNull().default(epochNow),
+});

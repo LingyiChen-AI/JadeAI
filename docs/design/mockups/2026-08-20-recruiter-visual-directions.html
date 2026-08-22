@@ -1,0 +1,637 @@
+<title>招聘模块 · 视觉与交互方向</title>
+
+<style>
+  :root {
+    --ground: #f7f7f8;
+    --surface: #ffffff;
+    --surface-2: #f2f2f4;
+    --surface-3: #e8e8eb;
+    --border: #e5e5e8;
+    --border-strong: #d3d3d8;
+    --ink: #17171a;
+    --ink-2: #4b4b52;
+    --muted: #75757e;
+    --faint: #a3a3ac;
+    --brand: #00a878;
+    --brand-deep: #04835f;
+    --brand-soft: #e3f5ee;
+    --amber: #d97706;
+    --amber-soft: #fef3e2;
+    --rose: #e11d48;
+    --slate: #64748b;
+    --shadow-1: 0 1px 2px rgb(16 16 20 / 0.05);
+    --shadow-2: 0 4px 16px -6px rgb(16 16 20 / 0.14);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #131316; --surface: #1c1c20; --surface-2: #242429; --surface-3: #2e2e35;
+      --border: #2e2e35; --border-strong: #3d3d46;
+      --ink: #f5f5f7; --ink-2: #c9c9d2; --muted: #91919c; --faint: #6a6a75;
+      --brand: #17c793; --brand-deep: #3ddfae; --brand-soft: #10352a;
+      --amber: #f0a952; --amber-soft: #3a2a12;
+      --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4); --shadow-2: 0 4px 16px -6px rgb(0 0 0 / 0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #131316; --surface: #1c1c20; --surface-2: #242429; --surface-3: #2e2e35;
+    --border: #2e2e35; --border-strong: #3d3d46;
+    --ink: #f5f5f7; --ink-2: #c9c9d2; --muted: #91919c; --faint: #6a6a75;
+    --brand: #17c793; --brand-deep: #3ddfae; --brand-soft: #10352a;
+    --amber: #f0a952; --amber-soft: #3a2a12;
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4); --shadow-2: 0 4px 16px -6px rgb(0 0 0 / 0.6);
+  }
+  :root[data-theme="light"] {
+    --ground: #f7f7f8; --surface: #ffffff; --surface-2: #f2f2f4; --surface-3: #e8e8eb;
+    --border: #e5e5e8; --border-strong: #d3d3d8;
+    --ink: #17171a; --ink-2: #4b4b52; --muted: #75757e; --faint: #a3a3ac;
+    --brand: #00a878; --brand-deep: #04835f; --brand-soft: #e3f5ee;
+    --amber: #d97706; --amber-soft: #fef3e2;
+    --shadow-1: 0 1px 2px rgb(16 16 20 / 0.05); --shadow-2: 0 4px 16px -6px rgb(16 16 20 / 0.14);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font: 15px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 100px; }
+
+  .masthead { padding: 52px 0 24px; }
+  .masthead h1 { margin: 0; font-size: 29px; font-weight: 700; letter-spacing: -0.022em; }
+  .masthead .sub { margin: 9px 0 0; color: var(--muted); max-width: 60ch; }
+
+  .diag { margin-top: 24px; border: 1px solid var(--border); border-left: 3px solid var(--rose); border-radius: 10px; background: var(--surface); padding: 16px 18px; }
+  .diag h2 { margin: 0 0 8px; font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .diag ul { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 14px; }
+  .diag li { margin-bottom: 4px; }
+  .diag b { color: var(--ink); }
+
+  /* ── 阶段色：整个模块的视觉身份 ─────────────────────── */
+  .legend { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .legend div {
+    display: flex; align-items: center; gap: 7px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+    padding: 7px 12px; font-size: 12.5px; color: var(--ink-2);
+  }
+  .legend i { width: 8px; height: 8px; border-radius: 2px; }
+
+  .switcher {
+    position: sticky; top: 0; z-index: 20; display: flex; gap: 6px; flex-wrap: wrap;
+    margin-top: 26px; padding: 10px 0;
+    background: color-mix(in srgb, var(--ground) 92%, transparent);
+    backdrop-filter: blur(10px); border-bottom: 1px solid var(--border);
+  }
+  .switcher button {
+    font: inherit; font-size: 13.5px; cursor: pointer; padding: 8px 15px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); transition: .14s;
+  }
+  .switcher button:hover { border-color: var(--border-strong); color: var(--ink); }
+  .switcher button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: var(--ground); font-weight: 500; }
+  .switcher .spacer { flex: 1; }
+  .switcher .theme { border-radius: 8px; }
+
+  .plan { display: none; padding-top: 32px; }
+  .plan.on { display: block; }
+  .eyebrow { font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brand); font-weight: 600; }
+  .plan h2 { margin: 6px 0 8px; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+  .plan .claim { margin: 0 0 20px; color: var(--ink-2); max-width: 66ch; }
+  .plan .claim b { color: var(--ink); }
+
+  .frame { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow-2); }
+  .frame-bar { display: flex; align-items: center; gap: 7px; padding: 9px 13px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+  .frame-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); }
+  .frame-bar span { margin-left: 8px; font-size: 11.5px; color: var(--faint); }
+  .cap { margin: 10px 0 32px; font-size: 12.5px; color: var(--muted); }
+
+  /* ── 页头（三个方案共用） ───────────────────────────── */
+  .page { padding: 26px 30px 34px; background: var(--ground); }
+  .crumb { font-size: 12px; color: var(--muted); }
+  .head { display: flex; align-items: flex-end; gap: 14px; margin: 4px 0 22px; }
+  .head h3 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .head .meta { font-size: 12.5px; color: var(--muted); padding-bottom: 5px; }
+  .head .meta b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .head .right { margin-left: auto; display: flex; gap: 8px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink-2); white-space: nowrap;
+  }
+  .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.quiet { border-color: transparent; background: var(--surface-2); }
+  .btn.sm { padding: 6px 11px; font-size: 12px; }
+
+  /* ══ A · 档案卡 ═══════════════════════════════════ */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 14px; }
+  .dossier {
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+    overflow: hidden; box-shadow: var(--shadow-1); display: flex; flex-direction: column;
+  }
+  .dossier .top { display: flex; align-items: center; gap: 11px; padding: 15px 15px 12px; }
+  .mono {
+    width: 38px; height: 38px; border-radius: 10px; flex: none;
+    display: grid; place-items: center; font-size: 15px; font-weight: 700; letter-spacing: -0.02em;
+  }
+  .dossier .nm { min-width: 0; }
+  .dossier .nm strong { display: block; font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+  .dossier .nm span { font-size: 11.5px; color: var(--muted); }
+  .dossier .score { margin-left: auto; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+  .bar { height: 3px; background: var(--surface-3); }
+  .bar i { display: block; height: 100%; }
+  .dossier .act {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 11px; font-size: 13px; font-weight: 500; border-top: 1px solid var(--border);
+    margin-top: auto;
+  }
+  .dossier .act.go { background: var(--brand); color: #fff; border-top-color: var(--brand); }
+  .dossier .act.quiet { color: var(--ink-2); }
+  .dossier.add {
+    border-style: dashed; box-shadow: none; background: transparent;
+    align-items: center; justify-content: center; min-height: 132px; color: var(--muted); font-size: 13.5px; gap: 8px;
+  }
+
+  /* ══ B · 进度轨 ═══════════════════════════════════ */
+  .rows { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 16px; padding: 0 16px; height: 74px; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: 0; }
+  .row .who { display: flex; align-items: center; gap: 11px; width: 190px; flex: none; }
+  .row .who strong { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+  .track { display: flex; align-items: center; gap: 0; flex: 1; min-width: 0; }
+  .track .seg { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .track .node {
+    width: 9px; height: 9px; border-radius: 50%; flex: none;
+    border: 2px solid var(--border-strong); background: var(--surface);
+  }
+  .track .node.done { background: var(--brand); border-color: var(--brand); }
+  .track .node.now { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .track .line { flex: 1; height: 2px; background: var(--surface-3); min-width: 14px; }
+  .track .line.done { background: var(--brand); }
+  .track .lbl { font-size: 10.5px; color: var(--faint); position: absolute; }
+  .track-labels { display: flex; margin-left: 201px; margin-top: 2px; }
+  .track-labels span { flex: 1; font-size: 10.5px; color: var(--faint); }
+  .row .tail { display: flex; align-items: center; gap: 12px; flex: none; }
+  .pct { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; width: 52px; text-align: right; }
+
+  /* ══ C · 计分板 ═══════════════════════════════════ */
+  .board-head { display: flex; align-items: baseline; gap: 10px; margin: 26px 0 10px; }
+  .board-head h4 { margin: 0; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .board-head .n { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .board-head .rule { flex: 1; height: 1px; background: var(--border); }
+  .rank { display: flex; align-items: center; gap: 18px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .rank:last-child { border-bottom: 0; }
+  .rank .pos { width: 20px; font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .rank .big { font-size: 34px; font-weight: 700; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; width: 62px; }
+  .rank .info { min-width: 0; flex: 1; }
+  .rank .info strong { display: block; font-size: 15px; font-weight: 650; }
+  .rank .info .dims { display: flex; gap: 3px; margin-top: 6px; }
+  .rank .info .dims i { height: 4px; border-radius: 2px; }
+  .verdict {
+    font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .v-yes { background: var(--brand-soft); color: var(--brand-deep); }
+  .v-maybe { background: var(--amber-soft); color: var(--amber); }
+  .v-no { background: color-mix(in srgb, var(--rose) 10%, transparent); color: var(--rose); }
+
+  /* ══ D · 面试台 ═══════════════════════════════════ */
+  .stage { display: flex; min-height: 470px; background: var(--surface); }
+  .stage .lft { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 26px 32px 22px; }
+  .stage .rgt { width: 300px; flex: none; border-left: 1px solid var(--border); background: var(--ground); padding: 22px 20px; }
+  .stage .chiprow { display: flex; align-items: center; gap: 9px; }
+  .qchip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; background: color-mix(in srgb, #6366f1 10%, transparent); color: #6366f1; border: 1px solid color-mix(in srgb, #6366f1 30%, transparent); }
+  .stage .q { margin: 16px 0 0; font-size: 21px; font-weight: 650; line-height: 1.7; letter-spacing: -0.012em; flex: 1; }
+  .verdicts { display: flex; gap: 8px; margin-top: 20px; }
+  .vbtn {
+    flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+    border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface);
+    padding: 10px 13px; cursor: pointer; transition: .12s;
+  }
+  .vbtn .k { font-size: 10px; color: var(--faint); font-family: ui-monospace, Menlo, monospace; }
+  .vbtn .v { font-size: 14px; font-weight: 600; }
+  .vbtn.good { border-color: color-mix(in srgb, var(--brand) 55%, transparent); }
+  .vbtn.good .v { color: var(--brand-deep); }
+  .vbtn.ok { border-color: color-mix(in srgb, var(--amber) 55%, transparent); }
+  .vbtn.ok .v { color: var(--amber); }
+  .vbtn.bad { border-color: color-mix(in srgb, var(--rose) 45%, transparent); }
+  .vbtn.bad .v { color: var(--rose); }
+  .vbtn.picked { background: var(--brand); border-color: var(--brand); }
+  .vbtn.picked .v, .vbtn.picked .k { color: #fff; }
+  .noteline {
+    margin-top: 10px; display: flex; align-items: center; gap: 9px;
+    border: 1px solid var(--border-strong); border-radius: 9px; padding: 9px 12px; font-size: 13.5px; color: var(--muted);
+  }
+  .stage .foot { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+  .stage .foot .hint { margin-left: auto; font-size: 11px; color: var(--faint); display: flex; gap: 8px; align-items: center; }
+  .kbd { font: 500 10px/1 ui-monospace, Menlo, monospace; padding: 4px 6px; border-radius: 5px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--muted); }
+  .rgt .lbl { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); display: block; margin-bottom: 8px; }
+  .rub { display: grid; gap: 8px; }
+  .rub div { display: flex; gap: 8px; font-size: 12.5px; line-height: 1.6; color: var(--ink-2); }
+  .rub i { width: 2px; border-radius: 2px; flex: none; }
+  .rub.linked div { padding: 7px 9px; border-radius: 8px; border: 1px solid transparent; }
+  .rub.linked div.hi { border-color: var(--brand); background: var(--brand-soft); }
+  .fold { display: flex; align-items: center; gap: 7px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+
+  .note { margin-top: 34px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 18px 20px; }
+  .note h3 { margin: 0 0 10px; font-size: 15px; }
+  .note p { margin: 0 0 8px; color: var(--ink-2); font-size: 14px; }
+  .note p:last-child { margin: 0; }
+  .note b { color: var(--ink); }
+</style>
+
+<div class="wrap">
+  <div class="masthead">
+    <h1>招聘模块 · 视觉与交互方向</h1>
+    <p class="sub">候选人列表页的三个视觉方向，加上面试台记录方式的重做。</p>
+
+    <div class="diag">
+      <h2>现在为什么难看</h2>
+      <ul>
+        <li><b>没有层级</b>——标题、摘要行、搜索框、候选人行，分量完全一样</li>
+        <li><b>八个彩色小点是彩纸屑</b>，装饰假装成信息。维度色在题目里有意义，在这一页没有</li>
+        <li><b>候选人行没有存在感</b>：56px 一条细线，承载着这页唯一重要的信息</li>
+        <li><b>进度是灰色小字「已记 0/14」</b>——进度该是看得见的形，不是读得出的数</li>
+        <li><b>只有一个候选人时，页面 90% 是空的</b></li>
+      </ul>
+    </div>
+
+    <div class="legend">
+      <div><i style="background:var(--border-strong)"></i>待传简历</div>
+      <div><i style="background:var(--amber)"></i>待出题</div>
+      <div><i style="background:var(--brand)"></i>面试中</div>
+      <div><i style="background:var(--ink)"></i>已评价</div>
+    </div>
+  </div>
+
+  <div class="switcher" role="tablist">
+    <button role="tab" aria-selected="true" data-go="a">A · 档案卡</button>
+    <button role="tab" aria-selected="false" data-go="b">B · 进度轨</button>
+    <button role="tab" aria-selected="false" data-go="c">C · 计分板</button>
+    <button role="tab" aria-selected="false" data-go="d">D · 面试台记录方式</button>
+    <span class="spacer"></span>
+    <button class="theme" id="theme">◐ 深色</button>
+  </div>
+
+  <!-- ═══════════ A ═══════════ -->
+  <section class="plan on" id="plan-a">
+    <span class="eyebrow">方向 A</span>
+    <h2>档案卡</h2>
+    <p class="claim">
+      候选人不是表格的一行，是一份档案。首字母方块给每个人一个可辨认的形，
+      顶部一条阶段色带表明他走到哪，底部整条就是主按钮——<b>一张卡一个动作，点哪都对</b>。
+      末尾一张虚线卡负责「添加」，所以只有一个候选人时页面也不空。
+    </p>
+
+    <div class="frame">
+      <div class="frame-bar"><i></i><i></i><i></i><span>招聘 · golang 开发工程师</span></div>
+      <div class="page">
+        <div class="crumb">‹ 招聘岗位</div>
+        <div class="head">
+          <h3>golang 开发工程师</h3>
+          <span class="meta"><b>4</b> 位候选人 · <b>1</b> 位面试中 · <b>14</b> 题</span>
+          <div class="right">
+            <span class="btn sm">岗位设置</span>
+            <span class="btn sm primary">+ 添加候选人</span>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="dossier">
+            <div class="bar"><i style="width:100%;background:var(--ink)"></i></div>
+            <div class="top">
+              <span class="mono" style="background:var(--surface-2);color:var(--ink)">张</span>
+              <span class="nm"><strong>张三</strong><span>已评价 · 推荐录用</span></span>
+              <span class="score">86</span>
+            </div>
+            <div class="act quiet">看报告</div>
+          </div>
+
+          <div class="dossier">
+            <div class="bar"><i style="width:36%;background:var(--brand)"></i></div>
+            <div class="top">
+              <span class="mono" style="background:var(--brand-soft);color:var(--brand-deep)">李</span>
+              <span class="nm"><strong>李四</strong><span>面试中 · 已记 5/14</span></span>
+            </div>
+            <div class="act go">▷ 继续面试</div>
+          </div>
+
+          <div class="dossier">
+            <div class="bar"><i style="width:100%;background:var(--amber)"></i></div>
+            <div class="top">
+              <span class="mono" style="background:var(--amber-soft);color:var(--amber)">王</span>
+              <span class="nm"><strong>王五</strong><span>简历已解析</span></span>
+            </div>
+            <div class="act quiet">生成题目</div>
+          </div>
+
+          <div class="dossier">
+            <div class="bar"><i style="width:100%;background:var(--border-strong)"></i></div>
+            <div class="top">
+              <span class="mono" style="background:var(--surface-2);color:var(--muted)">赵</span>
+              <span class="nm"><strong>赵六</strong><span>还没有简历</span></span>
+            </div>
+            <div class="act quiet">传简历</div>
+          </div>
+
+          <div class="dossier add">＋ 添加候选人</div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">卡片顶部那条色带就是阶段：灰=待简历、琥珀=待出题、绿=面试中（长度即进度）、黑=已评价。</p>
+  </section>
+
+  <!-- ═══════════ B ═══════════ -->
+  <section class="plan" id="plan-b">
+    <span class="eyebrow">方向 B</span>
+    <h2>进度轨</h2>
+    <p class="claim">
+      还是一人一行，但每行中间是一条四节点的轨：简历 → 出题 → 面试 → 评价。
+      <b>「他走到哪一步」变成看得见的形</b>，不用读文字。行高 74px，姓名和动作各在两端，
+      中间的轨是扫视时唯一要看的东西。
+    </p>
+
+    <div class="frame">
+      <div class="frame-bar"><i></i><i></i><i></i><span>招聘 · golang 开发工程师</span></div>
+      <div class="page">
+        <div class="crumb">‹ 招聘岗位</div>
+        <div class="head">
+          <h3>golang 开发工程师</h3>
+          <span class="meta"><b>4</b> 位候选人 · <b>1</b> 位面试中 · <b>14</b> 题</span>
+          <div class="right">
+            <span class="btn sm">岗位设置</span>
+            <span class="btn sm primary">+ 添加候选人</span>
+          </div>
+        </div>
+
+        <div class="rows">
+          <div class="row">
+            <span class="who">
+              <span class="mono" style="width:32px;height:32px;font-size:13px;background:var(--surface-2);color:var(--ink)">张</span>
+              <strong>张三</strong>
+            </span>
+            <span class="track">
+              <span class="seg"><i class="node done"></i><i class="line done"></i></span>
+              <span class="seg"><i class="node done"></i><i class="line done"></i></span>
+              <span class="seg"><i class="node done"></i><i class="line done"></i></span>
+              <span class="seg" style="flex:none"><i class="node done"></i></span>
+            </span>
+            <span class="tail">
+              <span style="font-size:19px;font-weight:700;letter-spacing:-0.03em">86</span>
+              <span class="verdict v-yes">推荐录用</span>
+              <span class="btn sm">看报告</span>
+            </span>
+          </div>
+
+          <div class="row">
+            <span class="who">
+              <span class="mono" style="width:32px;height:32px;font-size:13px;background:var(--brand-soft);color:var(--brand-deep)">李</span>
+              <strong>李四</strong>
+            </span>
+            <span class="track">
+              <span class="seg"><i class="node done"></i><i class="line done"></i></span>
+              <span class="seg"><i class="node done"></i><i class="line done"></i></span>
+              <span class="seg"><i class="node now"></i><i class="line"></i></span>
+              <span class="seg" style="flex:none"><i class="node"></i></span>
+            </span>
+            <span class="tail">
+              <span class="pct">5/14</span>
+              <span class="btn sm primary">▷ 继续面试</span>
+            </span>
+          </div>
+
+          <div class="row">
+            <span class="who">
+              <span class="mono" style="width:32px;height:32px;font-size:13px;background:var(--amber-soft);color:var(--amber)">王</span>
+              <strong>王五</strong>
+            </span>
+            <span class="track">
+              <span class="seg"><i class="node done"></i><i class="line done"></i></span>
+              <span class="seg"><i class="node now"></i><i class="line"></i></span>
+              <span class="seg"><i class="node"></i><i class="line"></i></span>
+              <span class="seg" style="flex:none"><i class="node"></i></span>
+            </span>
+            <span class="tail"><span class="pct"></span><span class="btn sm">生成题目</span></span>
+          </div>
+
+          <div class="row">
+            <span class="who">
+              <span class="mono" style="width:32px;height:32px;font-size:13px;background:var(--surface-2);color:var(--muted)">赵</span>
+              <strong>赵六</strong>
+            </span>
+            <span class="track">
+              <span class="seg"><i class="node now"></i><i class="line"></i></span>
+              <span class="seg"><i class="node"></i><i class="line"></i></span>
+              <span class="seg"><i class="node"></i><i class="line"></i></span>
+              <span class="seg" style="flex:none"><i class="node"></i></span>
+            </span>
+            <span class="tail"><span class="pct"></span><span class="btn sm">传简历</span></span>
+          </div>
+        </div>
+        <div class="track-labels" style="margin-left:217px;padding-right:200px">
+          <span>简历</span><span>出题</span><span>面试</span><span>评价</span>
+        </div>
+      </div>
+    </div>
+    <p class="cap">四个节点的位置在每行都一样，所以扫一列就知道谁卡在哪一步。</p>
+  </section>
+
+  <!-- ═══════════ C ═══════════ -->
+  <section class="plan" id="plan-c">
+    <span class="eyebrow">方向 C</span>
+    <h2>计分板</h2>
+    <p class="claim">
+      招聘的目的是<b>比较和决策</b>，那就把分数摆到台面上。已评价的按总分降序排，
+      34px 的大号分数在最左边，下面一条维度色柱是他各维度得分的形状——
+      两个人放一起，强弱一眼可见。还在进行中的收在下面一组。
+    </p>
+
+    <div class="frame">
+      <div class="frame-bar"><i></i><i></i><i></i><span>招聘 · golang 开发工程师</span></div>
+      <div class="page">
+        <div class="crumb">‹ 招聘岗位</div>
+        <div class="head">
+          <h3>golang 开发工程师</h3>
+          <span class="meta"><b>5</b> 位候选人 · 均分 <b>74</b></span>
+          <div class="right">
+            <span class="btn sm">岗位设置</span>
+            <span class="btn sm primary">+ 添加候选人</span>
+          </div>
+        </div>
+
+        <div class="board-head"><h4>已评价</h4><span class="n">3</span><span class="rule"></span></div>
+        <div class="rows">
+          <div class="rank">
+            <span class="pos">1</span>
+            <span class="big">86</span>
+            <span class="info">
+              <strong>张三</strong>
+              <span class="dims">
+                <i style="width:52px;background:var(--brand)"></i>
+                <i style="width:44px;background:var(--brand)"></i>
+                <i style="width:38px;background:var(--brand)"></i>
+                <i style="width:30px;background:var(--surface-3)"></i>
+              </span>
+            </span>
+            <span class="verdict v-yes">推荐录用</span>
+            <span class="btn sm">看报告</span>
+          </div>
+          <div class="rank">
+            <span class="pos">2</span>
+            <span class="big">71</span>
+            <span class="info">
+              <strong>周八</strong>
+              <span class="dims">
+                <i style="width:40px;background:var(--brand)"></i>
+                <i style="width:46px;background:var(--brand)"></i>
+                <i style="width:22px;background:var(--surface-3)"></i>
+                <i style="width:34px;background:var(--brand)"></i>
+              </span>
+            </span>
+            <span class="verdict v-maybe">待定</span>
+            <span class="btn sm">看报告</span>
+          </div>
+          <div class="rank">
+            <span class="pos">3</span>
+            <span class="big" style="color:var(--muted)">52</span>
+            <span class="info">
+              <strong>吴九</strong>
+              <span class="dims">
+                <i style="width:24px;background:var(--surface-3)"></i>
+                <i style="width:30px;background:var(--surface-3)"></i>
+                <i style="width:36px;background:var(--brand)"></i>
+                <i style="width:18px;background:var(--surface-3)"></i>
+              </span>
+            </span>
+            <span class="verdict v-no">不推荐</span>
+            <span class="btn sm">看报告</span>
+          </div>
+        </div>
+
+        <div class="board-head"><h4>进行中</h4><span class="n">2</span><span class="rule"></span></div>
+        <div class="rows">
+          <div class="row" style="height:60px">
+            <span class="who">
+              <span class="mono" style="width:30px;height:30px;font-size:12px;background:var(--brand-soft);color:var(--brand-deep)">李</span>
+              <strong>李四</strong>
+            </span>
+            <span class="track">
+              <span class="seg"><i class="node done"></i><i class="line done"></i></span>
+              <span class="seg"><i class="node done"></i><i class="line done"></i></span>
+              <span class="seg"><i class="node now"></i><i class="line"></i></span>
+              <span class="seg" style="flex:none"><i class="node"></i></span>
+            </span>
+            <span class="tail"><span class="pct">5/14</span><span class="btn sm primary">▷ 继续面试</span></span>
+          </div>
+          <div class="row" style="height:60px">
+            <span class="who">
+              <span class="mono" style="width:30px;height:30px;font-size:12px;background:var(--surface-2);color:var(--muted)">赵</span>
+              <strong>赵六</strong>
+            </span>
+            <span class="track">
+              <span class="seg"><i class="node now"></i><i class="line"></i></span>
+              <span class="seg"><i class="node"></i><i class="line"></i></span>
+              <span class="seg"><i class="node"></i><i class="line"></i></span>
+              <span class="seg" style="flex:none"><i class="node"></i></span>
+            </span>
+            <span class="tail"><span class="pct"></span><span class="btn sm">传简历</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">维度色柱的长度就是该维度得分，四根并排即这个人的能力形状——不用点进报告看雷达图。</p>
+  </section>
+
+  <!-- ═══════════ D ═══════════ -->
+  <section class="plan" id="plan-d">
+    <span class="eyebrow">方向 D</span>
+    <h2>面试台 · 记录一道题 = 点一下</h2>
+    <p class="claim">
+      面试时你在听人说话，手上顶多记三五个关键词。之前那个 600px 高的输入框假设你在写逐字稿，
+      是个错误的前提。<b>你在一道题上真正要产出的是一个判断——这题答得怎么样</b>，
+      而评分标准本来就把判断分好了三档。所以记录应该是点一下，笔记是可选的一行。
+    </p>
+
+    <div class="frame">
+      <div class="frame-bar"><i></i><i></i><i></i><span>面试中 · 张三 · 第 1 题 / 共 14</span></div>
+      <div class="stage">
+        <div class="lft">
+          <div class="chiprow">
+            <span class="qchip"><i style="width:6px;height:6px;border-radius:50%;background:#6366f1"></i>专业技能</span>
+            <span style="font-size:12px;color:var(--faint)">hard · 建议 8 分钟</span>
+            <span style="margin-left:auto;font-size:12px;color:var(--brand)">✓ 已保存</span>
+          </div>
+
+          <p class="q">你简历里说用 Golang 重写了订单服务，为什么不直接优化原来的 Java 服务？</p>
+
+          <div class="verdicts">
+            <button class="vbtn good"><span class="k">1</span><span class="v">优秀</span></button>
+            <button class="vbtn picked"><span class="k">2</span><span class="v">合格</span></button>
+            <button class="vbtn bad"><span class="k">3</span><span class="v">不合格</span></button>
+            <button class="vbtn"><span class="k">0</span><span class="v" style="color:var(--muted)">没问</span></button>
+          </div>
+
+          <div class="noteline">
+            <span style="color:var(--ink)">提到 GC 停顿和 P99，没说迁移方案</span>
+            <span style="margin-left:auto;font-size:11px;color:var(--faint)">可选</span>
+          </div>
+
+          <div class="foot">
+            <span class="btn">上一题</span>
+            <span class="btn primary">下一题 →</span>
+            <span class="hint"><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span> 选档并跳下一题 <span class="kbd">esc</span> 退出</span>
+          </div>
+        </div>
+
+        <div class="rgt">
+          <span class="lbl">评分标准</span>
+          <div class="rub linked">
+            <div><i style="background:var(--brand)"></i>优秀：给得出量化对比和迁移方案</div>
+            <div class="hi"><i style="background:var(--amber)"></i>合格：说得清动机</div>
+            <div><i style="background:var(--rose)"></i>不合格：只说 Go 性能好</div>
+          </div>
+          <div style="margin-top:16px">
+            <div class="fold">› 追问 · 2</div>
+            <div class="fold">› 参考答案要点 · 4</div>
+            <div class="fold">› 考察点</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">选中的档位会在右侧评分标准里高亮对应那一条——你点的「合格」和标准里写的「合格」是同一个东西。</p>
+
+    <div class="note" style="margin-top:22px">
+      <h3>这么改带来的连锁好处</h3>
+      <p><b>一道题一秒钟。</b>按 <code>2</code> 就是「合格 + 跳下一题」，手不用离开键盘，眼睛不用离开候选人。十四道题的面试不再需要低头打字。</p>
+      <p><b>评估质量直接提升。</b>现在 AI 要从一段自由文本里推断答得好不好；有了确定的档位，打分有了锚点，AI 只需要在档位内做细分和写理由。</p>
+      <p><b>进度变得诚实。</b>「已记 5/14」现在指的是「填了字的题数」，有了档位就变成「已判断的题数」——这才是面试真正的进度。</p>
+      <p style="color:var(--muted)"><b>代价：</b>数据模型要加一个 <code>verdict</code> 字段（optional，老数据不受影响），评估 prompt 要相应改写。笔记框保留，只是从主角变成配角。</p>
+    </div>
+  </section>
+
+  <div class="note">
+    <h3>三个视觉方向共有的改动</h3>
+    <p><b>阶段色成为模块的视觉身份</b>：灰=待简历、琥珀=待出题、绿=面试中、黑=已评价。这四个色同时用在岗位卡片的统计数字上，一路贯穿到面试台顶栏。</p>
+    <p><b>八个维度色点从列表页拿掉</b>。维度色在题目列表里有意义（判断题目类型），在候选人列表里只是彩纸屑。想看配置点「岗位设置」。</p>
+    <p><b>「添加候选人」升级成主按钮，放到标题行右侧</b>，和「岗位设置」并排。搜索框只在候选人多于 8 个时出现——一个人的时候摆个搜索框是滑稽的。</p>
+    <p>我的选择是 <b>B</b>：它在只有一个候选人时不空、在十几个人时也不乱，而且四节点的轨是这套流程唯一真正需要一直看的信息。C 更有观点但只在多人已评价时才成立，可以作为 B 的一个排序视图后续再加。</p>
+    <p>面试台的 <b>D</b> 和列表页的方向互不冲突，可以一起做。</p>
+  </div>
+</div>
+
+<script>
+  const tabs = [...document.querySelectorAll('.switcher [data-go]')];
+  tabs.forEach((t) => {
+    t.addEventListener('click', () => {
+      tabs.forEach((x) => x.setAttribute('aria-selected', String(x === t)));
+      document.querySelectorAll('.plan').forEach((p) => p.classList.toggle('on', p.id === 'plan-' + t.dataset.go));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+  const tb = document.getElementById('theme');
+  tb.addEventListener('click', () => {
+    const now = document.documentElement.getAttribute('data-theme');
+    const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const next = now ? (now === 'dark' ? 'light' : 'dark') : prefersDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    tb.textContent = next === 'dark' ? '◐ 浅色' : '◐ 深色';
+  });
+</script>

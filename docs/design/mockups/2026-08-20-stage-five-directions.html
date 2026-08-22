@@ -1,0 +1,470 @@
+<title>面试台 · 五个方向</title>
+
+<style>
+  :root {
+    --pg: #f6f6f7; --pg-2: #ffffff;
+    --line: #e6e6e9; --line-2: #d2d2d8;
+    --ink: #16161a; --ink-2: #4a4a52; --dim: #78787f; --faint: #a6a6ae;
+    --go: #00a878; --go-deep: #077a5a;
+    --warn: #d97706; --bad: #e11d48;
+    --sh: 0 1px 2px rgb(0 0 0 / .05);
+    --sh-2: 0 10px 34px -14px rgb(0 0 0 / .22);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --pg: #121215; --pg-2: #1b1b1f; --line: #2c2c33; --line-2: #3c3c45;
+      --ink: #f4f4f6; --ink-2: #c6c6ce; --dim: #909099; --faint: #676770;
+      --go: #17c793; --go-deep: #4ce0b4;
+      --warn: #edab52; --bad: #fb7185;
+      --sh: 0 1px 2px rgb(0 0 0 / .4); --sh-2: 0 10px 34px -14px rgb(0 0 0 / .7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --pg: #121215; --pg-2: #1b1b1f; --line: #2c2c33; --line-2: #3c3c45;
+    --ink: #f4f4f6; --ink-2: #c6c6ce; --dim: #909099; --faint: #676770;
+    --go: #17c793; --go-deep: #4ce0b4; --warn: #edab52; --bad: #fb7185;
+    --sh: 0 1px 2px rgb(0 0 0 / .4); --sh-2: 0 10px 34px -14px rgb(0 0 0 / .7);
+  }
+  :root[data-theme="light"] {
+    --pg: #f6f6f7; --pg-2: #ffffff; --line: #e6e6e9; --line-2: #d2d2d8;
+    --ink: #16161a; --ink-2: #4a4a52; --dim: #78787f; --faint: #a6a6ae;
+    --go: #00a878; --go-deep: #077a5a; --warn: #d97706; --bad: #e11d48;
+    --sh: 0 1px 2px rgb(0 0 0 / .05); --sh-2: 0 10px 34px -14px rgb(0 0 0 / .22);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--pg); color: var(--ink);
+    font: 15px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 22px 100px; }
+  .top { padding: 50px 0 20px; }
+  .top h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -.022em; }
+  .top p { margin: 8px 0 0; color: var(--dim); max-width: 62ch; }
+  .why { margin-top: 20px; border: 1px solid var(--line); border-left: 3px solid var(--bad); border-radius: 10px; background: var(--pg-2); padding: 15px 17px; }
+  .why h2 { margin: 0 0 7px; font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+  .why p { margin: 0; font-size: 14px; color: var(--ink-2); }
+  .why b { color: var(--ink); }
+
+  .tabs { position: sticky; top: 0; z-index: 30; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 22px; padding: 10px 0;
+          background: color-mix(in srgb, var(--pg) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .tabs button { font: inherit; font-size: 13px; cursor: pointer; padding: 8px 14px; border-radius: 999px;
+                 border: 1px solid var(--line); background: var(--pg-2); color: var(--ink-2); transition: .14s; }
+  .tabs button:hover { border-color: var(--line-2); color: var(--ink); }
+  .tabs button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: var(--pg); font-weight: 500; }
+  .tabs .sp { flex: 1; }
+
+  .sec { display: none; padding-top: 30px; }
+  .sec.on { display: block; }
+  .kicker { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--go); font-weight: 600; }
+  .sec h2 { margin: 6px 0 8px; font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
+  .sec .lead { margin: 0 0 18px; color: var(--ink-2); max-width: 68ch; }
+  .sec .lead b { color: var(--ink); }
+  .cap { margin: 11px 0 0; font-size: 12.5px; color: var(--dim); }
+
+  .fr { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--sh-2); }
+  .fr-bar { display: flex; align-items: center; gap: 7px; padding: 9px 13px; background: var(--pg-2); border-bottom: 1px solid var(--line); }
+  .fr-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-2); }
+  .fr-bar span { margin-left: 8px; font-size: 11.5px; color: var(--faint); }
+
+  /* 共用小件 */
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; }
+  .kb { font: 500 10px/1 ui-monospace, Menlo, monospace; padding: 4px 6px; border-radius: 5px; border: 1px solid currentColor; opacity: .5; }
+
+  /* ═══ 1 · 提词器 ═══════════════════════════════ */
+  .s1 { background: #0b0d10; color: #e8eaed; min-height: 560px; display: flex; flex-direction: column; }
+  .s1 .bar { display: flex; align-items: center; gap: 14px; padding: 14px 26px; }
+  .s1 .bar .nm { font-size: 13px; color: #9aa0a6; }
+  .s1 .rail { flex: 1; display: flex; gap: 3px; }
+  .s1 .rail i { flex: 1; height: 2px; background: #23272c; border-radius: 2px; }
+  .s1 .rail i.done { background: #3c4248; }
+  .s1 .rail i.now { background: var(--go); }
+  .s1 .bar .n { font-size: 12px; color: #6b7176; font-variant-numeric: tabular-nums; }
+  .s1 .body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 8vw; }
+  .s1 .tag { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: #6b7176; margin-bottom: 18px; }
+  .s1 .tag b { color: #a5b4fc; font-weight: 500; }
+  .s1 .q { font-size: 30px; line-height: 1.55; font-weight: 500; letter-spacing: -.015em; color: #f1f3f4; margin: 0; }
+  .s1 .rub { display: flex; gap: 26px; margin-top: 30px; }
+  .s1 .rub div { display: flex; gap: 9px; font-size: 12.5px; color: #6b7176; line-height: 1.6; max-width: 30ch; }
+  .s1 .rub i { width: 2px; border-radius: 2px; flex: none; }
+  .s1 .foot { padding: 0 8vw 26px; }
+  .s1 .note { width: 100%; border: 0; border-bottom: 1px solid #2a2e33; background: transparent; color: #e8eaed;
+              font: inherit; font-size: 16px; padding: 12px 0; outline: none; }
+  .s1 .note::placeholder { color: #4c5257; }
+  .s1 .hint { margin-top: 12px; font-size: 11px; color: #4c5257; display: flex; gap: 14px; }
+
+  /* ═══ 2 · 卷宗 ═════════════════════════════════ */
+  .s2 { background: #faf9f6; color: #1c1a17; min-height: 560px; display: grid; grid-template-columns: 1fr 268px; }
+  @media (prefers-color-scheme: dark) { .s2 { background: #17161a; color: #ecebe8; } }
+  :root[data-theme="dark"] .s2 { background: #17161a; color: #ecebe8; }
+  .s2 .main { padding: 34px 40px 26px; display: flex; flex-direction: column; }
+  .s2 .eye { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: #9c948a; margin-bottom: 20px; display: flex; gap: 14px; }
+  .s2 .eye b { color: #5b4636; font-weight: 600; }
+  .s2 .q { font-family: "Songti SC", "Noto Serif SC", Georgia, serif; font-size: 25px; line-height: 1.75; font-weight: 600; margin: 0; max-width: 30em; }
+  .s2 .rule { height: 1px; background: #ddd8ce; margin: 26px 0 0; }
+  .s2 .note { margin-top: auto; }
+  .s2 .note label { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: #9c948a; }
+  .s2 .note .in { margin-top: 8px; border: 1px solid #ddd8ce; border-radius: 3px; background: #fffefb; padding: 11px 13px; font-size: 14.5px; color: #9c948a; min-height: 62px; }
+  .s2 .acts { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .s2 .side { border-left: 1px solid #e6e1d8; padding: 34px 22px; background: #f4f2ed; }
+  :root[data-theme="dark"] .s2 .side { background: #1d1c21; border-color: #2c2a30; }
+  .s2 .side h4 { margin: 0 0 10px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: #9c948a; font-weight: 600; }
+  .s2 .side .fn { font-size: 12.5px; line-height: 1.75; color: #4a443c; margin-bottom: 16px; }
+  :root[data-theme="dark"] .s2 .side .fn { color: #b7b1a8; }
+  .s2 .side .fn sup { color: #b08d57; font-weight: 700; margin-right: 4px; }
+  .s2 .btn { border: 1px solid #c8bfae; background: #fffefb; color: #3b352d; border-radius: 3px; padding: 9px 16px; font-size: 13.5px; }
+  .s2 .btn.go { background: #5b4636; border-color: #5b4636; color: #faf9f6; }
+
+  /* ═══ 3 · 控制台 ═══════════════════════════════ */
+  .s3 { display: grid; grid-template-columns: 216px 1fr; min-height: 560px; background: var(--pg-2); }
+  .s3 .gut { border-right: 1px solid var(--line); background: var(--pg); padding: 14px 0; overflow: hidden; }
+  .s3 .gut .hd { padding: 0 14px 10px; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .s3 .gut a { display: flex; align-items: center; gap: 9px; padding: 6px 14px; font-size: 12.5px; color: var(--dim); text-decoration: none; }
+  .s3 .gut a.on { background: var(--pg-2); color: var(--ink); font-weight: 600; box-shadow: inset 2px 0 0 var(--go); }
+  .s3 .gut a i { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  .s3 .gut a .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .s3 .gut a .ck { margin-left: auto; font-size: 10px; color: var(--go); }
+  .s3 .main { display: flex; flex-direction: column; }
+  .s3 .hd2 { display: flex; align-items: center; gap: 10px; padding: 12px 22px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--dim); }
+  .s3 .q { margin: 0; padding: 22px 22px 18px; font-size: 19px; font-weight: 650; line-height: 1.65; letter-spacing: -.01em; }
+  .s3 .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .s3 .grid3 > div { padding: 12px 16px; border-right: 1px solid var(--line); }
+  .s3 .grid3 > div:last-child { border-right: 0; }
+  .s3 .grid3 .lb { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; margin-bottom: 5px; font-weight: 600; }
+  .s3 .grid3 p { margin: 0; font-size: 12.5px; line-height: 1.65; color: var(--ink-2); }
+  .s3 .extra { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .s3 .extra > div { padding: 14px 20px; border-right: 1px solid var(--line); }
+  .s3 .extra > div:last-child { border-right: 0; }
+  .s3 .extra h5 { margin: 0 0 7px; font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+  .s3 .extra ul { margin: 0; padding-left: 15px; font-size: 12.5px; line-height: 1.7; color: var(--ink-2); }
+  .s3 .rec { margin-top: auto; border-top: 1px solid var(--line); background: var(--pg); padding: 12px 22px; display: flex; gap: 12px; align-items: center; }
+  .s3 .rec .in { flex: 1; border: 1px solid var(--line-2); border-radius: 7px; background: var(--pg-2); padding: 9px 12px; font-size: 13.5px; color: var(--faint); }
+
+  /* ═══ 4 · 无边框 ═══════════════════════════════ */
+  .s4 { background: var(--pg-2); min-height: 560px; display: flex; flex-direction: column; padding: 0 0 26px; }
+  .s4 .bar { display: flex; align-items: baseline; gap: 12px; padding: 20px 46px 0; font-size: 12px; color: var(--faint); }
+  .s4 .bar .idx { font-size: 34px; font-weight: 800; letter-spacing: -.05em; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1; }
+  .s4 .bar .of { font-size: 13px; color: var(--faint); }
+  .s4 .bar .sp { flex: 1; }
+  .s4 .q { margin: 22px 46px 0; font-size: 24px; font-weight: 650; line-height: 1.7; letter-spacing: -.012em; max-width: 34em; }
+  .s4 .rub { margin: 30px 46px 0; display: grid; gap: 11px; max-width: 46em; }
+  .s4 .rub div { display: grid; grid-template-columns: 66px 1fr; gap: 14px; align-items: baseline; }
+  .s4 .rub .lb { font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-align: right; }
+  .s4 .rub p { margin: 0; font-size: 13.5px; line-height: 1.7; color: var(--ink-2); }
+  .s4 .more { margin: 22px 46px 0; display: flex; gap: 18px; font-size: 11.5px; color: var(--faint); }
+  .s4 .rec { margin: auto 46px 0; padding-top: 26px; }
+  .s4 .rec .in { border: 0; border-bottom: 2px solid var(--line-2); padding: 10px 0; font-size: 16px; color: var(--faint); }
+  .s4 .rec .row { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: 12px; color: var(--faint); }
+  .s4 .go { background: var(--go); color: #fff; border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 500; }
+  .s4 .ghost { border: 1px solid var(--line-2); border-radius: 8px; padding: 9px 16px; font-size: 13.5px; color: var(--ink-2); }
+
+  /* ═══ 5 · 牌堆 ═════════════════════════════════ */
+  .s5 { background: linear-gradient(180deg, #eef0f3, #e4e7ec); min-height: 560px; display: flex; flex-direction: column; align-items: center; padding: 26px 0 30px; position: relative; }
+  :root[data-theme="dark"] .s5 { background: linear-gradient(180deg, #17181c, #101114); }
+  .s5 .top5 { width: 100%; display: flex; align-items: center; gap: 14px; padding: 0 26px 20px; font-size: 12px; color: var(--dim); }
+  .s5 .stack { position: relative; width: min(660px, 86%); flex: 1; }
+  .s5 .card {
+    position: absolute; inset: 0; border-radius: 16px; background: var(--pg-2);
+    border: 1px solid var(--line); box-shadow: 0 18px 44px -20px rgb(0 0 0 / .3);
+  }
+  .s5 .card.b2 { transform: translateY(14px) scale(.965); opacity: .55; }
+  .s5 .card.b1 { transform: translateY(7px) scale(.983); opacity: .8; }
+  .s5 .card.front { display: flex; flex-direction: column; padding: 26px 28px 22px; }
+  .s5 .head5 { display: flex; align-items: center; gap: 9px; }
+  .s5 .q { margin: 16px 0 0; font-size: 20px; font-weight: 650; line-height: 1.68; letter-spacing: -.01em; }
+  .s5 .flip { margin-top: auto; display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--faint); padding-top: 14px; border-top: 1px dashed var(--line); }
+  .s5 .in { margin-top: 12px; border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; color: var(--faint); }
+  .s5 .acts { margin-top: 14px; display: flex; align-items: center; gap: 10px; }
+  .s5 .left { width: 100%; padding: 18px 26px 0; display: flex; justify-content: center; gap: 5px; }
+  .s5 .left i { width: 22px; height: 3px; border-radius: 2px; background: var(--line-2); }
+  .s5 .left i.done { background: var(--go); opacity: .5; }
+  .s5 .left i.now { background: var(--go); }
+
+  .note-box { margin-top: 34px; border: 1px solid var(--line); border-radius: 10px; background: var(--pg-2); padding: 18px 20px; }
+  .note-box h3 { margin: 0 0 10px; font-size: 15px; }
+  .note-box table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .note-box td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink-2); }
+  .note-box tr:last-child td { border-bottom: 0; }
+  .note-box td:first-child { font-weight: 650; color: var(--ink); white-space: nowrap; }
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <h1>面试台 · 五个方向</h1>
+    <p>忽略现有实现，五种不同的视觉与交互解法。内容完全一致：同一道题、同一份评分标准、同一个记录动作。</p>
+    <div class="why">
+      <h2>现在为什么丑</h2>
+      <p>
+        满屏都是<b>细灰边框的盒子</b>——题干一个区、评分标准三个盒、折叠条一排、记录区一条，
+        每个盒子权重一样，眼睛不知道该看哪。<b>没有字体层级</b>：21px 和 13px 之间没有中间层，
+        全靠边框在分区。<b>没有色彩主张</b>：除了三条评分色，整页只有灰。
+        下面五个方向，每一个都是对这三条的不同回答。
+      </p>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-go="1">1 · 提词器</button>
+    <button role="tab" aria-selected="false" data-go="2">2 · 卷宗</button>
+    <button role="tab" aria-selected="false" data-go="3">3 · 控制台</button>
+    <button role="tab" aria-selected="false" data-go="4">4 · 无边框</button>
+    <button role="tab" aria-selected="false" data-go="5">5 · 牌堆</button>
+    <span class="sp"></span>
+    <button id="theme">◐ 深色</button>
+  </div>
+
+  <!-- ═══════ 1 ═══════ -->
+  <section class="sec on" id="s-1">
+    <span class="kicker">方向 1</span>
+    <h2>提词器 · 深色专注</h2>
+    <p class="lead">
+      面试进行中就该像上台。<b>深底、30px 大字、所有边框全部取消</b>，界面退到背景里去。
+      评分标准是底部三条细色线，不占盒子。记录只有一根下划线，写多少是多少。
+      <b>整屏只有一件东西是亮的：你要念的那句话。</b>
+    </p>
+    <div class="fr">
+      <div class="fr-bar"><i></i><i></i><i></i><span>面试中</span></div>
+      <div class="s1">
+        <div class="bar">
+          <span class="nm">张三</span>
+          <span class="rail">
+            <i class="done"></i><i class="done"></i><i class="now"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </span>
+          <span class="n">3 / 14 · 22 分钟</span>
+        </div>
+        <div class="body">
+          <div class="tag"><b>专业技能</b> · HARD · 建议 8 分钟</div>
+          <p class="q">你简历里说用 Golang 重写了订单服务，为什么不直接优化原来的 Java 服务？</p>
+          <div class="rub">
+            <div><i style="background:var(--go)"></i>优秀：给得出量化对比和迁移方案</div>
+            <div><i style="background:#d29922"></i>合格：说得清动机</div>
+            <div><i style="background:#f85149"></i>不合格：只说 Go 性能好</div>
+          </div>
+        </div>
+        <div class="foot">
+          <div class="note">边问边记…</div>
+          <div class="hint">
+            <span><span class="kb">⌘↵</span> 下一题</span>
+            <span><span class="kb">⌥F</span> 追问 2 条</span>
+            <span><span class="kb">esc</span> 退出</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">追问、参考答案、考察点默认完全不显示，按快捷键才浮出来——面试中它们是干扰。</p>
+  </section>
+
+  <!-- ═══════ 2 ═══════ -->
+  <section class="sec" id="s-2">
+    <span class="kicker">方向 2</span>
+    <h2>卷宗 · 编辑排版</h2>
+    <p class="lead">
+      把面试当成读一份案卷。<b>题干用衬线体、25px、行高 1.75</b>，像正文；
+      右侧一条窄栏放脚注体例的边注（评分标准、追问、要点），小字、有编号。
+      纸感的米白底和赭石色点缀——<b>这是唯一一个有自己色彩身份的方向</b>。
+    </p>
+    <div class="fr">
+      <div class="fr-bar"><i></i><i></i><i></i><span>面试中</span></div>
+      <div class="s2">
+        <div class="main">
+          <div class="eye"><span>张三 · 第 3 题 / 共 14</span><span><b>专业技能</b></span><span>HARD</span></div>
+          <p class="q">你简历里说用 Golang 重写了订单服务，为什么不直接优化原来的 Java 服务？</p>
+          <div class="rule"></div>
+          <div class="note">
+            <label>记录</label>
+            <div class="in">边问边记，不用整理</div>
+            <div class="acts">
+              <span class="btn">上一题</span>
+              <span class="btn go">记录并下一题</span>
+              <span style="margin-left:auto;font-size:11px;color:#9c948a">⌘↵ 下一题 · esc 退出</span>
+            </div>
+          </div>
+        </div>
+        <aside class="side">
+          <h4>评分标准</h4>
+          <div class="fn"><sup>甲</sup>给得出量化对比和迁移方案</div>
+          <div class="fn"><sup>乙</sup>说得清动机</div>
+          <div class="fn"><sup>丙</sup>只说 Go 性能好</div>
+          <h4 style="margin-top:24px">追问</h4>
+          <div class="fn"><sup>1</sup>当时 QPS 多少</div>
+          <div class="fn"><sup>2</sup>迁移期怎么双写</div>
+          <h4 style="margin-top:24px">参考要点</h4>
+          <div class="fn">延迟指标 · 迁移成本 · 双写校验</div>
+        </aside>
+      </div>
+    </div>
+    <p class="cap">边注永远在，但小到不抢戏——这是纸质文档处理「主文 + 注释」的老办法。</p>
+  </section>
+
+  <!-- ═══════ 3 ═══════ -->
+  <section class="sec" id="s-3">
+    <span class="kicker">方向 3</span>
+    <h2>控制台 · 全部可见</h2>
+    <p class="lead">
+      反方向：<b>什么都不折叠，什么都不隐藏</b>。左侧一条窄栏列出全部 14 道题（色点即维度），
+      右侧题干、评分标准三栏、追问和要点全部铺开。用<b>网格线而不是圆角盒子</b>分区——
+      密度高，但眼睛有格可循。适合不喜欢点来点去的人。
+    </p>
+    <div class="fr">
+      <div class="fr-bar"><i></i><i></i><i></i><span>面试中</span></div>
+      <div class="s3">
+        <nav class="gut">
+          <div class="hd">题目 3 / 14</div>
+          <a><i style="background:#6366f1"></i><span class="t">订单服务重写</span><span class="ck">✓</span></a>
+          <a><i style="background:#6366f1"></i><span class="t">Kafka 幂等</span><span class="ck">✓</span></a>
+          <a class="on"><i style="background:#8b5cf6"></i><span class="t">1% 请求超时</span></a>
+          <a><i style="background:#8b5cf6"></i><span class="t">机器成本估算</span></a>
+          <a><i style="background:#0ea5e9"></i><span class="t">讲给新同学听</span></a>
+          <a><i style="background:#0ea5e9"></i><span class="t">被资深同事反对</span></a>
+          <a><i style="background:#f43f5e"></i><span class="t">线上事故</span></a>
+          <a><i style="background:#f43f5e"></i><span class="t">排期被砍一半</span></a>
+        </nav>
+        <div class="main">
+          <div class="hd2">
+            <span class="pill" style="background:color-mix(in srgb,#8b5cf6 12%,transparent);color:#8b5cf6">逻辑思维</span>
+            <span>HARD · 建议 7 分钟</span>
+            <span style="margin-left:auto;color:var(--go)">✓ 已保存</span>
+          </div>
+          <h3 class="q">线上只有 1% 的请求超时，其余都正常，你按什么顺序排查？</h3>
+          <div class="grid3">
+            <div><div class="lb" style="color:var(--go)">优秀</div><p>按「可能性 × 验证成本」排序；说得出每一步要看什么证据</p></div>
+            <div><div class="lb" style="color:var(--warn)">合格</div><p>有章法，能从现象推到某一层</p></div>
+            <div><div class="lb" style="color:var(--bad)">不合格</div><p>乱猜，或只会说重启</p></div>
+          </div>
+          <div class="extra">
+            <div>
+              <h5>追问 2</h5>
+              <ul><li>怎么确认不是网络抖动</li><li>长尾在哪一层能观测到</li></ul>
+            </div>
+            <div>
+              <h5>参考要点 3</h5>
+              <ul><li>长尾定位手段</li><li>P99 与均值的区别</li><li>抽样与全量日志</li></ul>
+            </div>
+          </div>
+          <div class="rec">
+            <div class="in">边问边记，不用整理</div>
+            <span class="pill" style="border:1px solid var(--line-2);padding:8px 14px">上一题</span>
+            <span class="pill" style="background:var(--go);color:#fff;padding:8px 16px">记录并下一题</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">左栏同时是导航和进度：打勾的是记过的，色点是维度。</p>
+  </section>
+
+  <!-- ═══════ 4 ═══════ -->
+  <section class="sec" id="s-4">
+    <span class="kicker">方向 4</span>
+    <h2>无边框 · 纯排版</h2>
+    <p class="lead">
+      <b>一个盒子都不要</b>。层级完全靠字号、字重、留白和一点颜色建立：
+      左上角一个 34px 的题号锚住视线，题干 24px，评分标准用右对齐的标签列 + 正文列，
+      记录区只有一条 2px 下划线。<b>没有边框，就没有「一堆盒子」的问题。</b>
+    </p>
+    <div class="fr">
+      <div class="fr-bar"><i></i><i></i><i></i><span>面试中</span></div>
+      <div class="s4">
+        <div class="bar">
+          <span class="idx">03</span><span class="of">/ 14</span>
+          <span style="margin-left:14px;color:#6366f1;font-weight:600">专业技能</span>
+          <span>HARD · 8 分钟</span>
+          <span class="sp"></span>
+          <span style="color:var(--go)">✓ 已保存</span>
+        </div>
+        <p class="q">你简历里说用 Golang 重写了订单服务，为什么不直接优化原来的 Java 服务？</p>
+        <div class="rub">
+          <div><span class="lb" style="color:var(--go)">优秀</span><p>给得出量化对比和迁移方案：重写前后的 P99、机器数，以及迁移期怎么双写校验</p></div>
+          <div><span class="lb" style="color:var(--warn)">合格</span><p>说得清动机，但给不出数字</p></div>
+          <div><span class="lb" style="color:var(--bad)">不合格</span><p>只说 Go 性能好</p></div>
+        </div>
+        <div class="more">
+          <span>追问 2 →</span><span>参考要点 4 →</span><span>考察点 →</span>
+        </div>
+        <div class="rec">
+          <div class="in">边问边记…</div>
+          <div class="row">
+            <span class="ghost">上一题</span>
+            <span class="go">记录并下一题</span>
+            <span style="margin-left:auto">⌘↵ 下一题 · esc 退出</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">评分标准的三个标签右对齐成一条视觉轴，正文左对齐成另一条——两条轴代替了三个盒子。</p>
+  </section>
+
+  <!-- ═══════ 5 ═══════ -->
+  <section class="sec" id="s-5">
+    <span class="kicker">方向 5</span>
+    <h2>牌堆 · 有限感</h2>
+    <p class="lead">
+      一道题就是一张牌，<b>身后能看见还剩几张的边缘</b>。记完往前推，牌飞走，下一张顶上来。
+      评分标准在牌的背面，按一下翻过去看。<b>「还有 11 道」从一个数字变成一件看得见摸得着的事</b>——
+      面试进行到哪、还剩多少，不用读数字。
+    </p>
+    <div class="fr">
+      <div class="fr-bar"><i></i><i></i><i></i><span>面试中</span></div>
+      <div class="s5">
+        <div class="top5">
+          <span style="font-weight:600;color:var(--ink)">张三</span>
+          <span>第 3 张 · 还剩 11</span>
+          <span style="margin-left:auto">已用 22 分钟</span>
+          <span class="pill" style="border:1px solid var(--line-2);padding:5px 12px">结束面试</span>
+        </div>
+        <div class="stack">
+          <div class="card b2"></div>
+          <div class="card b1"></div>
+          <div class="card front">
+            <div class="head5">
+              <span class="pill" style="background:color-mix(in srgb,#6366f1 12%,transparent);color:#6366f1">专业技能</span>
+              <span style="font-size:11.5px;color:var(--faint)">HARD · 8 分钟</span>
+              <span style="margin-left:auto;font-size:11.5px;color:var(--go)">✓ 已保存</span>
+            </div>
+            <p class="q">你简历里说用 Golang 重写了订单服务，为什么不直接优化原来的 Java 服务？</p>
+            <div class="flip">↻ 翻到背面看评分标准与追问 <span class="kb" style="margin-left:auto">space</span></div>
+            <div class="in">边问边记，不用整理</div>
+            <div class="acts">
+              <span class="pill" style="border:1px solid var(--line-2);padding:8px 14px">← 上一张</span>
+              <span class="pill" style="background:var(--go);color:#fff;padding:8px 18px">记完，下一张 →</span>
+            </div>
+          </div>
+        </div>
+        <div class="left">
+          <i class="done"></i><i class="done"></i><i class="now"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+      </div>
+    </div>
+    <p class="cap">底部十四道刻度是唯一的进度显示。牌堆本身已经说明了「还剩多少」。</p>
+  </section>
+
+  <div class="note-box">
+    <h3>五个方向各自赌的是什么</h3>
+    <table>
+      <tr><td>1 · 提词器</td><td>赌「面试中信息越少越好」。把追问和参考答案全部藏进快捷键，屏幕上只留一句话。风险：需要的时候按不出来。</td></tr>
+      <tr><td>2 · 卷宗</td><td>赌「衬线体和边注能让它像一份严肃文件」。唯一有独立色彩身份的方向。风险：和产品其他页面的观感割裂。</td></tr>
+      <tr><td>3 · 控制台</td><td>赌「一次看全比来回点强」。用网格线而非圆角盒分区，密度最高。风险：信息量大，扫视成本高。</td></tr>
+      <tr><td>4 · 无边框</td><td>赌「层级靠排版就够了，不需要边框」。改动量最小、和现有设计体系最兼容。风险：不够有记忆点。</td></tr>
+      <tr><td>5 · 牌堆</td><td>赌「有限感能减轻面试的心理负担」。最有记忆点。风险：动效和翻面要做好才成立，做不好会显得花哨。</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+  const tabs = [...document.querySelectorAll('.tabs [data-go]')];
+  tabs.forEach((t) => {
+    t.addEventListener('click', () => {
+      tabs.forEach((x) => x.setAttribute('aria-selected', String(x === t)));
+      document.querySelectorAll('.sec').forEach((s) => s.classList.toggle('on', s.id === 's-' + t.dataset.go));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+  const tb = document.getElementById('theme');
+  tb.addEventListener('click', () => {
+    const now = document.documentElement.getAttribute('data-theme');
+    const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const next = now ? (now === 'dark' ? 'light' : 'dark') : dark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    tb.textContent = next === 'dark' ? '◐ 浅色' : '◐ 深色';
+  });
+</script>

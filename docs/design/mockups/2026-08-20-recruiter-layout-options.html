@@ -1,0 +1,623 @@
+<title>招聘模块布局方案对比</title>
+
+<style>
+  :root {
+    --ground: #fafafa;
+    --surface: #ffffff;
+    --surface-2: #f4f4f5;
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --text: #18181b;
+    --text-2: #52525b;
+    --muted: #71717a;
+    --faint: #a1a1aa;
+    --brand: #00a878;
+    --brand-soft: #e6f6f0;
+    --ok: #10b981;
+    --warn: #f59e0b;
+    --bad: #ef4444;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+    --radius: 10px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #18181b;
+      --surface: #232326;
+      --surface-2: #2a2a2e;
+      --border: #35353a;
+      --border-strong: #45454b;
+      --text: #fafafa;
+      --text-2: #d4d4d8;
+      --muted: #a1a1aa;
+      --faint: #71717a;
+      --brand: #14c08d;
+      --brand-soft: #123a30;
+      --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #18181b;
+    --surface: #232326;
+    --surface-2: #2a2a2e;
+    --border: #35353a;
+    --border-strong: #45454b;
+    --text: #fafafa;
+    --text-2: #d4d4d8;
+    --muted: #a1a1aa;
+    --faint: #71717a;
+    --brand: #14c08d;
+    --brand-soft: #123a30;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  }
+
+  :root[data-theme="light"] {
+    --ground: #fafafa;
+    --surface: #ffffff;
+    --surface-2: #f4f4f5;
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --text: #18181b;
+    --text-2: #52525b;
+    --muted: #71717a;
+    --faint: #a1a1aa;
+    --brand: #00a878;
+    --brand-soft: #e6f6f0;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { max-width: 1600px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* ── intro ─────────────────────────────────────────── */
+  .intro { max-width: 68ch; margin-bottom: 36px; }
+  h1 { font-size: 24px; font-weight: 700; margin: 0 0 8px; text-wrap: balance; }
+  .intro p { margin: 0 0 12px; color: var(--text-2); }
+  .metrics {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding: 0; list-style: none;
+  }
+  .metrics li {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 12px; font-size: 12px; color: var(--muted);
+  }
+  .metrics b { color: var(--bad); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  /* ── switcher ──────────────────────────────────────── */
+  .switcher {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; flex-wrap: wrap; gap: 4px;
+    background: var(--ground); padding: 12px 0;
+    border-bottom: 1px solid var(--border); margin-bottom: 28px;
+  }
+  .switcher button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    background: transparent; color: var(--muted);
+    border: 1px solid transparent; border-radius: 8px;
+    padding: 7px 14px; transition: background .15s, color .15s;
+  }
+  .switcher button:hover { color: var(--text); background: var(--surface-2); }
+  .switcher button[aria-selected="true"] {
+    background: var(--surface); color: var(--text);
+    border-color: var(--border); box-shadow: var(--shadow); font-weight: 600;
+  }
+  .switcher button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  /* ── panel ─────────────────────────────────────────── */
+  .panel[hidden] { display: none; }
+  .panel-head { max-width: 68ch; margin-bottom: 20px; }
+  .panel-head h2 { font-size: 18px; font-weight: 650; margin: 0 0 6px; }
+  .verdict { display: grid; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; font-size: 13px; }
+  .verdict li { display: flex; gap: 8px; align-items: baseline; color: var(--text-2); }
+  .verdict .tag {
+    flex: none; width: 3.2em; font-size: 11px; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  .verdict .good .tag { color: var(--ok); }
+  .verdict .cost .tag { color: var(--warn); }
+
+  /* ── mock chrome ───────────────────────────────────── */
+  .mock {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden; box-shadow: var(--shadow);
+  }
+  .mock-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); }
+  .mock-bar span { margin-left: 8px; font-size: 11px; color: var(--faint); }
+  .mock-body { display: flex; min-height: 460px; }
+
+  /* ── sidebar (shared) ──────────────────────────────── */
+  .side {
+    flex: none; width: 240px; padding: 16px;
+    border-right: 1px solid var(--border); background: var(--surface);
+  }
+  .side-back { font-size: 11px; color: var(--faint); }
+  .side-title { font-size: 15px; font-weight: 650; margin: 2px 0 12px; }
+  .side-search {
+    height: 30px; border: 1px solid var(--border); border-radius: 7px;
+    background: var(--surface-2); margin-bottom: 10px;
+    display: flex; align-items: center; padding: 0 9px; font-size: 12px; color: var(--faint);
+  }
+  .cand {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 9px; border-radius: 7px; border-left: 2px solid transparent;
+    font-size: 13px;
+  }
+  .cand.on { background: var(--brand-soft); border-left-color: var(--brand); }
+  .cand .st { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
+  .cand .nm { flex: 1; font-weight: 500; }
+  .cand .sc { font-variant-numeric: tabular-nums; color: var(--text-2); }
+
+  /* ── main area ─────────────────────────────────────── */
+  .main { flex: 1; min-width: 0; padding: 20px; }
+  .main.pad-lg { padding: 24px 28px; }
+  .who { font-size: 19px; font-weight: 700; }
+  .who small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+
+  .steps { display: flex; gap: 22px; border-bottom: 1px solid var(--border); margin: 14px 0 18px; }
+  .step { display: flex; align-items: center; gap: 6px; padding-bottom: 9px; font-size: 13px; color: var(--muted); }
+  .step.on { color: var(--text); font-weight: 600; box-shadow: inset 0 -2px 0 var(--text); }
+  .step i {
+    width: 17px; height: 17px; border-radius: 50%; display: grid; place-items: center;
+    font-size: 10px; font-style: normal; background: var(--brand); color: #fff;
+  }
+  .step.todo i { background: transparent; border: 1px solid var(--border-strong); color: var(--faint); }
+
+  .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .btn {
+    font-size: 12.5px; border-radius: 7px; padding: 7px 12px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  }
+  .btn.pri { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 500; }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .summary { font-size: 12px; color: var(--faint); margin-bottom: 12px; }
+  .summary b { color: var(--text-2); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  .chip {
+    font-size: 11px; padding: 1px 7px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
+  }
+  .dur { font-size: 11.5px; color: var(--faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .lv { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .lv.e { background: var(--ok); } .lv.m { background: var(--warn); } .lv.h { background: var(--bad); }
+  .box { width: 15px; height: 15px; border: 1px solid var(--border-strong); border-radius: 4px; flex: none; }
+  .chev { color: var(--faint); font-size: 11px; flex: none; }
+
+  /* A — 限宽 */
+  .reading { max-width: 780px; }
+  .q-row {
+    display: flex; align-items: center; gap: 10px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 12px; margin-bottom: 6px; background: var(--surface);
+  }
+  .q-row .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* B — 主从 */
+  .split { display: flex; gap: 18px; align-items: flex-start; }
+  .qlist { flex: none; width: 300px; display: grid; gap: 4px; }
+  .qlist .it {
+    display: flex; gap: 8px; align-items: center; padding: 9px 10px;
+    border: 1px solid transparent; border-radius: 8px; font-size: 13px; cursor: default;
+  }
+  .qlist .it .n { color: var(--faint); font-variant-numeric: tabular-nums; flex: none; }
+  .qlist .it .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .qlist .it.on { background: var(--brand-soft); border-color: var(--brand); font-weight: 500; }
+  .detail {
+    flex: 1; min-width: 0; border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px; background: var(--surface);
+  }
+  .detail h3 { font-size: 15px; font-weight: 600; margin: 0 0 4px; line-height: 1.5; }
+  .detail .meta { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+  .lab {
+    font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--faint); margin: 14px 0 5px;
+  }
+  .rub { display: grid; gap: 5px; }
+  .rub div { display: flex; gap: 8px; font-size: 13px; color: var(--text-2); }
+  .rub s { width: 2px; border-radius: 2px; flex: none; text-decoration: none; }
+  .rub .a s { background: var(--ok); } .rub .b s { background: var(--warn); } .rub .c s { background: var(--bad); }
+  .detail ul { margin: 0; padding-left: 17px; font-size: 13px; color: var(--text-2); }
+
+  /* C — 双列 */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .g-card {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px 13px; background: var(--surface);
+  }
+  .g-card .top { display: flex; gap: 8px; align-items: flex-start; }
+  .g-card .t { flex: 1; font-size: 13px; font-weight: 500; line-height: 1.5; }
+  .g-card .foot { display: flex; gap: 8px; align-items: center; margin-top: 9px; }
+
+  /* D — 表格 */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left; font-size: 11px; font-weight: 500; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--faint);
+    padding: 9px 12px; background: var(--surface-2); border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.num { color: var(--faint); font-variant-numeric: tabular-nums; width: 1%; }
+  td.q { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td.right { text-align: right; width: 1%; }
+
+  /* 现状 */
+  .wide-row {
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 13px 16px; margin-bottom: 8px; background: var(--surface);
+  }
+  .wide-row .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .void-note {
+    margin-top: 14px; padding: 10px 14px; border-radius: 8px;
+    border: 1px dashed var(--border-strong); color: var(--faint); font-size: 12px;
+  }
+
+  .rec {
+    margin-top: 36px; max-width: 68ch; padding: 18px 20px;
+    border: 1px solid var(--border); border-left: 3px solid var(--brand);
+    border-radius: var(--radius); background: var(--surface);
+  }
+  .rec h2 { font-size: 15px; margin: 0 0 8px; font-weight: 650; }
+  .rec p { margin: 0 0 10px; color: var(--text-2); font-size: 13.5px; }
+  .rec p:last-child { margin-bottom: 0; }
+
+  @media (max-width: 900px) {
+    .mock-body { flex-direction: column; }
+    .side { width: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+    .split { flex-direction: column; }
+    .qlist { width: auto; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="page">
+
+  <div class="intro">
+    <h1>招聘模块布局方案</h1>
+    <p>
+      问题不在配色也不在间距，在于<strong>把 1600px 全部拿来放单列内容</strong>。
+      题卡横跨整屏，题干只占左边三分之一，中间是大片空白，维度徽章和时长孤零零飘在右端——
+      眼睛要横扫一整屏才能把「这道题问什么」和「要花几分钟」连起来。
+    </p>
+    <ul class="metrics">
+      <li>题卡宽度 <b>1500px</b></li>
+      <li>题干实占 <b>35%</b></li>
+      <li>中间空白 <b>约 700px</b></li>
+      <li>下半屏 <b>全空</b></li>
+    </ul>
+    <p style="margin-top:16px">
+      下面四个方案用同一批真实题目、同一个宽度渲染，第一个标签是现状对照。
+      挑一个告诉我编号即可，也可以说「A 的宽度 + D 的行密度」这种组合。
+    </p>
+  </div>
+
+  <div class="switcher" role="tablist" aria-label="布局方案">
+    <button role="tab" aria-selected="true" aria-controls="p0" id="t0">现状</button>
+    <button role="tab" aria-selected="false" aria-controls="pa" id="ta">A · 限宽阅读流</button>
+    <button role="tab" aria-selected="false" aria-controls="pb" id="tb">B · 主从双栏</button>
+    <button role="tab" aria-selected="false" aria-controls="pc" id="tc">C · 双列卡片</button>
+    <button role="tab" aria-selected="false" aria-controls="pd" id="td">D · 紧凑表格</button>
+  </div>
+
+  <!-- ── 现状 ─────────────────────────────────────────── -->
+  <section class="panel" id="p0" role="tabpanel" aria-labelledby="t0">
+    <div class="panel-head">
+      <h2>现状</h2>
+      <ul class="verdict">
+        <li class="cost"><span class="tag">问题</span><span>题干与右侧元信息之间隔着 700px 空白，两者读不到一起</span></li>
+        <li class="cost"><span class="tag">问题</span><span>「全部展开」按钮距离它控制的内容 1400px</span></li>
+        <li class="cost"><span class="tag">问题</span><span>1440×900 屏下半部分完全空白，左栏也是</span></li>
+      </ul>
+    </div>
+    <div class="mock">
+      <div class="mock-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span>/recruit/…/c/… — 面试题</span></div>
+      <div class="mock-body">
+        <aside class="side">
+          <div class="side-back">‹ 招聘岗位</div>
+          <div class="side-title">高级后端工程师</div>
+          <div class="side-search">搜索候选人</div>
+          <div class="cand on"><i class="st"></i><span class="nm">张三</span><span class="sc">78</span></div>
+        </aside>
+        <div class="main">
+          <div class="who">张三<small>已评价</small></div>
+          <div class="steps">
+            <div class="step"><i>✓</i>简历</div>
+            <div class="step on"><i>✓</i>面试题</div>
+            <div class="step"><i>✓</i>评价</div>
+          </div>
+          <div class="toolbar">
+            <button class="btn pri">重新生成</button>
+            <button class="btn">复制全部题目</button>
+            <button class="btn ghost" style="margin-left:auto">全部展开</button>
+          </div>
+          <div class="summary">共 <b>5</b> 题 · 预计 <b>42</b> 分钟　逻辑思维 5</div>
+
+          <div class="wide-row"><i class="box"></i><span class="t">1. 你在低代码平台里做断点续传，分块大小是怎么定的？</span><span class="chip">逻辑思维</span><span class="dur"><i class="lv m"></i> 8 分钟</span><span class="chev">⌄</span></div>
+          <div class="wide-row"><i class="box"></i><span class="t">2. 讲一个你排查过的线上问题，从现象到定位的完整过程。</span><span class="chip">逻辑思维</span><span class="dur"><i class="lv h"></i> 10 分钟</span><span class="chev">⌄</span></div>
+          <div class="wide-row"><i class="box"></i><span class="t">3. Tekton 与 Knative 那套自动化交付，失败时如何回滚？</span><span class="chip">逻辑思维</span><span class="dur"><i class="lv m"></i> 8 分钟</span><span class="chev">⌄</span></div>
+          <div class="wide-row"><i class="box"></i><span class="t">4. 字段级权限控制的配置分离方案，为什么不用中间件统一拦截？</span><span class="chip">逻辑思维</span><span class="dur"><i class="lv m"></i> 7 分钟</span><span class="chev">⌄</span></div>
+          <div class="wide-row"><i class="box"></i><span class="t">5. 游戏牌局逻辑里，如何保证服务端与客户端状态一致？</span><span class="chip">逻辑思维</span><span class="dur"><i class="lv h"></i> 9 分钟</span><span class="chev">⌄</span></div>
+
+          <div class="void-note">↓ 这里往下到屏幕底部全是空白</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── A ────────────────────────────────────────────── -->
+  <section class="panel" id="pa" role="tabpanel" aria-labelledby="ta" hidden>
+    <div class="panel-head">
+      <h2>A · 限宽阅读流</h2>
+      <p style="color:var(--text-2);margin:0">
+        内容区限制在 780px 左对齐，不再拉满。行长回到正常阅读区间，题干和时长一眼能连起来。
+      </p>
+      <ul class="verdict">
+        <li class="good"><span class="tag">收益</span><span>改动最小，只加一个 max-width，其余结构不动</span></li>
+        <li class="good"><span class="tag">收益</span><span>行长受控，扫读效率最高</span></li>
+        <li class="cost"><span class="tag">代价</span><span>右侧仍有空白，只是从「难看的空」变成「留白」</span></li>
+      </ul>
+    </div>
+    <div class="mock">
+      <div class="mock-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span>方案 A</span></div>
+      <div class="mock-body">
+        <aside class="side">
+          <div class="side-back">‹ 招聘岗位</div>
+          <div class="side-title">高级后端工程师</div>
+          <div class="side-search">搜索候选人</div>
+          <div class="cand on"><i class="st"></i><span class="nm">张三</span><span class="sc">78</span></div>
+        </aside>
+        <div class="main pad-lg">
+          <div class="reading">
+            <div class="who">张三<small>已评价</small></div>
+            <div class="steps">
+              <div class="step"><i>✓</i>简历</div>
+              <div class="step on"><i>✓</i>面试题</div>
+              <div class="step"><i>✓</i>评价</div>
+            </div>
+            <div class="toolbar">
+              <button class="btn pri">重新生成</button>
+              <button class="btn">复制全部题目</button>
+              <button class="btn ghost" style="margin-left:auto">全部展开</button>
+            </div>
+            <div class="summary">共 <b>5</b> 题 · 预计 <b>42</b> 分钟　逻辑思维 5</div>
+
+            <div class="q-row"><i class="box"></i><span class="t">1. 你在低代码平台里做断点续传，分块大小是怎么定的？</span><span class="chip">逻辑思维</span><span class="dur"><i class="lv m"></i> 8 分</span><span class="chev">⌄</span></div>
+            <div class="q-row"><i class="box"></i><span class="t">2. 讲一个你排查过的线上问题，从现象到定位的完整过程。</span><span class="chip">逻辑思维</span><span class="dur"><i class="lv h"></i> 10 分</span><span class="chev">⌄</span></div>
+            <div class="q-row"><i class="box"></i><span class="t">3. Tekton 与 Knative 那套自动化交付，失败时如何回滚？</span><span class="chip">逻辑思维</span><span class="dur"><i class="lv m"></i> 8 分</span><span class="chev">⌄</span></div>
+            <div class="q-row"><i class="box"></i><span class="t">4. 字段级权限控制的配置分离方案，为什么不用中间件统一拦截？</span><span class="chip">逻辑思维</span><span class="dur"><i class="lv m"></i> 7 分</span><span class="chev">⌄</span></div>
+            <div class="q-row"><i class="box"></i><span class="t">5. 游戏牌局逻辑里，如何保证服务端与客户端状态一致？</span><span class="chip">逻辑思维</span><span class="dur"><i class="lv h"></i> 9 分</span><span class="chev">⌄</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── B ────────────────────────────────────────────── -->
+  <section class="panel" id="pb" role="tabpanel" aria-labelledby="tb" hidden>
+    <div class="panel-head">
+      <h2>B · 主从双栏</h2>
+      <p style="color:var(--text-2);margin:0">
+        左边一列题目，右边常驻当前题的完整细则。点一题右边就换内容，不用展开收起。
+      </p>
+      <ul class="verdict">
+        <li class="good"><span class="tag">收益</span><span>面试中最好用：题目列表和当前题细则同时在屏，不用来回折叠</span></li>
+        <li class="good"><span class="tag">收益</span><span>横向空间用满，没有大片空白</span></li>
+        <li class="cost"><span class="tag">代价</span><span>会前想通读全部题目时不如 A / D 直接，得逐题点</span></li>
+        <li class="cost"><span class="tag">代价</span><span>改动最大，题卡组件要拆成列表项 + 详情面板两个</span></li>
+      </ul>
+    </div>
+    <div class="mock">
+      <div class="mock-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span>方案 B</span></div>
+      <div class="mock-body">
+        <aside class="side">
+          <div class="side-back">‹ 招聘岗位</div>
+          <div class="side-title">高级后端工程师</div>
+          <div class="side-search">搜索候选人</div>
+          <div class="cand on"><i class="st"></i><span class="nm">张三</span><span class="sc">78</span></div>
+        </aside>
+        <div class="main">
+          <div class="who">张三<small>已评价</small></div>
+          <div class="steps">
+            <div class="step"><i>✓</i>简历</div>
+            <div class="step on"><i>✓</i>面试题</div>
+            <div class="step"><i>✓</i>评价</div>
+          </div>
+          <div class="toolbar">
+            <button class="btn pri">重新生成</button>
+            <button class="btn">复制全部题目</button>
+            <span class="summary" style="margin:0 0 0 auto">共 <b>5</b> 题 · <b>42</b> 分钟</span>
+          </div>
+
+          <div class="split">
+            <div class="qlist">
+              <div class="it"><i class="box"></i><span class="n">1</span><span class="t">断点续传的分块大小</span><i class="lv m"></i></div>
+              <div class="it on"><i class="box"></i><span class="n">2</span><span class="t">排查过的线上问题</span><i class="lv h"></i></div>
+              <div class="it"><i class="box"></i><span class="n">3</span><span class="t">Tekton 失败回滚</span><i class="lv m"></i></div>
+              <div class="it"><i class="box"></i><span class="n">4</span><span class="t">字段级权限的方案选型</span><i class="lv m"></i></div>
+              <div class="it"><i class="box"></i><span class="n">5</span><span class="t">牌局状态一致性</span><i class="lv h"></i></div>
+            </div>
+
+            <div class="detail">
+              <h3>2. 讲一个你排查过的线上问题，从现象到定位的完整过程。</h3>
+              <div class="meta"><span class="chip">逻辑思维</span><span class="dur"><i class="lv h"></i> 10 分钟 · hard</span></div>
+
+              <div class="lab">考察点</div>
+              <div style="font-size:13px;color:var(--text-2)">看拆解问题的路径，是否有假设与验证，而不是背结论。</div>
+
+              <div class="lab">评分标准</div>
+              <div class="rub">
+                <div class="a"><s></s><span><span style="color:var(--muted)">优秀：</span>有假设有验证，结果能量化</span></div>
+                <div class="b"><s></s><span><span style="color:var(--muted)">合格：</span>能说清现象和最终原因</span></div>
+                <div class="c"><s></s><span><span style="color:var(--muted)">不合格：</span>只复述结论，讲不出过程</span></div>
+              </div>
+
+              <div class="lab">追问建议</div>
+              <ul><li>当时为什么先怀疑这里？</li><li>如果这个假设不成立，下一步查什么？</li></ul>
+
+              <div class="lab">参考答案要点</div>
+              <ul><li>定位手段（监控 / 日志 / 链路追踪）</li><li>验证方式与回滚预案</li></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── C ────────────────────────────────────────────── -->
+  <section class="panel" id="pc" role="tabpanel" aria-labelledby="tc" hidden>
+    <div class="panel-head">
+      <h2>C · 双列卡片</h2>
+      <p style="color:var(--text-2);margin:0">
+        题目排成两列。横向空间填满了，纵向也短一半。
+      </p>
+      <ul class="verdict">
+        <li class="good"><span class="tag">收益</span><span>横向填满，纵向压到现在的一半</span></li>
+        <li class="good"><span class="tag">收益</span><span>改动小，只改容器的 grid</span></li>
+        <li class="cost"><span class="tag">代价</span><span>题目有先后顺序，两列会打断「从上往下问」的阅读方向</span></li>
+        <li class="cost"><span class="tag">代价</span><span>展开某一题时会把同行另一题挤开，跳动明显</span></li>
+      </ul>
+    </div>
+    <div class="mock">
+      <div class="mock-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span>方案 C</span></div>
+      <div class="mock-body">
+        <aside class="side">
+          <div class="side-back">‹ 招聘岗位</div>
+          <div class="side-title">高级后端工程师</div>
+          <div class="side-search">搜索候选人</div>
+          <div class="cand on"><i class="st"></i><span class="nm">张三</span><span class="sc">78</span></div>
+        </aside>
+        <div class="main">
+          <div class="who">张三<small>已评价</small></div>
+          <div class="steps">
+            <div class="step"><i>✓</i>简历</div>
+            <div class="step on"><i>✓</i>面试题</div>
+            <div class="step"><i>✓</i>评价</div>
+          </div>
+          <div class="toolbar">
+            <button class="btn pri">重新生成</button>
+            <button class="btn">复制全部题目</button>
+            <button class="btn ghost" style="margin-left:auto">全部展开</button>
+          </div>
+          <div class="summary">共 <b>5</b> 题 · 预计 <b>42</b> 分钟　逻辑思维 5</div>
+
+          <div class="grid2">
+            <div class="g-card"><div class="top"><i class="box"></i><span class="t">1. 你在低代码平台里做断点续传，分块大小是怎么定的？</span></div><div class="foot"><span class="chip">逻辑思维</span><span class="dur"><i class="lv m"></i> 8 分钟</span><span class="chev" style="margin-left:auto">⌄</span></div></div>
+            <div class="g-card"><div class="top"><i class="box"></i><span class="t">2. 讲一个你排查过的线上问题，从现象到定位的完整过程。</span></div><div class="foot"><span class="chip">逻辑思维</span><span class="dur"><i class="lv h"></i> 10 分钟</span><span class="chev" style="margin-left:auto">⌄</span></div></div>
+            <div class="g-card"><div class="top"><i class="box"></i><span class="t">3. Tekton 与 Knative 那套自动化交付，失败时如何回滚？</span></div><div class="foot"><span class="chip">逻辑思维</span><span class="dur"><i class="lv m"></i> 8 分钟</span><span class="chev" style="margin-left:auto">⌄</span></div></div>
+            <div class="g-card"><div class="top"><i class="box"></i><span class="t">4. 字段级权限控制的配置分离方案，为什么不用中间件统一拦截？</span></div><div class="foot"><span class="chip">逻辑思维</span><span class="dur"><i class="lv m"></i> 7 分钟</span><span class="chev" style="margin-left:auto">⌄</span></div></div>
+            <div class="g-card"><div class="top"><i class="box"></i><span class="t">5. 游戏牌局逻辑里，如何保证服务端与客户端状态一致？</span></div><div class="foot"><span class="chip">逻辑思维</span><span class="dur"><i class="lv h"></i> 9 分钟</span><span class="chev" style="margin-left:auto">⌄</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── D ────────────────────────────────────────────── -->
+  <section class="panel" id="pd" role="tabpanel" aria-labelledby="td" hidden>
+    <div class="panel-head">
+      <h2>D · 紧凑表格</h2>
+      <p style="color:var(--text-2);margin:0">
+        题目改成表格，列对齐。信息密度最高，一屏能放十几题。
+      </p>
+      <ul class="verdict">
+        <li class="good"><span class="tag">收益</span><span>密度最高，10 题也只占半屏</span></li>
+        <li class="good"><span class="tag">收益</span><span>列对齐，时长和难度成列可比，扫读最快</span></li>
+        <li class="cost"><span class="tag">代价</span><span>观感偏「后台系统」，比卡片式冷</span></li>
+        <li class="cost"><span class="tag">代价</span><span>展开细则要用行内展开，实现比卡片略绕</span></li>
+      </ul>
+    </div>
+    <div class="mock">
+      <div class="mock-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span>方案 D</span></div>
+      <div class="mock-body">
+        <aside class="side">
+          <div class="side-back">‹ 招聘岗位</div>
+          <div class="side-title">高级后端工程师</div>
+          <div class="side-search">搜索候选人</div>
+          <div class="cand on"><i class="st"></i><span class="nm">张三</span><span class="sc">78</span></div>
+        </aside>
+        <div class="main pad-lg">
+          <div style="max-width:1000px">
+            <div class="who">张三<small>已评价</small></div>
+            <div class="steps">
+              <div class="step"><i>✓</i>简历</div>
+              <div class="step on"><i>✓</i>面试题</div>
+              <div class="step"><i>✓</i>评价</div>
+            </div>
+            <div class="toolbar">
+              <button class="btn pri">重新生成</button>
+              <button class="btn">复制全部题目</button>
+              <button class="btn ghost" style="margin-left:auto">全部展开</button>
+            </div>
+            <div class="summary">共 <b>5</b> 题 · 预计 <b>42</b> 分钟　逻辑思维 5</div>
+
+            <div class="tbl-wrap">
+              <table>
+                <thead>
+                  <tr><th style="width:1%"></th><th style="width:1%">#</th><th>题目</th><th>维度</th><th>难度</th><th style="text-align:right">时长</th><th style="width:1%"></th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><i class="box"></i></td><td class="num">1</td><td class="q">你在低代码平台里做断点续传，分块大小是怎么定的？</td><td><span class="chip">逻辑思维</span></td><td><i class="lv m"></i></td><td class="right dur">8 分钟</td><td class="chev">⌄</td></tr>
+                  <tr><td><i class="box"></i></td><td class="num">2</td><td class="q">讲一个你排查过的线上问题，从现象到定位的完整过程。</td><td><span class="chip">逻辑思维</span></td><td><i class="lv h"></i></td><td class="right dur">10 分钟</td><td class="chev">⌄</td></tr>
+                  <tr><td><i class="box"></i></td><td class="num">3</td><td class="q">Tekton 与 Knative 那套自动化交付，失败时如何回滚？</td><td><span class="chip">逻辑思维</span></td><td><i class="lv m"></i></td><td class="right dur">8 分钟</td><td class="chev">⌄</td></tr>
+                  <tr><td><i class="box"></i></td><td class="num">4</td><td class="q">字段级权限控制的配置分离方案，为什么不用中间件统一拦截？</td><td><span class="chip">逻辑思维</span></td><td><i class="lv m"></i></td><td class="right dur">7 分钟</td><td class="chev">⌄</td></tr>
+                  <tr><td><i class="box"></i></td><td class="num">5</td><td class="q">游戏牌局逻辑里，如何保证服务端与客户端状态一致？</td><td><span class="chip">逻辑思维</span></td><td><i class="lv h"></i></td><td class="right dur">9 分钟</td><td class="chev">⌄</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="rec">
+    <h2>我的判断</h2>
+    <p>
+      <strong>B 主从双栏</strong>最贴合你定的场景。你选的是「面试中实时看」——那个场景下，
+      面试官需要的是「当前这道题的完整细则」常驻在眼前，同时能瞥见还剩几题。
+      折叠展开是在单列约束下的妥协，主从双栏直接消掉了这个妥协。
+    </p>
+    <p>
+      如果想小步走，<strong>A 限宽</strong>是性价比最高的一档：一行 CSS 就能把最刺眼的空旷解决掉，
+      结构完全不动。之后想升级到 B 也不冲突。
+    </p>
+    <p>
+      C 我不推荐——题目是有顺序的，两列会打断从上往下问的节奏，展开时还会把同行另一题挤开。
+      D 密度最好，但那套观感更适合「批量管理」而不是「面试中对着念」。
+    </p>
+  </div>
+
+</div>
+
+<script>
+  const tabs = [...document.querySelectorAll('[role="tab"]')];
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      tabs.forEach((t) => {
+        const on = t === tab;
+        t.setAttribute('aria-selected', String(on));
+        document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      });
+    });
+  });
+</script>

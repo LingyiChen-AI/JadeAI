@@ -40,10 +40,24 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
     [resumeId]
   );
 
-  const { messages, sendMessage, status, error, setMessages } = useChat({
+  const { messages, sendMessage: rawSendMessage, status, error, setMessages } = useChat({
     id: sessionId,
     transport,
   });
+
+  /**
+   * 发消息前先把未保存的改动落库。
+   *
+   * 请求体里只有 resumeId，服务端是回库里读简历正文的（工具改简历也是直接改库）。
+   * 手动改完立刻发消息时，防抖保存可能还没触发，AI 拿到的就是上一版——issue #96。
+   */
+  const sendMessage = useCallback(
+    async (message: Parameters<typeof rawSendMessage>[0]) => {
+      await useResumeStore.getState().flushSave();
+      return rawSendMessage(message);
+    },
+    [rawSendMessage],
+  );
 
   const isLoading = status === 'streaming' || status === 'submitted';
 
@@ -131,7 +145,7 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
       setLocalMessages([]);
     }
 
-    sendMessage({ text: input });
+    void sendMessage({ text: input });
     setInput('');
   }, [input, sendMessage, localMessages]);
 

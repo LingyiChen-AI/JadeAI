@@ -103,6 +103,8 @@ export function TranslateDialog({ open, onOpenChange, resumeId }: TranslateDialo
     abortRef.current = controller;
 
     try {
+      // 服务端按 resumeId 回库读简历，先把未保存的改动落库，否则翻的是上一版
+      await useResumeStore.getState().flushSave();
       const fingerprint = localStorage.getItem('jade_fingerprint');
       const res = await fetch('/api/ai/translate', {
         method: 'POST',

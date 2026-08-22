@@ -58,24 +58,49 @@ export async function isLoopbackPortBindable(port: number): Promise<boolean> {
   });
 }
 
+/**
+ * The port a fresh install serves on.
+ *
+ * Picked out of 30000–32767 on purpose. That band sits **below** every
+ * mainstream OS's ephemeral range (macOS and Windows start at 49152, Linux at
+ * 32768), so the kernel never hands this number out to some other process's
+ * outbound connection — which is exactly what could steal the OS-assigned port
+ * we used to start on. It is also well above the crowd of dev-server defaults
+ * (3000 / 5173 / 8000 / 8080 / 9000 …) and the popular local AI servers
+ * (11434 Ollama, 7860 Gradio, 8188 ComfyUI), and 32400 (Plex) is the only
+ * well-known service nearby.
+ *
+ * The exact digits are arbitrary — the requirement is only "fixed, in that
+ * band, not somebody else's default".
+ */
+export const PREFERRED_SERVER_PORT = 30567;
+
+/** How many ports after the preferred one to try before giving up on a fixed number. */
+const PORT_SCAN_RANGE = 10;
+
 export interface ServerPortDeps {
   isLoopbackPortBindable: (port: number) => Promise<boolean>;
   allocateLoopbackPort: () => Promise<number>;
 }
 
 /**
- * Pick the port to serve on, preferring the one from last launch.
+ * Pick the port to serve on: last launch's port, then the fixed preferred one,
+ * then whatever the OS will give us.
  *
  * The port is part of the page's origin, and Chromium partitions localStorage,
  * IndexedDB and cookies by origin — so a fresh port every launch handed the
  * renderer an empty storage area each time, silently discarding the saved API
- * keys and the "tour already seen" flag. Reusing the port keeps the origin, and
- * with it the storage, stable across launches.
+ * keys and the "tour already seen" flag. Keeping the port stable keeps the
+ * storage stable.
  *
- * A stored port that will not bind (another process took it, or a second app
- * instance is already serving on it) is abandoned rather than retried: failing
- * to start is worse than losing web storage for that session. Callers persist
- * whatever comes back, so the app converges on a stable port again afterwards.
+ * A stored port still wins over the preferred one. Existing installs are
+ * already serving on an OS-assigned port with an API key sitting in that
+ * origin's localStorage; moving them to the new port to make things tidy would
+ * throw that key away.
+ *
+ * If the preferred port is busy we walk a few neighbours before falling back to
+ * `listen(0)`. Both fallbacks exist so a port conflict can never stop the app
+ * from starting — losing web storage for a session beats not launching.
  */
 export async function resolveServerPort(
   storedPort: number | null,
@@ -83,6 +108,11 @@ export async function resolveServerPort(
 ): Promise<number> {
   if (storedPort !== null && (await deps.isLoopbackPortBindable(storedPort))) {
     return storedPort;
+  }
+  for (let port = PREFERRED_SERVER_PORT; port < PREFERRED_SERVER_PORT + PORT_SCAN_RANGE; port++) {
+    if (await deps.isLoopbackPortBindable(port)) {
+      return port;
+    }
   }
   return deps.allocateLoopbackPort();
 }

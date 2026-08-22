@@ -118,7 +118,7 @@ export function UpdateNotice() {
             <div className="space-y-1.5">
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full bg-primary transition-[width] duration-150"
+                  className="h-full bg-brand transition-[width] duration-150"
                   style={{ width: `${percent}%` }}
                 />
               </div>

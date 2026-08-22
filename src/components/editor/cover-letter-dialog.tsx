@@ -16,6 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { LanguageSelect } from '@/components/ui/language-select';
 import { cn } from '@/lib/utils';
 import { getAIHeaders } from '@/stores/settings-store';
+import { useResumeStore } from '@/stores/resume-store';
 
 interface CoverLetterDialogProps {
   open: boolean;
@@ -47,6 +48,8 @@ export function CoverLetterDialog({ open, onOpenChange, resumeId }: CoverLetterD
     setError('');
 
     try {
+      // 服务端按 resumeId 回库读简历，先把未保存的改动落库，否则写的是上一版
+      await useResumeStore.getState().flushSave();
       const fingerprint = typeof window !== 'undefined' ? localStorage.getItem('jade_fingerprint') : null;
       const res = await fetch('/api/ai/cover-letter', {
         method: 'POST',
