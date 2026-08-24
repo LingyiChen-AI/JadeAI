@@ -118,6 +118,22 @@ describe('buildDimensionQuestionsPrompt', () => {
     expect(prompt).toContain('Golang 性能优化');
     expect(prompt).toContain('简历未证明 MySQL 经验');
     expect(prompt).toContain('one output question per slot, in order');
+    const firstSlot = prompt.indexOf(`Slot 1
+category: go_fundamentals
+source: jd
+dimension: professional
+topic: GMP scheduling and blocking calls
+evidence: JD requires Go performance optimization
+difficulty: hard`);
+    const secondSlot = prompt.indexOf(`Slot 2
+category: project_deep_dive
+source: resume
+dimension: professional
+topic: gRPC service ownership
+evidence: Resume says the project used gRPC
+difficulty: medium`);
+    expect(firstSlot).toBeGreaterThan(-1);
+    expect(secondSlot).toBeGreaterThan(firstSlot);
   });
 
   it('用户填的维度描述整段进 prompt', () => {
@@ -201,6 +217,10 @@ describe('buildDimensionQuestionsPrompt', () => {
     expect(system).toContain('Resume-backed questions');
     expect(system).toContain('JD-backed questions');
     expect(system).toContain('Never invent');
+    expect(system).toContain('resumeFacts');
+    expect(system).toContain('jdRequirements');
+    expect(system).toContain('gaps');
+    expect(system).toContain('must not imply prior experience');
   });
 
   it('system prompt 要求从 JD 和简历推断资历并匹配题目难度', () => {
@@ -214,6 +234,20 @@ describe('buildDimensionQuestionsPrompt', () => {
     expect(system).toContain('Junior');
     expect(system).toContain('Mid-level');
     expect(system).toContain('Senior / staff');
+  });
+
+  it('临时 count 分支使用独立 legacy system，而不是 slot-only 指令', () => {
+    const { system, prompt } = buildDimensionQuestionsPrompt({
+      ...base,
+      dimension: DIMENSIONS[0],
+      count: 2,
+    });
+
+    expect(system).toContain('LEGACY COUNT REQUEST');
+    expect(system).not.toContain('SLOT ASSIGNMENT');
+    expect(system).toContain('At least one third must be "hard"');
+    expect(prompt).toContain('exactly 2 questions');
+    expect(prompt).not.toContain('Assigned slots:');
   });
 });
 
@@ -233,7 +267,46 @@ describe('buildInterviewBlueprintPrompt', () => {
     expect(system).toContain('jdRequirements');
     expect(system).toContain('gaps');
     expect(system).toContain('Never convert an inference into a résumé fact');
+    expect(system).toContain('easy | medium | hard');
+    expect(system).toContain('If gaps is non-empty, include at least one gap slot');
+    expect(system).toContain('If gaps is empty, include at least one jd system_scenario slot');
     expect(prompt).toContain('Golang 开发工程师');
+  });
+
+  it.each([
+    [
+      5,
+      'Technical foundations (go_fundamentals, backend_fundamentals, middleware_database): at least 2 slots',
+      'Project deep-dives: 1–1 slots',
+      'System scenarios: 1–1 slots',
+      'Communication and HR: 1–1 slots',
+    ],
+    [
+      8,
+      'Technical foundations (go_fundamentals, backend_fundamentals, middleware_database): at least 3 slots',
+      'Project deep-dives: 2–2 slots',
+      'System scenarios: 1–2 slots',
+      'Communication and HR: 1–2 slots',
+    ],
+    [
+      10,
+      'Technical foundations (go_fundamentals, backend_fundamentals, middleware_database): at least 3 slots',
+      'Project deep-dives: 2–3 slots',
+      'System scenarios: 2–2 slots',
+      'Communication and HR: 2–2 slots',
+    ],
+  ])('emits feasible integer portfolio constraints for %i slots', (questionCount, ...rules) => {
+    const { system } = buildInterviewBlueprintPrompt({
+      jobTitle: '后端工程师',
+      jobDescription: '熟悉分布式系统',
+      resumeText: '做过订单服务',
+      dimensions: DIMENSIONS,
+      questionCount,
+    });
+
+    for (const rule of rules) {
+      expect(system).toContain(rule);
+    }
   });
 });
 

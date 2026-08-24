@@ -11,7 +11,7 @@ const LANGUAGE_RULE = `IMPORTANT: Detect the primary language of the job descrip
 
 const JSON_RULE = `CRITICAL: You are a JSON API. Your entire response must be a single valid JSON object starting with { and ending with }. Do NOT use markdown syntax. Do NOT wrap in code fences. Do NOT add any text before or after the JSON.`;
 
-const QUESTIONS_SYSTEM = `You are a senior interviewer at a top-tier technology company, known for questions that separate people who actually did the work from people who can describe it. You are writing the questions for ONE competency only — the one named in the user message.
+const SLOT_QUESTIONS_SYSTEM = `You are a senior interviewer at a top-tier technology company, known for questions that separate people who actually did the work from people who can describe it. You are writing the questions for ONE competency only — the one named in the user message.
 
 ${LANGUAGE_RULE}
 
@@ -31,13 +31,13 @@ symptom → engineering decision; communication or HR pressure remains professio
 Evidence anchor and factual boundaries:
 - The input slot's source and evidence are the authoritative evidence anchor. A generic question that
   could be used unchanged for any role and candidate is a failure.
-- Resume-backed questions may name only projects, technologies, responsibilities, transitions and
-  numbers actually present in the résumé. Never invent a company situation, personal contribution,
-  metric, failure, scale or outcome. If ownership is unclear, ask who owned it instead of asserting it.
-- JD-backed questions may create a realistic hypothetical work situation using the JD's responsibilities
-  and stack. Clearly phrase it as a scenario; never imply it happened to this candidate.
-- If résumé and JD disagree, turn the mismatch into a neutral JD gap probe rather than silently treating
-  either side as fact.
+- For source "resume", evidence must come from "resumeFacts". Resume-backed questions may name only
+  those facts; Never invent a company situation, personal contribution, metric, failure, scale, outcome,
+  architecture, ownership, or tool. If ownership is unclear, ask who owned it instead of asserting it.
+- For source "jd", evidence must come from "jdRequirements". JD-backed questions may create a realistic
+  hypothetical work situation using only that requirement; never imply it happened to this candidate.
+- For source "gap", evidence must come from "gaps". A gap question must not imply prior experience;
+  test transferable reasoning or learning instead. If "gaps" is empty, do not generate a gap question.
 
 Seniority calibration:
 - Honor each slot's assigned difficulty. Infer the expected seniority from the job title, JD scope and résumé evidence to calibrate the follow-up depth; if signals conflict, calibrate to the JD and use follow-ups to find the candidate's ceiling.
@@ -53,7 +53,6 @@ Depth bar:
   evidence they used, what went wrong and what they learned. Do not accept "we used X" as proof.
 - Scenario questions must allow clarification and trade-offs; do not hide one magic answer or rely on riddles.
 - Fundamentals questions must ask for cause-and-effect: mechanism → observable symptom → decision or fix.
-- At least one third must be "hard" — the kind where someone who only used the tool superficially runs out of things to say within a minute.
 - No warm-ups, no "tell me about yourself", no "what are your strengths".
 
 "followUps" is the heart of the question. Give 4-6 of them, ordered as a funnel (wide → narrow). Each one has THREE fields:
@@ -91,6 +90,36 @@ Return JSON with this exact shape:
 
 ${JSON_RULE}`;
 
+/** Temporary, private system for the pre-blueprint API route; Task 4 removes this branch. */
+const LEGACY_COUNT_QUESTIONS_SYSTEM = SLOT_QUESTIONS_SYSTEM
+  .replace(
+    /SLOT ASSIGNMENT[\s\S]*?non-discriminatory\.\n\n/,
+    `LEGACY COUNT REQUEST — no blueprint slots are available yet. Select a balanced mix of résumé-backed
+project deep-dives, JD-backed scenarios, fundamentals, communication, and HR pressure appropriate to the
+requested competency. Keep every question evidence-anchored and do not duplicate an event or knowledge point.
+
+`,
+  )
+  .replace(
+    /Evidence anchor and factual boundaries:[\s\S]*?\n\nSeniority calibration:/,
+    `Evidence anchor and factual boundaries:
+- Every question needs a clear evidence anchor in the résumé, JD, or an explicit mismatch between them.
+- Resume-backed questions may name only facts in the résumé; never invent metrics, architecture, incidents,
+  ownership, tools, scale, or outcomes. If ownership is unclear, ask who owned it.
+- JD-backed questions may create only a clearly hypothetical scenario from the JD; never imply it happened.
+- A mismatch is a neutral gap probe and must not imply prior experience.
+
+Seniority calibration:`,
+  )
+  .replace(
+    "- Honor each slot's assigned difficulty. Infer the expected seniority from the job title, JD scope and résumé evidence to calibrate the follow-up depth; if signals conflict, calibrate to the JD and use follow-ups to find the candidate's ceiling.",
+    "- Infer the expected seniority from the job title, JD scope and résumé evidence to calibrate difficulty and follow-up depth; if signals conflict, calibrate to the JD and use follow-ups to find the candidate's ceiling.",
+  )
+  .replace(
+    '- No warm-ups, no "tell me about yourself", no "what are your strengths".',
+    '- At least one third must be "hard" — the kind where someone who only used the tool superficially runs out of things to say within a minute.\n- No warm-ups, no "tell me about yourself", no "what are your strengths".',
+  );
+
 const EVALUATION_SYSTEM = `You are a seasoned hiring interviewer scoring a completed interview. You are given the JD, the candidate's resume, the question set (with rubrics), and the raw interview transcript.
 
 ${LANGUAGE_RULE}
@@ -118,6 +147,25 @@ export interface QuestionsPromptInput {
   questionCount: number;
 }
 
+function buildPortfolioRules(questionCount: number): string {
+  const minimum = (share: number) => Math.max(1, Math.round(questionCount * share));
+  const range = (lowerShare: number, upperShare: number) => {
+    const lower = minimum(lowerShare);
+    return [lower, Math.max(lower, Math.floor(questionCount * upperShare))] as const;
+  };
+
+  const foundations = Math.max(1, Math.ceil(questionCount * 0.3));
+  const [projectMinimum, projectMaximum] = range(0.2, 0.3);
+  const [scenarioMinimum, scenarioMaximum] = range(0.15, 0.25);
+  const [communicationMinimum, communicationMaximum] = range(0.15, 0.25);
+
+  return `Portfolio coverage — use these count-aware, feasible integer equivalents of the percentage targets:
+- Technical foundations (go_fundamentals, backend_fundamentals, middleware_database): at least ${foundations} slots (≥30%).
+- Project deep-dives: ${projectMinimum}–${projectMaximum} slots (20–30%).
+- System scenarios: ${scenarioMinimum}–${scenarioMaximum} slots (15–25%).
+- Communication and HR: ${communicationMinimum}–${communicationMaximum} slots (15–25%).`;
+}
+
 export function buildInterviewBlueprintPrompt(input: QuestionsPromptInput): {
   system: string;
   prompt: string;
@@ -128,6 +176,7 @@ export function buildInterviewBlueprintPrompt(input: QuestionsPromptInput): {
   const goMinimum = input.questionCount >= 8
     ? 'If it is Go-specific, include at least 2 go_fundamentals slots.'
     : 'For a Go-specific role, include go_fundamentals only when supported by the role.';
+  const portfolioRules = buildPortfolioRules(input.questionCount);
 
   const system = `You are an interview planner. Return only one strict interview blueprint JSON object.
 
@@ -147,7 +196,12 @@ Each slot must use one configured dimension key, one allowed category, one allow
 a concrete evidence string, and a difficulty. Allowed categories: go_fundamentals, backend_fundamentals,
 middleware_database, project_deep_dive, system_scenario, communication_pressure, hr_motivation. Allowed
 sources: resume, jd, gap. For a fundamentals slot, express its topic as mechanism → observable symptom →
-engineering decision. Cover important evidence without duplicating the same event or knowledge point.
+engineering decision. Allowed difficulty values: easy | medium | hard. Cover important evidence without
+duplicating the same event or knowledge point.
+
+${portfolioRules}
+
+If gaps is non-empty, include at least one gap slot. If gaps is empty, include at least one jd system_scenario slot instead, and do not create a gap slot.
 
 Configured dimensions:
 ${dimensionLines}
@@ -265,7 +319,7 @@ evidence, and difficulty; the slot is the complete question assignment.` : `Prod
 
 Respond with JSON only.`;
 
-  return { system: QUESTIONS_SYSTEM, prompt };
+  return { system: hasBlueprint ? SLOT_QUESTIONS_SYSTEM : LEGACY_COUNT_QUESTIONS_SYSTEM, prompt };
 }
 
 export interface EvaluationPromptInput {
