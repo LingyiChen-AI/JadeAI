@@ -294,8 +294,12 @@ describe('detectGoRole', () => {
   it.each([
     ['Golang engineer', '', true],
     ['Backend engineer', 'Build Go backend services', true],
+    ['Backend Go', 'Build APIs', true],
+    ['后端工程师', '负责 Go 开发与服务治理', true],
     ['Java engineer', 'Build Spring services', false],
     ['Cloud engineer', 'Operate Google Cloud infrastructure', false],
+    ['Go-to-market Manager', 'Own revenue strategy', false],
+    ['Release Manager', 'Coordinate the production go-live', false],
   ])('detects Go from role text without substring false positives', (title, description, expected) => {
     expect(detectGoRole(title, description)).toBe(expected);
   });

@@ -9,7 +9,10 @@ export type GeneratedGroup = {
 };
 
 export function detectGoRole(jobTitle: string, jobDescription: string): boolean {
-  return /\b(?:go|golang)\b/i.test(`${jobTitle}\n${jobDescription}`);
+  const roleText = `${jobTitle}\n${jobDescription}`;
+  if (/\bgolang\b/i.test(roleText)) return true;
+
+  return /(?:\bgo\b[ \t:/_-]+(?:backend|developer|engineer|programming|language|services?)\b|\b(?:backend|developer|engineer|programming|language|services?)[ \t:/_-]+go\b|\bgo\b[ \t]*(?:开发|后端|工程师|语言|服务)|(?:开发|后端|工程师|语言|服务)[ \t]*\bgo\b)/i.test(roleText);
 }
 
 export function validateBlueprint(
