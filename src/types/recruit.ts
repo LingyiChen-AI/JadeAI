@@ -15,6 +15,33 @@ export interface DimensionConfig {
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
 export type InterviewQuestionStatus = 'pending' | 'answered' | 'skipped';
 
+export type InterviewQuestionCategory =
+  | 'go_fundamentals'
+  | 'backend_fundamentals'
+  | 'middleware_database'
+  | 'project_deep_dive'
+  | 'system_scenario'
+  | 'communication_pressure'
+  | 'hr_motivation';
+
+export type InterviewQuestionSource = 'resume' | 'jd' | 'gap';
+
+export interface QuestionSlot {
+  category: InterviewQuestionCategory;
+  source: InterviewQuestionSource;
+  dimension: string;
+  topic: string;
+  evidence: string;
+  difficulty: QuestionDifficulty;
+}
+
+export interface InterviewBlueprint {
+  resumeFacts: string[];
+  jdRequirements: string[];
+  gaps: string[];
+  slots: QuestionSlot[];
+}
+
 /** 一条追问。老数据里 followUps 是纯字符串，读取时会补成 purpose 为空。 */
 export interface FollowUp {
   /** 这一问想拿到什么。空字符串表示老数据没标 */
@@ -31,6 +58,12 @@ export interface InterviewQuestion {
   id: string;
   /** 对应 DimensionConfig.key */
   dimension: string;
+  /** 面试题分类；老数据可能没有此字段。 */
+  category?: InterviewQuestionCategory;
+  /** 题目依据的材料来源；老数据可能没有此字段。 */
+  source?: InterviewQuestionSource;
+  /** 题目所依据的简历、JD 或差距证据；老数据可能没有此字段。 */
+  evidence?: string;
   question: string;
   /** 考察点：这道题真正想看什么 */
   intent: string;

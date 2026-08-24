@@ -67,12 +67,46 @@ export const updateCandidateInputSchema = z.object({
 
 // ── 输出 schema（模型返回值校验） ─────────────────────────────────────────────
 
+const interviewQuestionCategorySchema = z.enum([
+  'go_fundamentals',
+  'backend_fundamentals',
+  'middleware_database',
+  'project_deep_dive',
+  'system_scenario',
+  'communication_pressure',
+  'hr_motivation',
+]);
+
+const interviewQuestionSourceSchema = z.enum(['resume', 'jd', 'gap']);
+const strictDifficultySchema = z.enum(['easy', 'medium', 'hard']);
+
+const questionSlotOutputSchema = z.object({
+  category: interviewQuestionCategorySchema,
+  source: interviewQuestionSourceSchema,
+  dimension: z.string(),
+  topic: z.string(),
+  evidence: z.string(),
+  difficulty: strictDifficultySchema,
+}).strict();
+
+export const interviewBlueprintOutputSchema = z.object({
+  resumeFacts: z.array(z.string()),
+  jdRequirements: z.array(z.string()),
+  gaps: z.array(z.string()),
+  slots: z.array(questionSlotOutputSchema),
+}).strict();
+
 const difficultySchema = z
   .union([z.enum(['easy', 'medium', 'hard']), z.string(), z.null(), z.undefined()])
   .transform((v) => (v === 'easy' || v === 'medium' || v === 'hard' ? v : 'medium'));
 
 const rawQuestionSchema = z.object({
   dimension: z.string(),
+  // Metadata is optional here because older providers and persisted JSON omit it;
+  // the server supplies canonical values when assembling generated questions.
+  category: interviewQuestionCategorySchema.optional(),
+  source: interviewQuestionSourceSchema.optional(),
+  evidence: z.string().optional(),
   question: z.string(),
   intent: z.union([z.string(), z.null(), z.undefined()]).transform((v) => v ?? ''),
   rubric: z

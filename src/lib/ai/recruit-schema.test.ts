@@ -1,6 +1,45 @@
 import { describe, expect, it } from 'vitest';
 import { extractJson } from './extract-json';
-import { questionsOutputSchema, evaluationOutputSchema, dimensionsSchema } from './recruit-schema';
+import {
+  interviewBlueprintOutputSchema,
+  questionsOutputSchema,
+  evaluationOutputSchema,
+  dimensionsSchema,
+} from './recruit-schema';
+
+describe('interviewBlueprintOutputSchema', () => {
+  const validBlueprint = {
+    resumeFacts: ['食品产线项目使用 Go、MQTT、ONNX Runtime'],
+    jdRequirements: ['Go 并发与高性能服务'],
+    gaps: ['简历未证明 Prometheus 实践'],
+    slots: [{
+      category: 'go_fundamentals',
+      source: 'jd',
+      dimension: 'professional',
+      topic: 'GMP 调度与阻塞',
+      evidence: 'JD 要求 3 年以上 Golang 和高性能优化',
+      difficulty: 'hard',
+    }],
+  };
+
+  it('解析第一阶段的面试蓝图', () => {
+    expect(interviewBlueprintOutputSchema.parse(validBlueprint)).toEqual(validBlueprint);
+  });
+
+  it('拒绝不支持的问题来源', () => {
+    expect(() => interviewBlueprintOutputSchema.parse({
+      ...validBlueprint,
+      slots: [{ ...validBlueprint.slots[0], source: 'guess' }],
+    })).toThrow();
+  });
+
+  it('拒绝不支持的问题分类', () => {
+    expect(() => interviewBlueprintOutputSchema.parse({
+      ...validBlueprint,
+      slots: [{ ...validBlueprint.slots[0], category: 'guess' }],
+    })).toThrow();
+  });
+});
 
 describe('questionsOutputSchema', () => {
   it('解析正常的题目输出', () => {
@@ -39,6 +78,24 @@ describe('questionsOutputSchema', () => {
     const result = extractJson(raw, questionsOutputSchema);
     expect(result.questions[0].followUps).toEqual([]);
     expect(result.questions[0].referencePoints).toEqual([]);
+  });
+
+  it('接受没有 category、source、evidence 的历史题目输出', () => {
+    const result = questionsOutputSchema.parse({
+      questions: [{
+        dimension: 'logic',
+        question: '讲一个你排查过的线上问题',
+        intent: '看拆解问题的路径',
+        rubric: { excellent: '有假设有验证', pass: '能说清现象', fail: '只复述结论' },
+        followUps: [],
+        referencePoints: [],
+        estimatedMinutes: 8,
+        difficulty: 'medium',
+      }],
+    });
+    expect(result.questions[0]).not.toHaveProperty('category');
+    expect(result.questions[0]).not.toHaveProperty('source');
+    expect(result.questions[0]).not.toHaveProperty('evidence');
   });
 
   it('难度值不在枚举里时降级成 medium', () => {
