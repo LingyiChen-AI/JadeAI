@@ -307,6 +307,28 @@ describe('buildEvaluationPrompt', () => {
     expect(prompt).toContain('候选人说了缓存击穿的排查过程');
   });
 
+  it('JD 情景题携带来源证据，且不当作候选人过往经历', () => {
+    const jdScenario: InterviewQuestion[] = [{
+      ...questions[0],
+      category: 'system_scenario',
+      source: 'jd',
+      evidence: 'JD requires high-concurrency AI conversations',
+    }];
+    const { system, prompt } = buildEvaluationPrompt({
+      jobTitle: 'Backend Engineer',
+      jobDescription: 'Build high-concurrency AI conversations',
+      resumeText: 'Built internal admin tools',
+      dimensions: DIMENSIONS,
+      questions: jdScenario,
+      transcript: 'The candidate would first measure queue latency.',
+    });
+
+    expect(prompt).toContain('Category: system_scenario');
+    expect(prompt).toContain('Source: jd');
+    expect(prompt).toContain('Evidence: JD requires high-concurrency AI conversations');
+    expect(system).toContain('A JD-sourced scenario is hypothetical');
+  });
+
   it('system prompt 明确要求不给总分、且未作答的题不计入维度分', () => {
     const { system } = buildEvaluationPrompt({
       jobTitle: 'T',
