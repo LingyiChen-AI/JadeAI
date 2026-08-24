@@ -96,6 +96,14 @@ export const interviewBlueprintOutputSchema = z.object({
   slots: z.array(questionSlotOutputSchema),
 }).strict();
 
+export const dimensionSuggestionsOutputSchema = z.object({
+  dimensions: z.array(z.object({
+    key: interviewQuestionCategorySchema,
+    weight: z.number().int().min(1).max(5),
+    description: z.string().min(40).max(1200),
+  }).strict()),
+}).strict();
+
 const difficultySchema = z
   .union([z.enum(['easy', 'medium', 'hard']), z.string(), z.null(), z.undefined()])
   .transform((v) => (v === 'easy' || v === 'medium' || v === 'hard' ? v : 'medium'));

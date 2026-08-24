@@ -987,6 +987,11 @@
       "title": "Competencies to assess",
       "hint": "Weight decides how many questions a competency gets and how much it counts toward the total",
       "addCustom": "Add custom competency",
+      "aiRecognize": "AI detect",
+      "recognizing": "Detecting…",
+      "needJobInfo": "Enter the job title and description first",
+      "recognizeSuccess": "Dimensions, weights, and scopes were filled from the JD",
+      "recognizeFailed": "AI detection failed. Check model settings and retry.",
       "customPlaceholder": "Competency name",
       "weight": "Weight",
       "descriptions": {

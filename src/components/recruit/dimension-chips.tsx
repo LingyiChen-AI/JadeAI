@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { X, Plus, Check, Pencil } from 'lucide-react';
+import { X, Plus, Check, Pencil, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,9 +19,11 @@ interface DimensionChipsProps {
   onChange: (next: DimensionConfig[]) => void;
   /** 传入后每个已选维度显示分到几题，权重的效果肉眼可见 */
   questionCount?: number;
+  onAIRecognize?: () => void;
+  aiRecognizing?: boolean;
 }
 
-export function DimensionChips({ value, onChange, questionCount }: DimensionChipsProps) {
+export function DimensionChips({ value, onChange, questionCount, onAIRecognize, aiRecognizing = false }: DimensionChipsProps) {
   const t = useTranslations('recruit.dimensions');
   const [customName, setCustomName] = useState('');
   const [customDescription, setCustomDescription] = useState('');
@@ -70,7 +72,15 @@ export function DimensionChips({ value, onChange, questionCount }: DimensionChip
   return (
     <div className="space-y-4">
       <div>
-        <Label className="text-sm font-medium">{t('title')}</Label>
+        <div className="flex items-center justify-between gap-3">
+          <Label className="text-sm font-medium">{t('title')}</Label>
+          {onAIRecognize && (
+            <Button type="button" variant="outline" size="sm" onClick={onAIRecognize} disabled={aiRecognizing} className="cursor-pointer gap-1.5">
+              {aiRecognizing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {aiRecognizing ? t('recognizing') : t('aiRecognize')}
+            </Button>
+          )}
+        </div>
         <p className="mt-1 text-xs text-zinc-500">{t('hint')}</p>
       </div>
 

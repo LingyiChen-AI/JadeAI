@@ -19,6 +19,7 @@ import { DimensionChips } from './dimension-chips';
 import { interviewDimensions } from '@/lib/recruit/dimensions';
 import { detectGoRole } from '@/lib/ai/recruit-blueprint';
 import { useFingerprint } from '@/hooks/use-fingerprint';
+import { getAIHeaders } from '@/stores/settings-store';
 import {
   QUESTION_COUNT_DEFAULT,
   QUESTION_COUNT_MAX,
@@ -45,6 +46,7 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
   const [questionCount, setQuestionCount] = useState(QUESTION_COUNT_DEFAULT);
   const [dimensions, setDimensions] = useState<DimensionConfig[]>([]);
   const [saving, setSaving] = useState(false);
+  const [recognizing, setRecognizing] = useState(false);
 
   // 每次打开都重置成当前岗位的值——不这么做的话，编辑完 A 再打开 B 会看到 A 的内容。
   useEffect(() => {
@@ -62,6 +64,29 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
   }, [open, job, tDim]);
 
   const canSave = title.trim() && jobDescription.trim() && dimensions.length > 0 && !saving;
+
+  async function recognizeDimensions() {
+    if (!title.trim() || !jobDescription.trim()) {
+      toast.error(t('dimensions.needJobInfo'));
+      return;
+    }
+    setRecognizing(true);
+    try {
+      const response = await fetch('/api/recruit/dimensions/suggest', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...getAIHeaders() },
+        body: JSON.stringify({ title, jobDescription }),
+      });
+      if (!response.ok) throw new Error('suggest failed');
+      const data = await response.json();
+      setDimensions(data.dimensions);
+      toast.success(t('dimensions.recognizeSuccess'));
+    } catch {
+      toast.error(t('dimensions.recognizeFailed'));
+    } finally {
+      setRecognizing(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -142,6 +167,8 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
             value={dimensions}
             onChange={setDimensions}
             questionCount={questionCount}
+            onAIRecognize={() => void recognizeDimensions()}
+            aiRecognizing={recognizing}
           />
         </div>
 

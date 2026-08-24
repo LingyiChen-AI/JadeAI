@@ -987,6 +987,11 @@
       "title": "考察维度",
       "hint": "权重决定该维度出几道题，以及在总分里占多大比例",
       "addCustom": "添加自定义维度",
+      "aiRecognize": "AI 识别",
+      "recognizing": "识别中…",
+      "needJobInfo": "请先填写岗位名称和职位描述",
+      "recognizeSuccess": "已根据 JD 填充维度、权重和考察范围",
+      "recognizeFailed": "AI 识别失败，请检查模型设置后重试",
       "customPlaceholder": "维度名称",
       "weight": "权重",
       "descriptions": {
