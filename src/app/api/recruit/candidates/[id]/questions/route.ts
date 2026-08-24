@@ -107,7 +107,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
-    // 只有达到保存阈值并恢复蓝图的全局顺序后才构造、覆盖候选人的题目。
+    // 只有每个蓝图槽位都生成题目并恢复全局顺序后，才覆盖候选人的旧题。
     const raw = assembleGeneratedQuestions(
       settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : [])),
       job.questionCount,

@@ -1,4 +1,6 @@
 import { resolveDimensionGuide } from '@/lib/recruit/dimension-guides';
+import { detectGoRole } from '@/lib/ai/recruit-blueprint';
+import { allocateQuestions } from '@/lib/recruit/scoring';
 import type {
   DimensionConfig,
   InterviewBlueprint,
@@ -140,12 +142,27 @@ export function buildInterviewBlueprintPrompt(input: QuestionsPromptInput): {
   system: string;
   prompt: string;
 } {
+  const allocation = allocateQuestions(input.dimensions, input.questionCount);
   const dimensionLines = input.dimensions
-    .map((dimension) => `- ${dimension.label} (key: ${dimension.key})`)
+    .map((dimension) => {
+      const description = resolveDimensionGuide(dimension) || '(no description configured)';
+      return `- ${dimension.label} (key: ${dimension.key}, weight: ${dimension.weight}, exactly ${allocation[dimension.key] ?? 0} slots)\n  Description: ${description}`;
+    })
     .join('\n');
-  const goMinimum = input.questionCount >= 8
-    ? 'If it is Go-specific, include at least 2 go_fundamentals slots.'
-    : 'For a Go-specific role, include go_fundamentals only when supported by the role.';
+  const isGoRole = detectGoRole(input.jobTitle, input.jobDescription);
+  const goMinimum = isGoRole && input.questionCount >= 8
+    ? 'The server classified this as a Go-specific role. Include at least 2 go_fundamentals slots.'
+    : isGoRole
+      ? 'The server classified this as a Go-specific role. Include go_fundamentals only where the small slot count allows.'
+      : 'The server classified this as a non-Go role. Do not use go_fundamentals.';
+  const requiredGoPortfolio = isGoRole && input.questionCount >= 8
+    ? `Required Go interview portfolio:
+- at least 1 middleware_database slot
+- at least 1 project_deep_dive slot
+- at least 1 system_scenario slot
+- at least 1 communication_pressure slot
+- at least 1 hr_motivation slot`
+    : '';
   const portfolioRules = buildPortfolioRules(input.questionCount);
 
   const system = `You are an interview planner. Return only one strict interview blueprint JSON object.
@@ -159,8 +176,7 @@ First extract concise, explicit facts into three separate lists:
 Never convert an inference into a résumé fact. Do not invent metrics, architecture, incidents, ownership,
 tools, scale, outcomes, or a candidate's experience.
 
-Then create exactly ${input.questionCount} slots. Determine whether this is a Go-specific role from BOTH
-the job title and the JD. ${goMinimum} If it is not Go-specific, do not use go_fundamentals.
+Then create exactly ${input.questionCount} slots. ${goMinimum}
 
 Each slot must use one configured dimension key, one allowed category, one allowed source, a concrete topic,
 a concrete evidence string, and a difficulty. Allowed categories: go_fundamentals, backend_fundamentals,
@@ -169,11 +185,16 @@ sources: resume, jd, gap. For a fundamentals slot, express its topic as mechanis
 engineering decision. Allowed difficulty values: easy | medium | hard. Cover important evidence without
 duplicating the same event or knowledge point.
 
+For every slot, copy one complete entry exactly from the corresponding source list into "evidence":
+resume → resumeFacts, jd → jdRequirements, gap → gaps. Do not paraphrase, shorten, combine, or extend it.
+
 ${portfolioRules}
+
+${requiredGoPortfolio}
 
 If gaps is non-empty, include at least one gap slot. If gaps is empty, include at least one jd system_scenario slot instead, and do not create a gap slot.
 
-Configured dimensions:
+Configured dimensions and mandatory slot allocations (use every key exactly the stated number of times):
 ${dimensionLines}
 
 Return JSON with this exact shape:

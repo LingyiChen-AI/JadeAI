@@ -6,12 +6,11 @@ import {
   bindQuestionsToSlots,
   detectGoRole,
   groupBlueprintSlots,
-  meetsGenerationThreshold,
   validateBlueprint,
 } from './recruit-blueprint';
 
 const dimensions: DimensionConfig[] = [
-  { key: 'professional', label: 'Professional skill', weight: 2, custom: false },
+  { key: 'professional', label: 'Professional skill', weight: 7, custom: false },
   { key: 'communication', label: 'Communication', weight: 1, custom: false },
 ];
 
@@ -20,7 +19,7 @@ const slotA: QuestionSlot = {
   source: 'jd',
   dimension: 'professional',
   topic: 'Goroutine scheduling',
-  evidence: 'The role requires Go concurrency experience',
+  evidence: 'Strong Go experience',
   difficulty: 'hard',
 };
 
@@ -38,23 +37,34 @@ const slotC: QuestionSlot = {
   source: 'gap',
   dimension: 'professional',
   topic: 'Database indexes',
-  evidence: 'The resume lacks database optimization details',
+  evidence: 'No database tuning examples',
   difficulty: 'medium',
 };
 
 const blueprintWith8SlotsAnd2Go: InterviewBlueprint = {
-  resumeFacts: ['Built backend services'],
-  jdRequirements: ['Strong Go experience'],
+  resumeFacts: ['Built backend services', 'The resume describes cross-team projects'],
+  jdRequirements: ['Strong Go experience', 'Database and middleware experience'],
   gaps: ['No database tuning examples'],
   slots: [
     slotA,
     { ...slotA, topic: 'Channel ownership' },
+    {
+      ...slotA,
+      category: 'middleware_database',
+      topic: 'Transaction isolation',
+      evidence: 'Database and middleware experience',
+    },
+    {
+      ...slotA,
+      category: 'project_deep_dive',
+      source: 'resume',
+      topic: 'Backend service ownership',
+      evidence: 'Built backend services',
+    },
+    { ...slotC, category: 'system_scenario', topic: 'Caching failure' },
+    { ...slotA, category: 'backend_fundamentals', topic: 'HTTP timeouts' },
     slotB,
-    slotC,
-    { ...slotB, topic: 'Conflict resolution' },
-    { ...slotC, topic: 'Transaction isolation' },
-    { ...slotB, topic: 'Technical explanation' },
-    { ...slotC, topic: 'Caching strategy' },
+    { ...slotB, category: 'hr_motivation', topic: 'Role motivation' },
   ],
 };
 
@@ -99,13 +109,24 @@ describe('validateBlueprint', () => {
     expect(blueprintWith8SlotsAnd2Go).toEqual(original);
   });
 
-  it.each([5, 6, 7])('accepts a %i-slot Go blueprint with fewer than two Go fundamentals slots', (questionCount) => {
-    const blueprintWithOneGoSlot = {
+  it.each([
+    [5, 4, 1],
+    [6, 5, 1],
+    [7, 5, 2],
+  ])('accepts a %i-slot Go blueprint without the large-interview portfolio', (
+    questionCount,
+    professionalCount,
+    communicationCount,
+  ) => {
+    const blueprintWithSmallPortfolio = {
       ...blueprintWith8SlotsAnd2Go,
-      slots: [slotA, ...blueprintWith8SlotsAnd2Go.slots.slice(2, questionCount + 1)],
+      slots: [
+        ...blueprintWith8SlotsAnd2Go.slots.slice(0, professionalCount),
+        ...blueprintWith8SlotsAnd2Go.slots.slice(6, 6 + communicationCount),
+      ],
     };
 
-    const result = validateBlueprint(blueprintWithOneGoSlot, {
+    const result = validateBlueprint(blueprintWithSmallPortfolio, {
       questionCount,
       dimensions,
       isGoRole: true,
@@ -144,6 +165,21 @@ describe('validateBlueprint', () => {
     })).toThrow(/dimension/);
   });
 
+  it('rejects slot counts that do not match the configured weight allocation', () => {
+    const wronglyAllocated = {
+      ...blueprintWith8SlotsAnd2Go,
+      slots: blueprintWith8SlotsAnd2Go.slots.map((slot, index) => (
+        index === 5 ? { ...slot, dimension: 'communication' } : slot
+      )),
+    };
+
+    expect(() => validateBlueprint(wronglyAllocated, {
+      questionCount: 8,
+      dimensions,
+      isGoRole: true,
+    })).toThrow(/professional.*6.*5/);
+  });
+
   it('rejects any slot-count mismatch', () => {
     expect(() => validateBlueprint({
       ...blueprintWith8SlotsAnd2Go,
@@ -176,6 +212,62 @@ describe('validateBlueprint', () => {
       isGoRole: false,
     })).toThrow(/go_fundamentals/);
   });
+
+  it.each([
+    'middleware_database',
+    'project_deep_dive',
+    'system_scenario',
+    'communication_pressure',
+    'hr_motivation',
+  ] as const)('requires %s coverage for Go interviews with at least eight slots', (category) => {
+    const withoutCategory = {
+      ...blueprintWith8SlotsAnd2Go,
+      slots: blueprintWith8SlotsAnd2Go.slots.map((slot) => (
+        slot.category === category ? { ...slot, category: 'backend_fundamentals' as const } : slot
+      )),
+    };
+
+    expect(() => validateBlueprint(withoutCategory, {
+      questionCount: 8,
+      dimensions,
+      isGoRole: true,
+    })).toThrow(new RegExp(category));
+  });
+
+  it('accepts normalized exact evidence from the declared source list', () => {
+    const normalizedEvidence = {
+      ...blueprintWith8SlotsAnd2Go,
+      slots: blueprintWith8SlotsAnd2Go.slots.map((slot, index) => (
+        index === 3 ? { ...slot, evidence: '  BUILT   backend services  ' } : slot
+      )),
+    };
+
+    expect(validateBlueprint(normalizedEvidence, {
+      questionCount: 8,
+      dimensions,
+      isGoRole: true,
+    }).slots[3].evidence).toBe('  BUILT   backend services  ');
+  });
+
+  it.each([
+    ['resume', 'Built high-scale backend services'],
+    ['jd', 'Strong Go and Kubernetes experience'],
+    ['gap', 'No production database tuning examples'],
+  ] as const)('rejects %s evidence that is not a normalized exact list member', (source, evidence) => {
+    const slotIndex = source === 'resume' ? 3 : source === 'jd' ? 0 : 4;
+    const mismatchedEvidence = {
+      ...blueprintWith8SlotsAnd2Go,
+      slots: blueprintWith8SlotsAnd2Go.slots.map((slot, index) => (
+        index === slotIndex ? { ...slot, evidence } : slot
+      )),
+    };
+
+    expect(() => validateBlueprint(mismatchedEvidence, {
+      questionCount: 8,
+      dimensions,
+      isGoRole: true,
+    })).toThrow(new RegExp(`${source}.*evidence`));
+  });
 });
 
 describe('groupBlueprintSlots', () => {
@@ -207,17 +299,15 @@ describe('bindQuestionsToSlots', () => {
   });
 });
 
-describe('meetsGenerationThreshold', () => {
-  it('accepts generation at the rounded-up seventy percent threshold', () => {
-    expect(meetsGenerationThreshold(7, 10)).toBe(true);
-  });
-
-  it('rejects generation below the rounded-up seventy percent threshold', () => {
-    expect(meetsGenerationThreshold(6, 10)).toBe(false);
-  });
-});
-
 describe('assembleGeneratedQuestions', () => {
+  if (false) {
+    assembleGeneratedQuestions([{
+      // @ts-expect-error Assembly only accepts slots carrying their internal blueprint index.
+      slots: [slotA],
+      questions: [rawQuestion],
+    }], 1);
+  }
+
   it('restores global blueprint order after positional binding within dimension groups', () => {
     const groups = groupBlueprintSlots([slotA, slotB, slotC]);
     const generated = groups.map((group) => ({
@@ -237,7 +327,7 @@ describe('assembleGeneratedQuestions', () => {
     ]);
   });
 
-  it('rejects six generated questions when ten were planned', () => {
+  it.each([6, 7])('rejects %i generated questions when ten were planned', (generatedCount) => {
     const slots = Array.from({ length: 10 }, (_, index) => ({
       ...slotA,
       topic: `topic ${index}`,
@@ -246,14 +336,14 @@ describe('assembleGeneratedQuestions', () => {
 
     expect(() => assembleGeneratedQuestions([{
       slots: group.slots,
-      questions: Array.from({ length: 6 }, (_, index) => ({
+      questions: Array.from({ length: generatedCount }, (_, index) => ({
         ...rawQuestion,
         question: `question ${index}`,
       })),
-    }], 10)).toThrow(/6.*10.*70%/);
+    }], 10)).toThrow(new RegExp(`exactly 10.*${generatedCount}`));
   });
 
-  it('rejects an incomplete result even when it clears the save threshold', () => {
+  it('rejects more questions than were planned instead of truncating them', () => {
     const slots = Array.from({ length: 10 }, (_, index) => ({
       ...slotA,
       topic: `topic ${index}`,
@@ -261,30 +351,12 @@ describe('assembleGeneratedQuestions', () => {
     const [group] = groupBlueprintSlots(slots);
 
     expect(() => assembleGeneratedQuestions([{
-      slots: group.slots,
-      questions: Array.from({ length: 7 }, (_, index) => ({
-        ...rawQuestion,
-        question: `question ${index}`,
-      })),
-    }], 10)).toThrow(/7.*10.*complete/);
-  });
-
-  it('never returns more questions than were planned', () => {
-    const slots = Array.from({ length: 11 }, (_, index) => ({
-      ...slotA,
-      topic: `topic ${index}`,
-    }));
-    const [group] = groupBlueprintSlots(slots);
-
-    const assembled = assembleGeneratedQuestions([{
       slots: group.slots,
       questions: Array.from({ length: 11 }, (_, index) => ({
         ...rawQuestion,
         question: `question ${index}`,
       })),
-    }], 10);
-
-    expect(assembled).toHaveLength(10);
+    }], 10)).toThrow(/exactly 10.*11/);
   });
 });
 
@@ -294,10 +366,14 @@ describe('detectGoRole', () => {
     ['Backend engineer', 'Build Go backend services', true],
     ['Backend Go', 'Build APIs', true],
     ['后端工程师', '负责 Go 开发与服务治理', true],
+    ['Backend engineer', 'Proficiency in Go and MySQL', true],
+    ['后端工程师', '精通 Go，熟悉 MySQL', true],
+    ['Backend engineer', 'At least 3 years of Go experience', true],
     ['Java engineer', 'Build Spring services', false],
     ['Cloud engineer', 'Operate Google Cloud infrastructure', false],
     ['Go-to-market Manager', 'Own revenue strategy', false],
     ['Release Manager', 'Coordinate the production go-live', false],
+    ['Product Manager', 'Proficiency in go-to-market strategy', false],
   ])('detects Go from role text without substring false positives', (title, description, expected) => {
     expect(detectGoRole(title, description)).toBe(expected);
   });

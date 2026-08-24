@@ -16,8 +16,8 @@
 - Do not add a database migration; persist new fields inside the existing questions JSON.
 - Preserve short stems, follow-up ladders, rubrics, reference answers, red flags, skip status, recorded answers, and dimension-based scoring.
 - `resume` questions may use only explicit résumé facts; `jd` questions must be hypothetical; `gap` questions must not imply prior experience.
-- For Go roles with at least 8 questions, the blueprint must contain at least two `go_fundamentals` slots.
-- If fewer than 70% of planned questions are generated, do not overwrite the candidate's existing questions.
+- For Go roles with at least 8 questions, require two `go_fundamentals` slots and at least one each of `middleware_database`, `project_deep_dive`, `system_scenario`, `communication_pressure`, and `hr_motivation`.
+- Persist only when generated questions match every planned slot exactly; any missing or extra result leaves the candidate's existing questions untouched.
 - Preserve all pre-existing dirty-worktree changes; stage only named files for each commit and inspect `git diff --cached` before committing.
 
 ## File Structure
@@ -29,7 +29,7 @@
 - Modify `src/lib/ai/recruit-schema.test.ts`: schema parsing and rejection tests.
 - Modify `src/lib/ai/recruit-prompts.ts`: blueprint prompt builder and slot-driven question prompt builder.
 - Modify `src/lib/ai/recruit-prompts.test.ts`: prompt contract tests using final prompt output.
-- Modify `src/app/api/recruit/candidates/[id]/questions/route.ts`: two-stage orchestration and save threshold.
+- Modify `src/app/api/recruit/candidates/[id]/questions/route.ts`: two-stage orchestration and exact-count save guard.
 - Modify `src/lib/recruit/questions.ts`: old-question defaults for category, source, and evidence.
 - Modify `src/lib/recruit/questions.test.ts`: compatibility tests.
 - Modify `src/components/recruit/interview-stage.tsx`: category label beside the competency label.
@@ -149,9 +149,8 @@ git commit -m "feat(recruit): define interview blueprint metadata"
 **Interfaces:**
 - Consumes: `InterviewBlueprint`, `QuestionSlot`, `DimensionConfig`, `InterviewQuestion`.
 - Produces: `validateBlueprint(input: InterviewBlueprint, options: { questionCount: number; dimensions: DimensionConfig[]; isGoRole: boolean }): InterviewBlueprint`.
-- Produces: `groupBlueprintSlots(slots: QuestionSlot[]): Array<{ dimension: string; slots: QuestionSlot[] }>`.
+- Produces: `groupBlueprintSlots(slots: QuestionSlot[]): Array<{ dimension: string; slots: IndexedQuestionSlot[] }>`.
 - Produces: `bindQuestionsToSlots(raw: QuestionsOutput['questions'], slots: QuestionSlot[]): QuestionsOutput['questions']`.
-- Produces: `meetsGenerationThreshold(generated: number, planned: number): boolean`.
 
 - [ ] **Step 1: Write failing pure-function tests**
 
@@ -189,11 +188,9 @@ expect(bindQuestionsToSlots([rawQuestion], [slotA])[0]).toMatchObject({
   difficulty: slotA.difficulty,
 });
 
-expect(meetsGenerationThreshold(7, 10)).toBe(true);
-expect(meetsGenerationThreshold(6, 10)).toBe(false);
 ```
 
-Also test exact slot count, empty topic/evidence rejection, non-Go roles rejecting `go_fundamentals`, and stable first-seen dimension order.
+Also test exact slot count, exact per-dimension allocation from configured weights, source/evidence membership, full Go portfolio coverage at 8+ questions, small-count feasibility, empty topic/evidence rejection, non-Go roles rejecting `go_fundamentals`, and stable first-seen dimension order.
 
 - [ ] **Step 2: Run the new tests and verify RED**
 
@@ -203,7 +200,7 @@ Expected: FAIL because `recruit-blueprint.ts` does not exist.
 
 - [ ] **Step 3: Implement minimal pure functions**
 
-Use `Math.ceil(planned * 0.7)` for the threshold. Validation must throw descriptive `Error` objects and return a new blueprint without mutating input. `bindQuestionsToSlots` must use positional alignment and return at most `Math.min(raw.length, slots.length)` items.
+Reuse `allocateQuestions` so prompt, UI, and validation share one deterministic dimension-count contract. Validation must throw descriptive `Error` objects, enforce normalized exact evidence membership, and return a new blueprint without mutating input. `bindQuestionsToSlots` must use positional alignment and return at most `Math.min(raw.length, slots.length)` items.
 
 - [ ] **Step 4: Run blueprint tests and type-check**
 
@@ -311,7 +308,7 @@ git commit -m "feat(recruit): generate questions from interview blueprint"
 - Test: `src/lib/ai/recruit-blueprint.test.ts`
 
 **Interfaces:**
-- Consumes: `buildInterviewBlueprintPrompt`, `interviewBlueprintOutputSchema`, `validateBlueprint`, `groupBlueprintSlots`, `bindQuestionsToSlots`, `meetsGenerationThreshold`.
+- Consumes: `buildInterviewBlueprintPrompt`, `interviewBlueprintOutputSchema`, `validateBlueprint`, `groupBlueprintSlots`, `bindQuestionsToSlots`.
 - Produces: persisted `InterviewQuestion[]` with server-generated IDs, `status: 'pending'`, and server-owned slot metadata.
 
 - [ ] **Step 1: Add failing orchestration-boundary tests to pure helpers**
@@ -320,14 +317,14 @@ Add a helper `assembleGeneratedQuestions(groups, plannedCount)` with this contra
 
 ```ts
 type GeneratedGroup = {
-  slots: QuestionSlot[];
+  slots: IndexedQuestionSlot[];
   questions: QuestionsOutput['questions'];
 };
 
 assembleGeneratedQuestions(groups: GeneratedGroup[], plannedCount: number): QuestionsOutput['questions'];
 ```
 
-Test that it preserves blueprint order using an explicit `slotIndex` attached internally during grouping, rejects 6/10 results, accepts 7/10, and never returns more than `plannedCount`.
+Test that it preserves blueprint order using an explicit `slotIndex` attached internally during grouping, rejects both 6/10 and 7/10 results, rejects 11/10 rather than truncating, and exposes the indexed-slot requirement in its public input type.
 
 - [ ] **Step 2: Run helper tests and verify RED**
 
@@ -337,7 +334,7 @@ Expected: FAIL because `assembleGeneratedQuestions` does not exist.
 
 - [ ] **Step 3: Implement ordered assembly**
 
-Keep the public `QuestionSlot` unchanged. Internally pair each slot with its original index before grouping, bind returned questions positionally within a group, flatten, sort by original index, enforce the 70% threshold, and truncate to `plannedCount`.
+Keep the public `QuestionSlot` unchanged. Pair each slot with its original index during grouping, expose that indexed slot type to assembly, bind returned questions positionally within a group, flatten, sort by original index, and require the assembled count to equal `plannedCount` exactly.
 
 - [ ] **Step 4: Replace route planning with two model stages**
 
@@ -347,7 +344,7 @@ In the route:
 2. Parse with `interviewBlueprintOutputSchema`.
 3. Validate against configured dimensions and exact `job.questionCount`.
 4. Group slots and generate groups concurrently with `Promise.allSettled`.
-5. Assemble generated questions and reject below-threshold results before any repository update.
+5. Assemble generated questions and reject any missing or extra results before any repository update.
 6. Add UUID and `status: 'pending'` only after successful assembly.
 7. Persist once; do not clear old questions before success.
 
@@ -509,7 +506,7 @@ Use the existing Go candidate only after confirming the running development serv
 - at least one database/middleware question;
 - project, system scenario, communication/pressure, and HR coverage;
 - no claim that the candidate used `runtime.LockOSThread`, Worker Pool, Prometheus, or another implementation absent from the résumé;
-- exactly the configured total question count, unless a below-threshold generation correctly fails without overwriting the previous set.
+- exactly the configured total question count; any incomplete or extra generation must fail without overwriting the previous set.
 
 Do not record answers, skip questions, or generate an evaluation during this smoke test.
 
@@ -524,4 +521,3 @@ git commit -m "feat(recruit): ground interview evaluation context"
 - [ ] **Step 7: Report evidence**
 
 Report exact test counts, type-check/lint results, smoke-test category distribution, any generation failures, and all commits created. Do not claim completion without fresh command output from Step 4 and observed question data from Step 5.
-

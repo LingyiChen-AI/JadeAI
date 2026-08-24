@@ -221,11 +221,27 @@ difficulty: medium`);
 
 describe('buildInterviewBlueprintPrompt', () => {
   it('sets exact slot coverage and factual boundaries for the global blueprint', () => {
+    const weightedDimensions: DimensionConfig[] = [
+      {
+        key: 'professional',
+        label: '专业技能',
+        description: '重点考察技术原理与工程取舍',
+        weight: 3,
+        custom: false,
+      },
+      {
+        key: 'logic',
+        label: '逻辑思维',
+        description: '重点考察问题拆解与验证路径',
+        weight: 2,
+        custom: false,
+      },
+    ];
     const { system, prompt } = buildInterviewBlueprintPrompt({
       jobTitle: 'Golang 开发工程师',
       jobDescription: '3 年以上 Golang，熟悉 gRPC、Redis、MySQL',
       resumeText: '1 年 Go；项目使用 Gin、gRPC、Redis',
-      dimensions: DIMENSIONS,
+      dimensions: weightedDimensions,
       questionCount: 10,
     });
 
@@ -238,7 +254,33 @@ describe('buildInterviewBlueprintPrompt', () => {
     expect(system).toContain('easy | medium | hard');
     expect(system).toContain('If gaps is non-empty, include at least one gap slot');
     expect(system).toContain('If gaps is empty, include at least one jd system_scenario slot');
+    expect(system).toContain('professional');
+    expect(system).toContain('exactly 6 slots');
+    expect(system).toContain('重点考察技术原理与工程取舍');
+    expect(system).toContain('logic');
+    expect(system).toContain('exactly 4 slots');
+    expect(system).toContain('重点考察问题拆解与验证路径');
+    expect(system).toContain('at least 1 middleware_database slot');
+    expect(system).toContain('at least 1 project_deep_dive slot');
+    expect(system).toContain('at least 1 system_scenario slot');
+    expect(system).toContain('at least 1 communication_pressure slot');
+    expect(system).toContain('at least 1 hr_motivation slot');
+    expect(system).toContain('copy one complete entry exactly from the corresponding source list');
     expect(prompt).toContain('Golang 开发工程师');
+    expect(prompt).toContain('重点考察技术原理与工程取舍');
+  });
+
+  it('does not impose the eight-question Go portfolio on smaller interviews', () => {
+    const { system } = buildInterviewBlueprintPrompt({
+      jobTitle: 'Go 工程师',
+      jobDescription: '精通 Go，熟悉 MySQL',
+      resumeText: '使用 Go 开发服务',
+      dimensions: DIMENSIONS,
+      questionCount: 5,
+    });
+
+    expect(system).not.toContain('at least 1 hr_motivation slot');
+    expect(system).not.toContain('at least 1 middleware_database slot');
   });
 
   it.each([

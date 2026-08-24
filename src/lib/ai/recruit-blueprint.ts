@@ -1,10 +1,11 @@
 import type { DimensionConfig, InterviewBlueprint, QuestionSlot } from '@/types/recruit';
+import { allocateQuestions } from '@/lib/recruit/scoring';
 import type { QuestionsOutput } from './recruit-schema';
 
-type IndexedQuestionSlot = QuestionSlot & { slotIndex: number };
+export type IndexedQuestionSlot = QuestionSlot & { slotIndex: number };
 
 export type GeneratedGroup = {
-  slots: QuestionSlot[];
+  slots: IndexedQuestionSlot[];
   questions: QuestionsOutput['questions'];
 };
 
@@ -12,7 +13,26 @@ export function detectGoRole(jobTitle: string, jobDescription: string): boolean 
   const roleText = `${jobTitle}\n${jobDescription}`;
   if (/\bgolang\b/i.test(roleText)) return true;
 
-  return /(?:\bgo\b[ \t:/_-]+(?:backend|developer|engineer|programming|language|services?)\b|\b(?:backend|developer|engineer|programming|language|services?)[ \t:/_-]+go\b|\bgo\b[ \t]*(?:开发|后端|工程师|语言|服务)|(?:开发|后端|工程师|语言|服务)[ \t]*\bgo\b)/i.test(roleText);
+  const roleAdjacent = /(?:\bgo\b[ \t:/_-]+(?:backend|developer|engineer|programming|language|services?)\b|\b(?:backend|developer|engineer|programming|language|services?)[ \t:/_-]+go\b|\bgo\b[ \t]*(?:开发|后端|工程师|语言|服务)|(?:开发|后端|工程师|语言|服务)[ \t]*\bgo\b)/i;
+  if (roleAdjacent.test(roleText)) return true;
+
+  // A standalone language token near a skill/experience signal catches ordinary JD prose while
+  // excluding compounds such as "go-to-market", "go-live", and words such as "Google".
+  const goToken = '(?:^|[^A-Za-z0-9_-])go(?![A-Za-z0-9_-])';
+  const skillBeforeGo = new RegExp(
+    `(?:proficien(?:cy|t)|experience|experienced|expertise|skilled|familiar|knowledge|精通|熟悉|掌握|使用|要求)[^\\n.;。；]{0,40}${goToken}`,
+    'iu',
+  );
+  const experienceAfterGo = new RegExp(
+    `${goToken}[^\\n.;。；]{0,32}(?:experience|experienced|开发经验|经验)`,
+    'iu',
+  );
+
+  return skillBeforeGo.test(roleText) || experienceAfterGo.test(roleText);
+}
+
+function normalizeEvidence(value: string): string {
+  return value.normalize('NFKC').trim().replace(/\s+/gu, ' ').toLowerCase();
 }
 
 export function validateBlueprint(
@@ -30,7 +50,14 @@ export function validateBlueprint(
   }
 
   const configuredDimensions = new Set(options.dimensions.map((dimension) => dimension.key));
-  let goFundamentalsCount = 0;
+  const expectedDimensionCounts = allocateQuestions(options.dimensions, options.questionCount);
+  const actualDimensionCounts = new Map<string, number>();
+  const categoryCounts = new Map<QuestionSlot['category'], number>();
+  const evidenceBySource = {
+    resume: new Set(input.resumeFacts.map(normalizeEvidence)),
+    jd: new Set(input.jdRequirements.map(normalizeEvidence)),
+    gap: new Set(input.gaps.map(normalizeEvidence)),
+  } satisfies Record<QuestionSlot['source'], Set<string>>;
 
   for (const slot of input.slots) {
     if (!configuredDimensions.has(slot.dimension)) {
@@ -45,13 +72,52 @@ export function validateBlueprint(
       throw new Error('Blueprint slot evidence must not be empty.');
     }
 
-    if (slot.category === 'go_fundamentals') {
-      goFundamentalsCount += 1;
+    if (!evidenceBySource[slot.source].has(normalizeEvidence(slot.evidence))) {
+      const listName = slot.source === 'resume'
+        ? 'resumeFacts'
+        : slot.source === 'jd'
+          ? 'jdRequirements'
+          : 'gaps';
+      throw new Error(
+        `Blueprint ${slot.source} evidence must exactly match an entry in ${listName}.`,
+      );
+    }
+
+    actualDimensionCounts.set(
+      slot.dimension,
+      (actualDimensionCounts.get(slot.dimension) ?? 0) + 1,
+    );
+    categoryCounts.set(slot.category, (categoryCounts.get(slot.category) ?? 0) + 1);
+  }
+
+  for (const dimension of options.dimensions) {
+    const expected = expectedDimensionCounts[dimension.key] ?? 0;
+    const actual = actualDimensionCounts.get(dimension.key) ?? 0;
+    if (actual !== expected) {
+      throw new Error(
+        `Blueprint dimension "${dimension.key}" must contain exactly ${expected} slots; received ${actual}.`,
+      );
     }
   }
 
+  const goFundamentalsCount = categoryCounts.get('go_fundamentals') ?? 0;
   if (options.isGoRole && options.questionCount >= 8 && goFundamentalsCount < 2) {
     throw new Error('Go roles require at least two go_fundamentals slots.');
+  }
+
+  if (options.isGoRole && options.questionCount >= 8) {
+    const requiredCategories: QuestionSlot['category'][] = [
+      'middleware_database',
+      'project_deep_dive',
+      'system_scenario',
+      'communication_pressure',
+      'hr_motivation',
+    ];
+    for (const category of requiredCategories) {
+      if ((categoryCounts.get(category) ?? 0) < 1) {
+        throw new Error(`Go roles with at least eight questions require a ${category} slot.`);
+      }
+    }
   }
 
   if (!options.isGoRole && goFundamentalsCount > 0) {
@@ -103,39 +169,34 @@ export function bindQuestionsToSlots(
   }));
 }
 
-export function meetsGenerationThreshold(generated: number, planned: number): boolean {
-  return generated >= Math.ceil(planned * 0.7);
-}
-
 export function assembleGeneratedQuestions(
   groups: GeneratedGroup[],
   plannedCount: number,
 ): QuestionsOutput['questions'] {
+  for (const group of groups) {
+    if (group.questions.length !== group.slots.length) {
+      throw new Error(
+        `Expected exactly ${group.slots.length} generated questions for dimension "${group.slots[0]?.dimension ?? 'unknown'}"; received ${group.questions.length}.`,
+      );
+    }
+  }
+
   const ordered = groups
     .flatMap((group) => {
       const bound = bindQuestionsToSlots(group.questions, group.slots);
 
       return bound.map((question, index) => {
-        const slot = group.slots[index] as Partial<IndexedQuestionSlot>;
-        if (typeof slot.slotIndex !== 'number') {
-          throw new Error('Generated question slot is missing its blueprint index.');
-        }
+        const slot = group.slots[index];
         return { question, slotIndex: slot.slotIndex };
       });
     })
     .sort((left, right) => left.slotIndex - right.slotIndex);
 
-  if (!meetsGenerationThreshold(ordered.length, plannedCount)) {
+  if (ordered.length !== plannedCount) {
     throw new Error(
-      `Generated ${ordered.length} of ${plannedCount} planned questions, below the 70% save threshold.`,
+      `Expected exactly ${plannedCount} generated questions; received ${ordered.length}.`,
     );
   }
 
-  if (ordered.length < plannedCount) {
-    throw new Error(
-      `Generated ${ordered.length} of ${plannedCount} planned questions; the result is incomplete.`,
-    );
-  }
-
-  return ordered.slice(0, plannedCount).map(({ question }) => question);
+  return ordered.map(({ question }) => question);
 }
