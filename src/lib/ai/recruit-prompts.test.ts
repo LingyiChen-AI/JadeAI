@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildInterviewBlueprintPrompt,
   buildDimensionQuestionsPrompt,
   planQuestionGeneration,
   buildEvaluationPrompt,
 } from './recruit-prompts';
 import { PRESET_DIMENSION_GUIDES } from '@/lib/recruit/dimension-guides';
-import type { DimensionConfig, InterviewQuestion } from '@/types/recruit';
+import type {
+  DimensionConfig,
+  InterviewBlueprint,
+  InterviewQuestion,
+  QuestionSlot,
+} from '@/types/recruit';
 
 const DIMENSIONS: DimensionConfig[] = [
   { key: 'professional', label: '专业技能', weight: 3, custom: false },
@@ -48,23 +54,78 @@ describe('buildDimensionQuestionsPrompt', () => {
     dimensions: DIMENSIONS,
   };
 
-  it('JD、简历、维度和题数都进了 prompt', () => {
+  const blueprint: InterviewBlueprint = {
+    resumeFacts: ['1 年 Go 经验', '项目使用 Gin、gRPC、Redis'],
+    jdRequirements: ['Golang 性能优化', '熟悉 MySQL'],
+    gaps: ['简历未证明 MySQL 经验'],
+    slots: [
+      {
+        category: 'go_fundamentals',
+        source: 'jd',
+        dimension: 'professional',
+        topic: 'GMP 调度与阻塞调用',
+        evidence: 'JD 要求 Go 性能优化',
+        difficulty: 'hard',
+      },
+      {
+        category: 'project_deep_dive',
+        source: 'resume',
+        dimension: 'professional',
+        topic: 'gRPC 服务的个人职责',
+        evidence: '简历写明项目使用 gRPC',
+        difficulty: 'medium',
+      },
+    ],
+  };
+
+  it('按 slot 顺序渲染题目依据和全局事实列表', () => {
+    const slots: QuestionSlot[] = [
+      {
+        category: 'go_fundamentals',
+        source: 'jd',
+        dimension: 'professional',
+        topic: 'GMP scheduling and blocking calls',
+        evidence: 'JD requires Go performance optimization',
+        difficulty: 'hard',
+      },
+      {
+        category: 'project_deep_dive',
+        source: 'resume',
+        dimension: 'professional',
+        topic: 'gRPC service ownership',
+        evidence: 'Resume says the project used gRPC',
+        difficulty: 'medium',
+      },
+    ];
     const { prompt } = buildDimensionQuestionsPrompt({
       ...base,
       dimension: DIMENSIONS[0],
-      count: 6,
+      blueprint,
+      slots,
     });
     expect(prompt).toContain('需要熟悉分布式事务');
     expect(prompt).toContain('在某厂做过订单系统');
     expect(prompt).toContain('professional');
-    expect(prompt).toContain('exactly 6 questions');
+    expect(prompt).toContain('GMP scheduling and blocking calls');
+    expect(prompt).toContain('JD requires Go performance optimization');
+    expect(prompt).toContain('category: go_fundamentals');
+    expect(prompt).toContain('source: jd');
+    expect(prompt).toContain('gRPC service ownership');
+    expect(prompt).toContain('Resume says the project used gRPC');
+    expect(prompt).toContain('category: project_deep_dive');
+    expect(prompt).toContain('source: resume');
+    expect(prompt).toContain('1 年 Go 经验');
+    expect(prompt).toContain('Golang 性能优化');
+    expect(prompt).toContain('简历未证明 MySQL 经验');
+    expect(prompt).toContain('one output question per slot, in order');
   });
 
   it('用户填的维度描述整段进 prompt', () => {
     const { prompt } = buildDimensionQuestionsPrompt({
       ...base,
       dimension: { ...DIMENSIONS[0], description: '重点问 Kafka 消息重复消费怎么处理' },
-      count: 2,
+      blueprint,
+      slots: blueprint.slots,
     });
     expect(prompt).toContain('重点问 Kafka 消息重复消费怎么处理');
   });
@@ -73,7 +134,8 @@ describe('buildDimensionQuestionsPrompt', () => {
     const { prompt } = buildDimensionQuestionsPrompt({
       ...base,
       dimension: DIMENSIONS[0],
-      count: 2,
+      blueprint,
+      slots: blueprint.slots,
     });
     expect(prompt).toContain(PRESET_DIMENSION_GUIDES.professional);
   });
@@ -82,7 +144,8 @@ describe('buildDimensionQuestionsPrompt', () => {
     const { prompt } = buildDimensionQuestionsPrompt({
       ...base,
       dimension: DIMENSIONS[0],
-      count: 2,
+      blueprint,
+      slots: blueprint.slots,
     });
     expect(prompt).toContain('逻辑思维');
     expect(prompt).toContain('do NOT ask about them');
@@ -99,7 +162,8 @@ describe('buildDimensionQuestionsPrompt', () => {
       ...base,
       dimensions: [custom],
       dimension: custom,
-      count: 1,
+      blueprint: { ...blueprint, slots: [{ ...blueprint.slots[0], dimension: custom.key }] },
+      slots: [{ ...blueprint.slots[0], dimension: custom.key }],
     });
     expect(prompt).not.toContain('How to probe this competency');
   });
@@ -108,32 +172,30 @@ describe('buildDimensionQuestionsPrompt', () => {
     const { system } = buildDimensionQuestionsPrompt({
       ...base,
       dimension: DIMENSIONS[0],
-      count: 1,
+      blueprint,
+      slots: blueprint.slots,
     });
     expect(system).toContain('JSON');
     expect(system).toContain('referenceAnswer');
   });
 
-  it('system prompt 要求把题型与考察维度分开并组成完整面试题组', () => {
+  it('system prompt 要求严格按输入 slots 出题，不能自主选择题型', () => {
     const { system } = buildDimensionQuestionsPrompt({
       ...base,
       dimension: DIMENSIONS[0],
-      count: 6,
+      blueprint,
+      slots: blueprint.slots,
     });
-    expect(system).toContain('Question archetype is NOT the same as competency dimension');
-    expect(system).toContain('project deep-dive');
-    expect(system).toContain('work scenario');
-    expect(system).toContain('fundamentals');
-    expect(system).toContain('HR pressure');
-    expect(system).toContain('communication / collaboration');
-    expect(system).toContain('JD gap probe');
+    expect(system).toContain('Do not choose or rebalance categories, sources, dimensions, or difficulty');
+    expect(system).toContain('slot is the complete question assignment');
   });
 
   it('system prompt 分别约束简历题、JD 场景题和事实边界', () => {
     const { system } = buildDimensionQuestionsPrompt({
       ...base,
       dimension: DIMENSIONS[0],
-      count: 2,
+      blueprint,
+      slots: blueprint.slots,
     });
     expect(system).toContain('Evidence anchor');
     expect(system).toContain('Resume-backed questions');
@@ -145,12 +207,33 @@ describe('buildDimensionQuestionsPrompt', () => {
     const { system } = buildDimensionQuestionsPrompt({
       ...base,
       dimension: DIMENSIONS[0],
-      count: 2,
+      blueprint,
+      slots: blueprint.slots,
     });
     expect(system).toContain('Infer the expected seniority');
     expect(system).toContain('Junior');
     expect(system).toContain('Mid-level');
     expect(system).toContain('Senior / staff');
+  });
+});
+
+describe('buildInterviewBlueprintPrompt', () => {
+  it('sets exact slot coverage and factual boundaries for the global blueprint', () => {
+    const { system, prompt } = buildInterviewBlueprintPrompt({
+      jobTitle: 'Golang 开发工程师',
+      jobDescription: '3 年以上 Golang，熟悉 gRPC、Redis、MySQL',
+      resumeText: '1 年 Go；项目使用 Gin、gRPC、Redis',
+      dimensions: DIMENSIONS,
+      questionCount: 10,
+    });
+
+    expect(system).toContain('exactly 10 slots');
+    expect(system).toContain('at least 2 go_fundamentals');
+    expect(system).toContain('resumeFacts');
+    expect(system).toContain('jdRequirements');
+    expect(system).toContain('gaps');
+    expect(system).toContain('Never convert an inference into a résumé fact');
+    expect(prompt).toContain('Golang 开发工程师');
   });
 });
 
@@ -292,13 +375,29 @@ describe('buildEvaluationPrompt 与参考答案', () => {
 });
 
 describe('出题 system prompt 的硬约束', () => {
+  const blueprint: InterviewBlueprint = {
+    resumeFacts: [],
+    jdRequirements: [],
+    gaps: [],
+    slots: [
+      {
+        category: 'backend_fundamentals',
+        source: 'jd',
+        dimension: 'professional',
+        topic: '数据库索引',
+        evidence: 'JD',
+        difficulty: 'medium',
+      },
+    ],
+  };
   const { system } = buildDimensionQuestionsPrompt({
     jobTitle: 'T',
     jobDescription: 'JD',
     resumeText: 'R',
     dimensions: DIMENSIONS,
     dimension: DIMENSIONS[0],
-    count: 3,
+    blueprint,
+    slots: blueprint.slots,
   });
 
   it('明确要求题干短、且深度放在追问里', () => {

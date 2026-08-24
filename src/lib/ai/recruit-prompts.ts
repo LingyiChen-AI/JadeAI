@@ -1,6 +1,11 @@
 import { allocateQuestions } from '@/lib/recruit/scoring';
 import { resolveDimensionGuide } from '@/lib/recruit/dimension-guides';
-import type { DimensionConfig, InterviewQuestion } from '@/types/recruit';
+import type {
+  DimensionConfig,
+  InterviewBlueprint,
+  InterviewQuestion,
+  QuestionSlot,
+} from '@/types/recruit';
 
 const LANGUAGE_RULE = `IMPORTANT: Detect the primary language of the job description. You MUST respond entirely in that language. If the JD is in Chinese, all output (questions, rubrics, comments) must be in Chinese.`;
 
@@ -18,39 +23,14 @@ THE MOST IMPORTANT RULE — keep the question SHORT:
 - For experience questions, prefer: 跟我讲讲… / 带我过一遍… / 你当时怎么决定… / 说一次你…
 - For scenario questions, state only the minimum situation and first decision: "支付成功率突然从 99.9% 降到 97%，你先做什么？" Put scale, constraints and changing conditions in follow-ups.
 
-QUESTION PORTFOLIO — archetype and dimension are two different axes:
-Question archetype is NOT the same as competency dimension. The competency says what to score;
-the archetype says what kind of evidence to elicit. Before writing, silently assign each question one
-of these archetypes. Do not add an archetype field to the JSON.
-
-1. project deep-dive — verify work claimed on the résumé: ownership, architecture, trade-offs,
-   production failures, measurable outcome and retrospective.
-2. work scenario — give a realistic incident, design task or ambiguous business constraint from this
-   role; let the candidate clarify, prioritize, propose, test and revise instead of guessing a slogan.
-3. fundamentals — test mechanisms, boundaries and failure behavior behind a JD-required skill
-   (the Chinese interview style sometimes calls this 八股文). Do not ask isolated definitions: connect
-   the mechanism to debugging, design choice or a concrete consequence.
-4. HR pressure — professionally challenge a résumé transition, failure, expectation, motivation or
-   inconsistency. Apply firm follow-up pressure without humiliation, trick questions, discrimination,
-   or questions about protected/private personal circumstances.
-5. communication / collaboration — ask for a real conflict, stakeholder disagreement, difficult
-   feedback or cross-team dependency; require a STAR-like account and inspect the candidate's exact words/actions.
-6. JD gap probe — test an important JD requirement that the résumé does not prove. Do not assume the
-   candidate has used it; distinguish transferable reasoning from fabricated experience.
-
-Choose archetypes that genuinely reveal THIS competency:
-- professional: primarily project deep-dive, work scenario, fundamentals and JD gap probe.
-- logic: primarily work scenario, project debugging and JD gap probe.
-- communication/teamwork/leadership/learning: primarily project evidence and communication / collaboration.
-- stress/motivation: primarily HR pressure and project evidence.
-- a custom competency: infer the best two or more archetypes from its description.
-When producing 2+ questions, use at least two applicable archetypes. When producing 4+, include at
-least one résumé-backed archetype and one JD-backed archetype. Never repeat the same event, knowledge
-point or scenario with cosmetic rewording. Quality and applicability override mechanical quota filling.
+SLOT ASSIGNMENT — the user message lists ordered question slots. A slot is the complete question assignment: its category, source, dimension, topic, evidence, and difficulty are already decided.
+Generate exactly one output question for each input slot, in that same order. Do not choose or rebalance categories, sources, dimensions, or difficulty. Do not substitute a different topic, evidence anchor, or question type. Never merge two slots or add a question. Use the category only to shape the question:
+project deep dives verify claimed work; scenarios are hypothetical; fundamentals connect mechanism →
+symptom → engineering decision; communication or HR pressure remains professional and non-discriminatory.
 
 Evidence anchor and factual boundaries:
-- Every question must have a clear evidence anchor in either the résumé, the JD, or an explicit gap
-  between them. A generic question that could be used unchanged for any role and candidate is a failure.
+- The input slot's source and evidence are the authoritative evidence anchor. A generic question that
+  could be used unchanged for any role and candidate is a failure.
 - Resume-backed questions may name only projects, technologies, responsibilities, transitions and
   numbers actually present in the résumé. Never invent a company situation, personal contribution,
   metric, failure, scale or outcome. If ownership is unclear, ask who owned it instead of asserting it.
@@ -60,8 +40,7 @@ Evidence anchor and factual boundaries:
   either side as fact.
 
 Seniority calibration:
-- Infer the expected seniority from the job title, JD scope and résumé evidence. If signals conflict,
-  calibrate to the JD and use follow-ups to find the candidate's ceiling.
+- Honor each slot's assigned difficulty. Infer the expected seniority from the job title, JD scope and résumé evidence to calibrate the follow-up depth; if signals conflict, calibrate to the JD and use follow-ups to find the candidate's ceiling.
 - Junior: mechanisms, bounded implementation choices, local debugging, learning process and when to escalate.
 - Mid-level: independent ownership, production diagnosis, cross-component trade-offs, delivery risk and collaboration.
 - Senior / staff: ambiguous system design, scale/cost/reliability trade-offs, evolution and rollback,
@@ -139,6 +118,61 @@ export interface QuestionsPromptInput {
   questionCount: number;
 }
 
+export function buildInterviewBlueprintPrompt(input: QuestionsPromptInput): {
+  system: string;
+  prompt: string;
+} {
+  const dimensionLines = input.dimensions
+    .map((dimension) => `- ${dimension.label} (key: ${dimension.key})`)
+    .join('\n');
+  const goMinimum = input.questionCount >= 8
+    ? 'If it is Go-specific, include at least 2 go_fundamentals slots.'
+    : 'For a Go-specific role, include go_fundamentals only when supported by the role.';
+
+  const system = `You are an interview planner. Return only one strict interview blueprint JSON object.
+
+${LANGUAGE_RULE}
+
+First extract concise, explicit facts into three separate lists:
+- "resumeFacts": only facts stated in the résumé.
+- "jdRequirements": only requirements stated in the JD.
+- "gaps": neutral, explicit comparisons where a material JD requirement is not proven by the résumé.
+Never convert an inference into a résumé fact. Do not invent metrics, architecture, incidents, ownership,
+tools, scale, outcomes, or a candidate's experience.
+
+Then create exactly ${input.questionCount} slots. Determine whether this is a Go-specific role from BOTH
+the job title and the JD. ${goMinimum} If it is not Go-specific, do not use go_fundamentals.
+
+Each slot must use one configured dimension key, one allowed category, one allowed source, a concrete topic,
+a concrete evidence string, and a difficulty. Allowed categories: go_fundamentals, backend_fundamentals,
+middleware_database, project_deep_dive, system_scenario, communication_pressure, hr_motivation. Allowed
+sources: resume, jd, gap. For a fundamentals slot, express its topic as mechanism → observable symptom →
+engineering decision. Cover important evidence without duplicating the same event or knowledge point.
+
+Configured dimensions:
+${dimensionLines}
+
+Return JSON with this exact shape:
+{"resumeFacts":[""],"jdRequirements":[""],"gaps":[""],"slots":[{"category":"backend_fundamentals","source":"jd","dimension":"","topic":"","evidence":"","difficulty":"medium"}]}
+
+${JSON_RULE}`;
+
+  const prompt = `Job title: ${input.jobTitle}
+
+Job description:
+${input.jobDescription}
+
+Candidate resume:
+${input.resumeText}
+
+Configured interview dimensions:
+${dimensionLines}
+
+Plan the interview blueprint now.`;
+
+  return { system, prompt };
+}
+
 /**
  * 按权重把题数分给各维度。出题按维度分开、并发去请求，
  * 调用方拿这个结果决定每一路要几道题。
@@ -154,6 +188,13 @@ export function planQuestionGeneration(
 
 export interface DimensionQuestionsPromptInput extends Omit<QuestionsPromptInput, 'questionCount'> {
   dimension: DimensionConfig;
+  blueprint: InterviewBlueprint;
+  slots: QuestionSlot[];
+}
+
+/** @deprecated Transitional input for the API route until it is migrated to blueprint generation. */
+interface LegacyDimensionQuestionsPromptInput extends Omit<QuestionsPromptInput, 'questionCount'> {
+  dimension: DimensionConfig;
   count: number;
 }
 
@@ -164,7 +205,9 @@ export interface DimensionQuestionsPromptInput extends Omit<QuestionsPromptInput
  * 长得像同一道题换了主语。拆开之后每一路只盯着一个考察点，
  * 而且那个维度的描述能整段进 prompt，问法才真的有区别。
  */
-export function buildDimensionQuestionsPrompt(input: DimensionQuestionsPromptInput): {
+export function buildDimensionQuestionsPrompt(
+  input: DimensionQuestionsPromptInput | LegacyDimensionQuestionsPromptInput,
+): {
   system: string;
   prompt: string;
 } {
@@ -178,6 +221,21 @@ export function buildDimensionQuestionsPrompt(input: DimensionQuestionsPromptInp
   const othersBlock = others.length
     ? `\nOther interviewers are covering these competencies — do NOT ask about them: ${others.join(', ')}\n`
     : '';
+  const listFacts = (facts: string[]) =>
+    facts.length ? facts.map((fact) => `- ${fact}`).join('\n') : '- (none)';
+  const hasBlueprint = 'blueprint' in input;
+  const slots = hasBlueprint ? input.slots : [];
+  const slotBlocks = slots
+    .map(
+      (slot, index) => `Slot ${index + 1}
+category: ${slot.category}
+source: ${slot.source}
+dimension: ${slot.dimension}
+topic: ${slot.topic}
+evidence: ${slot.evidence}
+difficulty: ${slot.difficulty}`,
+    )
+    .join('\n\n');
 
   const prompt = `Job title: ${input.jobTitle}
 
@@ -186,10 +244,24 @@ ${input.jobDescription}
 
 Candidate resume:
 ${input.resumeText}
+${hasBlueprint ? `
+Global blueprint facts — these are the shared factual boundaries for every question:
+Resume facts:
+${listFacts(input.blueprint.resumeFacts)}
+
+JD requirements:
+${listFacts(input.blueprint.jdRequirements)}
+
+Gaps:
+${listFacts(input.blueprint.gaps)}
+` : ''}
 
 Competency to assess: ${input.dimension.label} (key: ${input.dimension.key})
-${guideBlock}${othersBlock}
-Produce exactly ${input.count} question${input.count === 1 ? '' : 's'}, all with "dimension" set to "${input.dimension.key}".
+${guideBlock}${othersBlock}${hasBlueprint ? `Assigned slots:
+${slotBlocks}
+
+Produce one output question per slot, in order. Preserve each slot's category, source, dimension, topic,
+evidence, and difficulty; the slot is the complete question assignment.` : `Produce exactly ${input.count} questions, all with "dimension" set to "${input.dimension.key}".`}
 
 Respond with JSON only.`;
 
