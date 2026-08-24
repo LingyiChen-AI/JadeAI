@@ -97,6 +97,21 @@ describe('validateBlueprint', () => {
     expect(blueprintWith8SlotsAnd2Go).toEqual(original);
   });
 
+  it.each([5, 6, 7])('accepts a %i-slot Go blueprint with fewer than two Go fundamentals slots', (questionCount) => {
+    const blueprintWithOneGoSlot = {
+      ...blueprintWith8SlotsAnd2Go,
+      slots: [slotA, ...blueprintWith8SlotsAnd2Go.slots.slice(2, questionCount + 1)],
+    };
+
+    const result = validateBlueprint(blueprintWithOneGoSlot, {
+      questionCount,
+      dimensions,
+      isGoRole: true,
+    });
+
+    expect(result.slots).toHaveLength(questionCount);
+  });
+
   it('rejects a Go blueprint with fewer than two Go fundamentals slots', () => {
     const blueprintWithOnly1GoSlot = {
       ...blueprintWith8SlotsAnd2Go,

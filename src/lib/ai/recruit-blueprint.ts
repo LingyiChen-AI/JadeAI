@@ -36,7 +36,7 @@ export function validateBlueprint(
     }
   }
 
-  if (options.isGoRole && goFundamentalsCount < 2) {
+  if (options.isGoRole && options.questionCount >= 8 && goFundamentalsCount < 2) {
     throw new Error('Go roles require at least two go_fundamentals slots.');
   }
 
