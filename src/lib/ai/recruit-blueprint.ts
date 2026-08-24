@@ -31,7 +31,10 @@ export function detectGoRole(jobTitle: string, jobDescription: string): boolean 
 }
 
 function normalizeEvidence(value: string): string {
-  return value.normalize('NFKC').trim().replace(/\s+/gu, ' ').toLowerCase();
+  return value
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\p{P}\p{S}\s]+/gu, '');
 }
 
 export function validateBlueprint(

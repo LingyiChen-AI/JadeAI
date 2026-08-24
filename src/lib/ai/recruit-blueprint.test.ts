@@ -85,6 +85,17 @@ const rawQuestion: QuestionsOutput['questions'][number] = {
 };
 
 describe('validateBlueprint', () => {
+  it('accepts source evidence that differs only in punctuation and whitespace', () => {
+    const input = structuredClone(blueprintWith8SlotsAnd2Go);
+    input.jdRequirements[0] = 'Strong Go experience。';
+    input.slots[0].evidence = '“Strong  Go experience”';
+
+    expect(() => validateBlueprint(input, {
+      questionCount: 8,
+      dimensions,
+      isGoRole: true,
+    })).not.toThrow();
+  });
   it('accepts a Go blueprint with the requested number of slots', () => {
     const result = validateBlueprint(blueprintWith8SlotsAnd2Go, {
       questionCount: 8,
