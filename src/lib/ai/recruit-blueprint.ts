@@ -131,5 +131,11 @@ export function assembleGeneratedQuestions(
     );
   }
 
+  if (ordered.length < plannedCount) {
+    throw new Error(
+      `Generated ${ordered.length} of ${plannedCount} planned questions; the result is incomplete.`,
+    );
+  }
+
   return ordered.slice(0, plannedCount).map(({ question }) => question);
 }

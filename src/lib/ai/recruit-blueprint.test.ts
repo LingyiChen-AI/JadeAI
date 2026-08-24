@@ -253,22 +253,20 @@ describe('assembleGeneratedQuestions', () => {
     }], 10)).toThrow(/6.*10.*70%/);
   });
 
-  it('accepts seven generated questions when ten were planned', () => {
+  it('rejects an incomplete result even when it clears the save threshold', () => {
     const slots = Array.from({ length: 10 }, (_, index) => ({
       ...slotA,
       topic: `topic ${index}`,
     }));
     const [group] = groupBlueprintSlots(slots);
 
-    const assembled = assembleGeneratedQuestions([{
+    expect(() => assembleGeneratedQuestions([{
       slots: group.slots,
       questions: Array.from({ length: 7 }, (_, index) => ({
         ...rawQuestion,
         question: `question ${index}`,
       })),
-    }], 10);
-
-    expect(assembled).toHaveLength(7);
+    }], 10)).toThrow(/7.*10.*complete/);
   });
 
   it('never returns more questions than were planned', () => {
