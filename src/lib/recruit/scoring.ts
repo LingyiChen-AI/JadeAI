@@ -12,46 +12,43 @@ export function allocateQuestions(
   dimensions: DimensionConfig[],
   total: number,
 ): Record<string, number> {
+  const configuredTotal = dimensions.reduce((sum, dimension) => sum + dimension.weight, 0);
+  if (configuredTotal === total) {
+    return Object.fromEntries(dimensions.map((dimension) => [dimension.key, dimension.weight]));
+  }
+
+  // 兼容还没打开岗位设置保存过的旧数据；新配置的 total 总是等于各维度题数之和。
   const result: Record<string, number> = {};
   if (dimensions.length === 0) return result;
-
   const safeTotal = Math.max(0, Math.floor(total));
-
-  // 名额不够人人有份：按权重降序（同权重保持原顺序）取前 safeTotal 个各给 1 题。
   if (safeTotal <= dimensions.length) {
-    for (const d of dimensions) result[d.key] = 0;
+    for (const dimension of dimensions) result[dimension.key] = 0;
     const ranked = dimensions
-      .map((d, index) => ({ d, index }))
-      .sort((a, b) => b.d.weight - a.d.weight || a.index - b.index);
-    for (const { d } of ranked.slice(0, safeTotal)) result[d.key] = 1;
+      .map((dimension, index) => ({ dimension, index }))
+      .sort((a, b) => b.dimension.weight - a.dimension.weight || a.index - b.index);
+    for (const { dimension } of ranked.slice(0, safeTotal)) result[dimension.key] = 1;
     return result;
   }
 
-  // 权重全为 0（或全为负）时退化成等权，否则负权重会把分配算歪。
-  const rawWeights = dimensions.map((d) => Math.max(d.weight, 0));
-  const weightSum = rawWeights.reduce((a, b) => a + b, 0);
-  const weights = weightSum > 0 ? rawWeights : dimensions.map(() => 1);
-  const effectiveSum = weights.reduce((a, b) => a + b, 0);
-
-  // 先每人 1 题打底，剩下的按权重用最大余额法分。
+  const weights = dimensions.map((dimension) => Math.max(dimension.weight, 0));
+  const weightSum = weights.reduce((sum, weight) => sum + weight, 0);
+  const effectiveWeights = weightSum > 0 ? weights : dimensions.map(() => 1);
+  const effectiveSum = effectiveWeights.reduce((sum, weight) => sum + weight, 0);
   const remainder = safeTotal - dimensions.length;
-  const exact = weights.map((w) => (w / effectiveSum) * remainder);
-  const floors = exact.map((v) => Math.floor(v));
-  let assigned = floors.reduce((a, b) => a + b, 0);
-
-  const byFraction = exact
-    .map((v, index) => ({ index, frac: v - Math.floor(v) }))
-    .sort((a, b) => b.frac - a.frac || a.index - b.index);
-
+  const exact = effectiveWeights.map((weight) => (weight / effectiveSum) * remainder);
+  const floors = exact.map(Math.floor);
+  let assigned = floors.reduce((sum, count) => sum + count, 0);
+  const fractions = exact
+    .map((count, index) => ({ index, fraction: count - Math.floor(count) }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
   let cursor = 0;
   while (assigned < remainder) {
-    floors[byFraction[cursor % byFraction.length].index] += 1;
+    floors[fractions[cursor % fractions.length].index] += 1;
     assigned += 1;
     cursor += 1;
   }
-
-  dimensions.forEach((d, i) => {
-    result[d.key] = 1 + floors[i];
+  dimensions.forEach((dimension, index) => {
+    result[dimension.key] = 1 + floors[index];
   });
   return result;
 }

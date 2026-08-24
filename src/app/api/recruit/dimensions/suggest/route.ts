@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       system: `You design interview scoring dimensions from a job description. Return strict JSON only.
 Use exactly these dimension keys, once each: ${allowedKeys.join(', ')}.
 For every dimension provide:
-- weight: integer 1-5 reflecting its importance for this specific JD;
+- weight: integer 1-5 meaning the exact number of questions to generate for this dimension;
 - description: a detailed Chinese assessment scope covering relevant knowledge, typical scenarios, probing directions, and what distinguishes strong from weak evidence.
 Ground every technology-specific scope in the JD. Do not invent required technologies. Keep behavioral dimensions role-specific.
 Shape: {"dimensions":[{"key":"...","weight":3,"description":"..."}]}`,

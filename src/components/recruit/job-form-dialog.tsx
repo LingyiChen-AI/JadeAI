@@ -14,16 +14,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
 import { DimensionChips } from './dimension-chips';
 import { interviewDimensions } from '@/lib/recruit/dimensions';
 import { detectGoRole } from '@/lib/ai/recruit-blueprint';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import { getAIHeaders } from '@/stores/settings-store';
 import {
-  QUESTION_COUNT_DEFAULT,
-  QUESTION_COUNT_MAX,
-  QUESTION_COUNT_MIN,
   type DimensionConfig,
   type RecruitJob,
 } from '@/types/recruit';
@@ -43,7 +39,6 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
 
   const [title, setTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
-  const [questionCount, setQuestionCount] = useState(QUESTION_COUNT_DEFAULT);
   const [dimensions, setDimensions] = useState<DimensionConfig[]>([]);
   const [saving, setSaving] = useState(false);
   const [recognizing, setRecognizing] = useState(false);
@@ -53,7 +48,6 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     if (!open) return;
     setTitle(job?.title ?? '');
     setJobDescription(job?.jobDescription ?? '');
-    setQuestionCount(job?.questionCount ?? QUESTION_COUNT_DEFAULT);
     const describe = (key: string) => tDim(`descriptions.${key}`);
     setDimensions(interviewDimensions(
       job?.dimensions ?? [],
@@ -64,6 +58,7 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
   }, [open, job, tDim]);
 
   const canSave = title.trim() && jobDescription.trim() && dimensions.length > 0 && !saving;
+  const questionCount = dimensions.reduce((sum, dimension) => sum + dimension.weight, 0);
 
   async function recognizeDimensions() {
     if (!title.trim() || !jobDescription.trim()) {
@@ -149,24 +144,9 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>
-              {t('questionCount')}：{questionCount}
-            </Label>
-            <Slider
-              className="cursor-pointer"
-              min={QUESTION_COUNT_MIN}
-              max={QUESTION_COUNT_MAX}
-              step={1}
-              value={[questionCount]}
-              onValueChange={([v]) => setQuestionCount(v)}
-            />
-          </div>
-
           <DimensionChips
             value={dimensions}
             onChange={setDimensions}
-            questionCount={questionCount}
             onAIRecognize={() => void recognizeDimensions()}
             aiRecognizing={recognizing}
           />

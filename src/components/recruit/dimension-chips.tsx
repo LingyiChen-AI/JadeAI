@@ -10,20 +10,17 @@ import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { PRESET_DIMENSION_KEYS } from '@/lib/recruit/dimensions';
 import { dimensionColor } from '@/lib/recruit/dimension-colors';
-import { allocateQuestions } from '@/lib/recruit/scoring';
 import { cn } from '@/lib/utils';
 import type { DimensionConfig } from '@/types/recruit';
 
 interface DimensionChipsProps {
   value: DimensionConfig[];
   onChange: (next: DimensionConfig[]) => void;
-  /** 传入后每个已选维度显示分到几题，权重的效果肉眼可见 */
-  questionCount?: number;
   onAIRecognize?: () => void;
   aiRecognizing?: boolean;
 }
 
-export function DimensionChips({ value, onChange, questionCount, onAIRecognize, aiRecognizing = false }: DimensionChipsProps) {
+export function DimensionChips({ value, onChange, onAIRecognize, aiRecognizing = false }: DimensionChipsProps) {
   const t = useTranslations('recruit.dimensions');
   const [customName, setCustomName] = useState('');
   const [customDescription, setCustomDescription] = useState('');
@@ -32,7 +29,6 @@ export function DimensionChips({ value, onChange, questionCount, onAIRecognize, 
   const [editingKey, setEditingKey] = useState<string | null>(null);
 
   const selectedByKey = new Map(value.map((d) => [d.key, d]));
-  const allocation = questionCount ? allocateQuestions(value, questionCount) : null;
   const editing = editingKey ? selectedByKey.get(editingKey) : undefined;
 
   function togglePreset(key: string) {
@@ -82,6 +78,9 @@ export function DimensionChips({ value, onChange, questionCount, onAIRecognize, 
           )}
         </div>
         <p className="mt-1 text-xs text-zinc-500">{t('hint')}</p>
+        <p className="mt-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+          {t('totalQuestions', { count: value.reduce((sum, dimension) => sum + dimension.weight, 0) })}
+        </p>
       </div>
 
       {/* 预置维度：两行 chip，未选中时不占纵向空间 */}
@@ -150,14 +149,9 @@ export function DimensionChips({ value, onChange, questionCount, onAIRecognize, 
                 value={[d.weight]}
                 onValueChange={([w]) => patch(d.key, { weight: w })}
               />
-              <span className="w-4 shrink-0 text-right text-xs tabular-nums text-zinc-500">
-                {d.weight}
+              <span className="w-10 shrink-0 text-right text-xs font-medium tabular-nums text-zinc-600">
+                {t('perDimension', { count: d.weight })}
               </span>
-              {allocation && (
-                <span className="w-10 shrink-0 text-right text-xs text-zinc-400">
-                  {t('perDimension', { count: allocation[d.key] ?? 0 })}
-                </span>
-              )}
               <button
                 type="button"
                 onClick={() => setEditingKey(editingKey === d.key ? null : d.key)}

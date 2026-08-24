@@ -10,8 +10,8 @@ import {
 } from './recruit-blueprint';
 
 const dimensions: DimensionConfig[] = [
-  { key: 'professional', label: 'Professional skill', weight: 7, custom: false },
-  { key: 'communication', label: 'Communication', weight: 1, custom: false },
+  { key: 'professional', label: 'Professional skill', weight: 6, custom: false },
+  { key: 'communication', label: 'Communication', weight: 2, custom: false },
 ];
 
 const slotA: QuestionSlot = {
@@ -139,7 +139,10 @@ describe('validateBlueprint', () => {
 
     const result = validateBlueprint(blueprintWithSmallPortfolio, {
       questionCount,
-      dimensions,
+      dimensions: [
+        { ...dimensions[0], weight: professionalCount },
+        { ...dimensions[1], weight: communicationCount },
+      ],
       isGoRole: true,
     });
 

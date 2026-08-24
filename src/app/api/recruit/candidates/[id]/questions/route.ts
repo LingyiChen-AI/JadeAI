@@ -46,6 +46,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       (key) => QUESTION_DIMENSION_DESCRIPTIONS[key as keyof typeof QUESTION_DIMENSION_DESCRIPTIONS] ?? key,
       (key) => QUESTION_DIMENSION_LABELS[key as keyof typeof QUESTION_DIMENSION_LABELS] ?? key,
     );
+    const questionCount = dimensions.reduce((sum, dimension) => sum + dimension.weight, 0);
 
     if (!dimensions?.length) {
       return NextResponse.json({ error: 'No dimensions configured' }, { status: 400 });
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       jobDescription: job.jobDescription,
       resumeText: candidate.resumeText,
       dimensions,
-      questionCount: job.questionCount,
+      questionCount,
     });
     const blueprintResult = await generateText({
       model,
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         slots: extractedBlueprint.slots.map((slot) => ({ ...slot, dimension: slot.category })),
       },
       {
-        questionCount: job.questionCount,
+        questionCount,
         dimensions,
         isGoRole,
       },
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // 只有每个蓝图槽位都生成题目并恢复全局顺序后，才覆盖候选人的旧题。
     const raw = assembleGeneratedQuestions(
       settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : [])),
-      job.questionCount,
+      questionCount,
     );
 
     // id 由服务端生成——模型返回的 id 可能重复或缺失，而后面的评估要靠它对齐题目。
@@ -154,6 +155,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       dimensionsOverride: dimensions,
       status: 'questions_ready',
     });
+    if (job.questionCount !== questionCount) {
+      await recruitRepository.updateJob(job.id, { questionCount });
+    }
 
     return NextResponse.json({ candidate: updated });
   } catch (error) {

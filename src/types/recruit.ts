@@ -174,5 +174,5 @@ export interface CandidateSummary {
 }
 
 export const QUESTION_COUNT_MIN = 5;
-export const QUESTION_COUNT_MAX = 20;
+export const QUESTION_COUNT_MAX = 30;
 export const QUESTION_COUNT_DEFAULT = 10;

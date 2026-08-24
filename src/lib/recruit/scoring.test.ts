@@ -7,49 +7,11 @@ function dim(key: string, weight: number): DimensionConfig {
 }
 
 describe('allocateQuestions', () => {
-  it('按权重分配，且总数精确等于 total', () => {
+  it('每个维度配置的数字就是该维度题目数', () => {
     const dims = [dim('professional', 3), dim('logic', 2), dim('communication', 2)];
-    const result = allocateQuestions(dims, 10);
-    expect(result).toEqual({ professional: 4, logic: 3, communication: 3 });
-    expect(Object.values(result).reduce((a, b) => a + b, 0)).toBe(10);
-  });
-
-  it('每个维度至少分到 1 题，哪怕权重悬殊', () => {
-    const dims = [dim('professional', 100), dim('teamwork', 1)];
-    const result = allocateQuestions(dims, 10);
-    expect(result.teamwork).toBeGreaterThanOrEqual(1);
-    expect(result.professional + result.teamwork).toBe(10);
-  });
-
-  it('余数用最大余额法补齐，不丢题也不多题', () => {
-    const dims = [dim('a', 1), dim('b', 1)];
-    const result = allocateQuestions(dims, 5);
-    expect(result.a + result.b).toBe(5);
-    // 1 题打底后余 3，两边各 1.5，最大余额法把多出来的 1 给排在前面的 a
-    expect(result).toEqual({ a: 3, b: 2 });
-  });
-
-  it('total 小于维度个数时，按权重降序只让前 total 个各出 1 题', () => {
-    const dims = [dim('a', 1), dim('b', 5), dim('c', 3)];
-    const result = allocateQuestions(dims, 2);
-    expect(result).toEqual({ a: 0, b: 1, c: 1 });
-  });
-
-  it('权重相同时按原顺序决定谁先拿到名额', () => {
-    const dims = [dim('a', 2), dim('b', 2), dim('c', 2)];
-    const result = allocateQuestions(dims, 2);
-    expect(result).toEqual({ a: 1, b: 1, c: 0 });
-  });
-
-  it('权重全为 0 时视作等权', () => {
-    const dims = [dim('a', 0), dim('b', 0)];
-    const result = allocateQuestions(dims, 6);
-    expect(result).toEqual({ a: 3, b: 3 });
-  });
-
-  it('单个维度拿走全部题目', () => {
-    const result = allocateQuestions([dim('a', 5)], 10);
-    expect(result).toEqual({ a: 10 });
+    const result = allocateQuestions(dims, 7);
+    expect(result).toEqual({ professional: 3, logic: 2, communication: 2 });
+    expect(Object.values(result).reduce((a, b) => a + b, 0)).toBe(7);
   });
 
   it('没有维度时返回空对象', () => {
