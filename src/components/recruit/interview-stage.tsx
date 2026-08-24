@@ -39,7 +39,6 @@ import { countAnswered, countSkipped } from '@/lib/recruit/answers';
 import { markQuestionSkipped, setQuestionAnswer } from '@/lib/recruit/questions';
 import { cn } from '@/lib/utils';
 import type {
-  DimensionConfig,
   InterviewQuestion,
   RecruitCandidate,
   RecruitJob,
@@ -93,8 +92,6 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
   }
 
   const questions = useMemo(() => candidate?.questions ?? [], [candidate?.questions]);
-  const dimensions: DimensionConfig[] =
-    candidate?.dimensionsOverride ?? (job?.dimensions as DimensionConfig[]) ?? [];
   const current = questions[index];
 
   // 待保存的答案。落库前一直留在这里，保存失败也不清空——
@@ -302,7 +299,6 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
   const hasAnswerBody =
     Boolean(current.referenceAnswer?.trim()) || current.referencePoints.length > 0;
   const color = dimensionColor(current.dimension);
-  const label = dimensions.find((d) => d.key === current.dimension)?.label ?? current.dimension;
 
   return (
     <div className={shell}>
@@ -386,12 +382,9 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-white dark:bg-zinc-900">
           <div className="flex shrink-0 items-center gap-2.5 border-b px-6 py-2.5 text-xs text-zinc-500 dark:border-zinc-800">
-            <Badge variant="outline" className={color.chip}>
-              <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
-              {label}
-            </Badge>
             {current.category && (
-              <Badge variant="outline" className="text-zinc-500">
+              <Badge variant="outline" className={color.chip}>
+                <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
                 {t(`questions.categories.${current.category}`)}
               </Badge>
             )}

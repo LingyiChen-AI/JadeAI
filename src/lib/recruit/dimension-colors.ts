@@ -11,39 +11,35 @@ export interface DimensionColor {
   chip: string;
 }
 
-/** 八个预置维度各占一个色相，相邻的两个不撞色。 */
+/** 题型与评分共用的预置维度各占一个色相。 */
 const PRESET_COLORS: Record<string, DimensionColor> = {
-  professional: {
+  go_fundamentals: {
     dot: 'bg-indigo-500',
     chip: 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-300',
   },
-  logic: {
+  backend_fundamentals: {
     dot: 'bg-violet-500',
     chip: 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-300',
   },
-  communication: {
+  middleware_database: {
     dot: 'bg-sky-500',
     chip: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-300',
   },
-  stress: {
+  project_deep_dive: {
     dot: 'bg-rose-500',
     chip: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300',
   },
-  teamwork: {
+  system_scenario: {
     dot: 'bg-teal-500',
     chip: 'border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-900 dark:bg-teal-950 dark:text-teal-300',
   },
-  learning: {
+  communication_pressure: {
     dot: 'bg-amber-500',
     chip: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300',
   },
-  motivation: {
+  hr_motivation: {
     dot: 'bg-orange-500',
     chip: 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300',
-  },
-  leadership: {
-    dot: 'bg-fuchsia-500',
-    chip: 'border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700 dark:border-fuchsia-900 dark:bg-fuchsia-950 dark:text-fuchsia-300',
   },
 };
 

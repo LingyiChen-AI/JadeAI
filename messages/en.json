@@ -990,6 +990,13 @@
       "customPlaceholder": "Competency name",
       "weight": "Weight",
       "descriptions": {
+        "go_fundamentals": "Assess Go mechanisms, concurrency, runtime behavior, memory, and performance analysis beyond memorization.",
+        "backend_fundamentals": "Assess networking, operating systems, API design, concurrency, and backend fundamentals.",
+        "middleware_database": "Assess databases, caches, queues, middleware mechanisms, failures, and trade-offs.",
+        "project_deep_dive": "Probe real résumé projects for constraints, ownership, decisions, outcomes, and lessons.",
+        "system_scenario": "Use role-specific design or incident scenarios to assess decomposition, evidence, trade-offs, and execution.",
+        "communication_pressure": "Assess conflict communication, pressure decisions, cross-team work, and responses to challenge.",
+        "hr_motivation": "Assess motivation, career choices, stability, growth goals, and role fit.",
         "stress": "Probe real high-pressure episodes on this resume: a production incident they owned, a deadline cut in half, two managers demanding opposite things. Then push back once on their answer to see whether they hold their reasoning or fold. A strong answer is specific about what they triaged, what they dropped and what they would change - not \"I just work harder\".",
         "logic": "Probe how they decompose a messy problem. Give a realistic scenario from this role - a metric moving the wrong way, 1% of requests slow, a capacity estimate - and watch them order hypotheses by likelihood and cost to check. No brainteasers. A strong answer states assumptions, splits the space, and says what evidence would falsify each branch.",
         "communication": "Probe whether they can make something complex from their own work land with a specific audience: a PM, a new hire, an angry customer. Then probe how they handle being disagreed with by someone more senior. Judge structure (conclusion first), calibration to the listener, and whether they ramble. Not whether they are friendly.",
@@ -1015,6 +1022,13 @@
       "learning": "Learning ability",
       "motivation": "Motivation & stability",
       "leadership": "Leadership"
+      ,"go_fundamentals": "Go Fundamentals"
+      ,"backend_fundamentals": "Backend Fundamentals"
+      ,"middleware_database": "Middleware & Databases"
+      ,"project_deep_dive": "Project Deep Dive"
+      ,"system_scenario": "System Scenarios"
+      ,"communication_pressure": "Communication & Pressure"
+      ,"hr_motivation": "Motivation & HR"
     },
       "addFlow": {
         "createTitle": "Add candidate",

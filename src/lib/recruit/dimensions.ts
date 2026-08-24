@@ -5,17 +5,26 @@ import type { DimensionConfig } from '@/types/recruit';
  * 这里只存 key，避免把中文硬编码进逻辑层。
  */
 export const PRESET_DIMENSION_KEYS = [
-  'stress',
-  'logic',
-  'communication',
-  'professional',
-  'teamwork',
-  'learning',
-  'motivation',
-  'leadership',
+  'go_fundamentals',
+  'backend_fundamentals',
+  'middleware_database',
+  'project_deep_dive',
+  'system_scenario',
+  'communication_pressure',
+  'hr_motivation',
 ] as const;
 
 export type PresetDimensionKey = (typeof PRESET_DIMENSION_KEYS)[number];
+
+export const QUESTION_DIMENSION_LABELS: Record<PresetDimensionKey, string> = {
+  go_fundamentals: 'Go 基础',
+  backend_fundamentals: '后端基础',
+  middleware_database: '中间件与数据库',
+  project_deep_dive: '项目深挖',
+  system_scenario: '系统场景',
+  communication_pressure: '沟通与压力',
+  hr_motivation: '求职动机',
+};
 
 /**
  * 新建岗位时的默认勾选：专业技能最重，逻辑与沟通次之。
@@ -24,14 +33,41 @@ export type PresetDimensionKey = (typeof PRESET_DIMENSION_KEYS)[number];
 export function defaultDimensions(
   labelOf: (key: string) => string,
   describeOf: (key: string) => string,
+  isGoRole = false,
 ): DimensionConfig[] {
-  return (['professional', 'logic', 'communication'] as const).map((key, i) => ({
+  const keys: PresetDimensionKey[] = [
+    isGoRole ? 'go_fundamentals' : 'backend_fundamentals',
+    'middleware_database',
+    'project_deep_dive',
+    'system_scenario',
+    'communication_pressure',
+    'hr_motivation',
+  ];
+  return keys.map((key) => ({
     key,
     label: labelOf(key),
     description: describeOf(key),
-    weight: i === 0 ? 3 : 2,
+    weight: key === 'go_fundamentals' || key === 'backend_fundamentals' || key === 'project_deep_dive' ? 3 : 2,
     custom: false,
   }));
+}
+
+export function interviewDimensions(
+  dimensions: DimensionConfig[],
+  isGoRole: boolean,
+  labelOf: (key: string) => string,
+  describeOf: (key: string) => string,
+): DimensionConfig[] {
+  const allowed = new Set<string>(PRESET_DIMENSION_KEYS);
+  const expectedFoundation = isGoRole ? 'go_fundamentals' : 'backend_fundamentals';
+  const canonical = dimensions.length > 0
+    && dimensions.every((dimension) => allowed.has(dimension.key))
+    && dimensions.some((dimension) => dimension.key === expectedFoundation)
+    && dimensions.every((dimension) => dimension.key !== (isGoRole ? 'backend_fundamentals' : 'go_fundamentals'));
+
+  return canonical
+    ? fillPresetDescriptions(dimensions, describeOf)
+    : defaultDimensions(labelOf, describeOf, isGoRole);
 }
 
 const PRESET_KEY_SET = new Set<string>(PRESET_DIMENSION_KEYS);

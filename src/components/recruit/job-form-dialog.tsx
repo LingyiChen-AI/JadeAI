@@ -16,7 +16,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { DimensionChips } from './dimension-chips';
-import { defaultDimensions, fillPresetDescriptions } from '@/lib/recruit/dimensions';
+import { interviewDimensions } from '@/lib/recruit/dimensions';
+import { detectGoRole } from '@/lib/ai/recruit-blueprint';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import {
   QUESTION_COUNT_DEFAULT,
@@ -52,11 +53,12 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     setJobDescription(job?.jobDescription ?? '');
     setQuestionCount(job?.questionCount ?? QUESTION_COUNT_DEFAULT);
     const describe = (key: string) => tDim(`descriptions.${key}`);
-    setDimensions(
-      job?.dimensions
-        ? fillPresetDescriptions(job.dimensions, describe)
-        : defaultDimensions((key) => tDim(key), describe),
-    );
+    setDimensions(interviewDimensions(
+      job?.dimensions ?? [],
+      detectGoRole(job?.title ?? '', job?.jobDescription ?? ''),
+      (key) => tDim(key),
+      describe,
+    ));
   }, [open, job, tDim]);
 
   const canSave = title.trim() && jobDescription.trim() && dimensions.length > 0 && !saving;

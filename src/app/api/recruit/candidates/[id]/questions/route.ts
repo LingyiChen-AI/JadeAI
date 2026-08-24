@@ -12,6 +12,7 @@ import {
 } from '@/lib/ai/recruit-blueprint';
 import { recruitRepository } from '@/lib/db/repositories/recruit.repository';
 import { requireOwnedCandidate } from '@/lib/recruit/access';
+import { interviewDimensions, QUESTION_DIMENSION_LABELS } from '@/lib/recruit/dimensions';
 import type { DimensionConfig, InterviewQuestion } from '@/types/recruit';
 
 export const maxDuration = 300;
@@ -32,8 +33,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // 候选人可覆盖岗位的维度配置；没覆盖就用岗位的。
-    const dimensions = ((candidate.dimensionsOverride as DimensionConfig[] | null) ??
+    const configuredDimensions = ((candidate.dimensionsOverride as DimensionConfig[] | null) ??
       (job.dimensions as DimensionConfig[])) as DimensionConfig[];
+    const isGoRole = detectGoRole(job.title, job.jobDescription);
+    const dimensions = interviewDimensions(
+      configuredDimensions,
+      isGoRole,
+      (key) => QUESTION_DIMENSION_LABELS[key as keyof typeof QUESTION_DIMENSION_LABELS] ?? key,
+      (key) => QUESTION_DIMENSION_LABELS[key as keyof typeof QUESTION_DIMENSION_LABELS] ?? key,
+    );
 
     if (!dimensions?.length) {
       return NextResponse.json({ error: 'No dimensions configured' }, { status: 400 });
@@ -56,12 +64,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       prompt: blueprintPrompt.prompt,
       providerOptions: getJsonProviderOptions(aiConfig),
     });
+    const extractedBlueprint = extractJson(blueprintResult.text, interviewBlueprintOutputSchema);
     const blueprint = validateBlueprint(
-      extractJson(blueprintResult.text, interviewBlueprintOutputSchema),
+      {
+        ...extractedBlueprint,
+        // 题型就是评分维度；模型返回的第二套 dimension 不再作为独立分类使用。
+        slots: extractedBlueprint.slots.map((slot) => ({ ...slot, dimension: slot.category })),
+      },
       {
         questionCount: job.questionCount,
         dimensions,
-        isGoRole: detectGoRole(job.title, job.jobDescription),
+        isGoRole,
       },
     );
     const groups = groupBlueprintSlots(blueprint.slots);
@@ -134,6 +147,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const updated = await recruitRepository.updateCandidate(id, {
       questions,
+      dimensionsOverride: dimensions,
       status: 'questions_ready',
     });
 

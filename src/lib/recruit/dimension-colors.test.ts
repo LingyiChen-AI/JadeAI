@@ -3,7 +3,7 @@ import { dimensionColor } from './dimension-colors';
 import { PRESET_DIMENSION_KEYS } from './dimensions';
 
 describe('dimensionColor', () => {
-  it('八个预置维度各有一套颜色，且互不相同', () => {
+  it('预置面试维度各有一套颜色，且互不相同', () => {
     const dots = PRESET_DIMENSION_KEYS.map((k) => dimensionColor(k).dot);
     expect(new Set(dots).size).toBe(PRESET_DIMENSION_KEYS.length);
   });
