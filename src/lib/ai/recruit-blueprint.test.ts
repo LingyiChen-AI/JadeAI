@@ -369,11 +369,13 @@ describe('detectGoRole', () => {
     ['Backend engineer', 'Proficiency in Go and MySQL', true],
     ['后端工程师', '精通 Go，熟悉 MySQL', true],
     ['Backend engineer', 'At least 3 years of Go experience', true],
+    ['Backend engineer', 'Skills: Go, MySQL', true],
     ['Java engineer', 'Build Spring services', false],
     ['Cloud engineer', 'Operate Google Cloud infrastructure', false],
     ['Go-to-market Manager', 'Own revenue strategy', false],
     ['Release Manager', 'Coordinate the production go-live', false],
     ['Product Manager', 'Proficiency in go-to-market strategy', false],
+    ['Java engineer', 'Experience with Java and willingness to go onsite', false],
   ])('detects Go from role text without substring false positives', (title, description, expected) => {
     expect(detectGoRole(title, description)).toBe(expected);
   });

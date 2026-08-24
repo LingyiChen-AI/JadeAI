@@ -16,19 +16,18 @@ export function detectGoRole(jobTitle: string, jobDescription: string): boolean 
   const roleAdjacent = /(?:\bgo\b[ \t:/_-]+(?:backend|developer|engineer|programming|language|services?)\b|\b(?:backend|developer|engineer|programming|language|services?)[ \t:/_-]+go\b|\bgo\b[ \t]*(?:开发|后端|工程师|语言|服务)|(?:开发|后端|工程师|语言|服务)[ \t]*\bgo\b)/i;
   if (roleAdjacent.test(roleText)) return true;
 
-  // A standalone language token near a skill/experience signal catches ordinary JD prose while
-  // excluding compounds such as "go-to-market", "go-live", and words such as "Google".
-  const goToken = '(?:^|[^A-Za-z0-9_-])go(?![A-Za-z0-9_-])';
-  const skillBeforeGo = new RegExp(
-    `(?:proficien(?:cy|t)|experience|experienced|expertise|skilled|familiar|knowledge|精通|熟悉|掌握|使用|要求)[^\\n.;。；]{0,40}${goToken}`,
-    'iu',
-  );
-  const experienceAfterGo = new RegExp(
-    `${goToken}[^\\n.;。；]{0,32}(?:experience|experienced|开发经验|经验)`,
-    'iu',
-  );
+  // Only accept a standalone Go token in an explicit technology/language context. Broad
+  // proximity matching turns ordinary prose such as "experience ... willingness to go onsite"
+  // into a false Go role.
+  const explicitSkill = /\b(?:proficien(?:cy|t)|expertise|skilled|familiar(?:ity)?|knowledge|experience(?:d)?)\s+(?:(?:in|with|of|using)\s+)?go\b(?!-)/iu;
+  const skillList = /\bskills?\s*:\s*[^\n;]{0,80}\bgo\b(?!-)/iu;
+  const chineseSkill = /(?:精通|熟悉|掌握|使用|要求)(?:使用)?\s*go\b(?!-)/iu;
+  const goExperience = /\bgo\b(?!-)\s*(?:language\s+)?(?:experience|experienced|开发经验|经验)/iu;
 
-  return skillBeforeGo.test(roleText) || experienceAfterGo.test(roleText);
+  return explicitSkill.test(roleText)
+    || skillList.test(roleText)
+    || chineseSkill.test(roleText)
+    || goExperience.test(roleText);
 }
 
 function normalizeEvidence(value: string): string {
