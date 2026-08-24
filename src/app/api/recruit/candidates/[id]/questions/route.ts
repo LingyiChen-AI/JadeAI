@@ -98,6 +98,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       referenceAnswer: q.referenceAnswer,
       estimatedMinutes: q.estimatedMinutes,
       difficulty: q.difficulty,
+      status: 'pending',
     }));
 
     const updated = await recruitRepository.updateCandidate(id, {

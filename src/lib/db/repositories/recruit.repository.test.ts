@@ -126,8 +126,10 @@ describe('recruitRepository — candidates', () => {
         rubric: { excellent: '有假设有验证', pass: '能说清现象', fail: '只会复述结论' },
         followUps: [{ purpose: '要细节', question: '当时为什么先怀疑这里？', answer: '' }],
         referencePoints: ['定位手段', '验证方式'],
+        redFlags: undefined,
         estimatedMinutes: 8,
         difficulty: 'medium' as const,
+        status: 'pending' as const,
       },
     ];
     await recruitRepository.updateCandidate(candidate!.id, {

@@ -5,7 +5,11 @@ import type { InterviewQuestion } from '@/types/recruit';
  * 输入框可能留下空格，那不该算「记过了」。
  */
 export function countAnswered(questions: InterviewQuestion[]): number {
-  return questions.filter((q) => Boolean(q.answer?.trim())).length;
+  return questions.filter((q) => q.status !== 'skipped' && Boolean(q.answer?.trim())).length;
+}
+
+export function countSkipped(questions: InterviewQuestion[]): number {
+  return questions.filter((q) => q.status === 'skipped').length;
 }
 
 /**
@@ -15,5 +19,5 @@ export function countAnswered(questions: InterviewQuestion[]): number {
  * 不该因为 transcript 为空就拒绝。
  */
 export function hasAnyAnswer(questions: InterviewQuestion[]): boolean {
-  return questions.some((q) => Boolean(q.answer?.trim()));
+  return questions.some((q) => q.status !== 'skipped' && Boolean(q.answer?.trim()));
 }

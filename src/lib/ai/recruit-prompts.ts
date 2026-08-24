@@ -15,11 +15,65 @@ THE MOST IMPORTANT RULE — keep the question SHORT:
 - A real interviewer says "跟我讲讲你为什么用 Golang 重写订单服务？" and then digs in based on the answer. They do NOT read out a paragraph with four sub-clauses.
 - Long multi-clause questions actively hurt: the candidate answers only the last clause, and you lose the chance to see whether they can structure an answer themselves.
 - Depth lives in "followUps", NOT in the question. Never front-load conditions, constraints or sub-questions into the stem — move every one of them into a follow-up.
-- Prefer these openers: 跟我讲讲… / 带我过一遍… / 你当时怎么决定… / 说一次你… — ask about something that actually happened, not a hypothetical.
+- For experience questions, prefer: 跟我讲讲… / 带我过一遍… / 你当时怎么决定… / 说一次你…
+- For scenario questions, state only the minimum situation and first decision: "支付成功率突然从 99.9% 降到 97%，你先做什么？" Put scale, constraints and changing conditions in follow-ups.
+
+QUESTION PORTFOLIO — archetype and dimension are two different axes:
+Question archetype is NOT the same as competency dimension. The competency says what to score;
+the archetype says what kind of evidence to elicit. Before writing, silently assign each question one
+of these archetypes. Do not add an archetype field to the JSON.
+
+1. project deep-dive — verify work claimed on the résumé: ownership, architecture, trade-offs,
+   production failures, measurable outcome and retrospective.
+2. work scenario — give a realistic incident, design task or ambiguous business constraint from this
+   role; let the candidate clarify, prioritize, propose, test and revise instead of guessing a slogan.
+3. fundamentals — test mechanisms, boundaries and failure behavior behind a JD-required skill
+   (the Chinese interview style sometimes calls this 八股文). Do not ask isolated definitions: connect
+   the mechanism to debugging, design choice or a concrete consequence.
+4. HR pressure — professionally challenge a résumé transition, failure, expectation, motivation or
+   inconsistency. Apply firm follow-up pressure without humiliation, trick questions, discrimination,
+   or questions about protected/private personal circumstances.
+5. communication / collaboration — ask for a real conflict, stakeholder disagreement, difficult
+   feedback or cross-team dependency; require a STAR-like account and inspect the candidate's exact words/actions.
+6. JD gap probe — test an important JD requirement that the résumé does not prove. Do not assume the
+   candidate has used it; distinguish transferable reasoning from fabricated experience.
+
+Choose archetypes that genuinely reveal THIS competency:
+- professional: primarily project deep-dive, work scenario, fundamentals and JD gap probe.
+- logic: primarily work scenario, project debugging and JD gap probe.
+- communication/teamwork/leadership/learning: primarily project evidence and communication / collaboration.
+- stress/motivation: primarily HR pressure and project evidence.
+- a custom competency: infer the best two or more archetypes from its description.
+When producing 2+ questions, use at least two applicable archetypes. When producing 4+, include at
+least one résumé-backed archetype and one JD-backed archetype. Never repeat the same event, knowledge
+point or scenario with cosmetic rewording. Quality and applicability override mechanical quota filling.
+
+Evidence anchor and factual boundaries:
+- Every question must have a clear evidence anchor in either the résumé, the JD, or an explicit gap
+  between them. A generic question that could be used unchanged for any role and candidate is a failure.
+- Resume-backed questions may name only projects, technologies, responsibilities, transitions and
+  numbers actually present in the résumé. Never invent a company situation, personal contribution,
+  metric, failure, scale or outcome. If ownership is unclear, ask who owned it instead of asserting it.
+- JD-backed questions may create a realistic hypothetical work situation using the JD's responsibilities
+  and stack. Clearly phrase it as a scenario; never imply it happened to this candidate.
+- If résumé and JD disagree, turn the mismatch into a neutral JD gap probe rather than silently treating
+  either side as fact.
+
+Seniority calibration:
+- Infer the expected seniority from the job title, JD scope and résumé evidence. If signals conflict,
+  calibrate to the JD and use follow-ups to find the candidate's ceiling.
+- Junior: mechanisms, bounded implementation choices, local debugging, learning process and when to escalate.
+- Mid-level: independent ownership, production diagnosis, cross-component trade-offs, delivery risk and collaboration.
+- Senior / staff: ambiguous system design, scale/cost/reliability trade-offs, evolution and rollback,
+  cross-team influence, prioritization and organizational consequences.
+- Difficulty comes from the depth of reasoning and evidence required, not obscure trivia. Do not give a
+  senior candidate junior recall questions or demand staff-level scope from a junior candidate.
 
 Depth bar:
-- Every question must name something specific from THIS résumé: a project, a system, a technology, a number, a transition. A question that could be pasted into any other interview is a failure.
-- Never ask for a definition or an abstract comparison of two technologies. Ask what they decided, what it cost, what broke, what they would do differently.
+- Project questions must expose what the candidate personally did, why, under what constraint, what
+  evidence they used, what went wrong and what they learned. Do not accept "we used X" as proof.
+- Scenario questions must allow clarification and trade-offs; do not hide one magic answer or rely on riddles.
+- Fundamentals questions must ask for cause-and-effect: mechanism → observable symptom → decision or fix.
 - At least one third must be "hard" — the kind where someone who only used the tool superficially runs out of things to say within a minute.
 - No warm-ups, no "tell me about yourself", no "what are your strengths".
 

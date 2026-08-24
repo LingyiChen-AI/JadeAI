@@ -6,6 +6,7 @@ import { evaluationOutputSchema } from '@/lib/ai/recruit-schema';
 import { buildEvaluationPrompt } from '@/lib/ai/recruit-prompts';
 import { computeOverallScore } from '@/lib/recruit/scoring';
 import { hasAnyAnswer } from '@/lib/recruit/answers';
+import { questionsForEvaluation } from '@/lib/recruit/questions';
 import { recruitRepository } from '@/lib/db/repositories/recruit.repository';
 import { requireOwnedCandidate } from '@/lib/recruit/access';
 import type {
@@ -24,10 +25,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if ('error' in access) return access.error;
 
     const { candidate, job } = access;
-    const questions = (candidate.questions as InterviewQuestion[] | null) ?? [];
+    const allQuestions = (candidate.questions as InterviewQuestion[] | null) ?? [];
 
-    if (!questions.length) {
+    if (!allQuestions.length) {
       return NextResponse.json({ error: 'Generate questions first' }, { status: 400 });
+    }
+    const questions = questionsForEvaluation(allQuestions);
+    if (!questions.length) {
+      return NextResponse.json({ error: 'All interview questions were skipped' }, { status: 400 });
     }
     // 逐题记录和粘贴整段记录二选一即可——只逐题记的场景 transcript 会是空的。
     if (!candidate.transcript?.trim() && !hasAnyAnswer(questions)) {

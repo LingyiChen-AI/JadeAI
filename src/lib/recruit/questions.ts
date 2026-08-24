@@ -1,4 +1,11 @@
-import type { FollowUp, InterviewQuestion } from '@/types/recruit';
+import type { FollowUp, InterviewQuestion, InterviewQuestionStatus } from '@/types/recruit';
+
+function normalizeQuestionStatus(q: InterviewQuestion): InterviewQuestionStatus {
+  if (q.status === 'pending' || q.status === 'answered' || q.status === 'skipped') {
+    return q.status;
+  }
+  return q.answer?.trim() ? 'answered' : 'pending';
+}
 
 /**
  * 把库里存的题目规整成当前的形状。
@@ -38,10 +45,23 @@ export function normalizeQuestion(q: InterviewQuestion): InterviewQuestion {
     followUps: normalizeFollowUps(q.followUps),
     referencePoints: Array.isArray(q.referencePoints) ? q.referencePoints : [],
     redFlags: Array.isArray(q.redFlags) ? q.redFlags : undefined,
+    status: normalizeQuestionStatus(q),
   };
 }
 
 export function normalizeQuestions(raw: unknown): InterviewQuestion[] | null {
   if (!Array.isArray(raw)) return null;
   return (raw as InterviewQuestion[]).map(normalizeQuestion);
+}
+
+export function setQuestionAnswer(q: InterviewQuestion, answer: string): InterviewQuestion {
+  return { ...q, answer, status: answer.trim() ? 'answered' : 'pending' };
+}
+
+export function markQuestionSkipped(q: InterviewQuestion): InterviewQuestion {
+  return { ...q, answer: '', status: 'skipped' };
+}
+
+export function questionsForEvaluation(questions: InterviewQuestion[]): InterviewQuestion[] {
+  return questions.filter((q) => q.status !== 'skipped');
 }

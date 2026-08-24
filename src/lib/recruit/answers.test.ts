@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countAnswered, hasAnyAnswer } from './answers';
+import { countAnswered, countSkipped, hasAnyAnswer } from './answers';
 import type { InterviewQuestion } from '@/types/recruit';
 
 function q(id: string, answer?: string): InterviewQuestion {
@@ -32,6 +32,19 @@ describe('countAnswered', () => {
 
   it('空数组返回 0', () => {
     expect(countAnswered([])).toBe(0);
+  });
+});
+
+describe('跳过题统计', () => {
+  it('只统计 skipped，且跳过题即使有旧答案也不算已回答', () => {
+    const questions = [
+      { answer: '旧答案', status: 'skipped' },
+      { answer: '有效答案', status: 'answered' },
+      { answer: '', status: 'pending' },
+    ] as never;
+    expect(countSkipped(questions)).toBe(1);
+    expect(countAnswered(questions)).toBe(1);
+    expect(hasAnyAnswer([questions[0]])).toBe(false);
   });
 });
 

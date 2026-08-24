@@ -13,6 +13,7 @@ export interface DimensionConfig {
 }
 
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
+export type InterviewQuestionStatus = 'pending' | 'answered' | 'skipped';
 
 /** 一条追问。老数据里 followUps 是纯字符串，读取时会补成 purpose 为空。 */
 export interface FollowUp {
@@ -54,6 +55,8 @@ export interface InterviewQuestion {
   referenceAnswer?: string;
   estimatedMinutes: number;
   difficulty: QuestionDifficulty;
+  /** 面试记录状态。老数据读取时会根据 answer 自动补齐。 */
+  status?: InterviewQuestionStatus;
   /** 面试中记录的候选人回答。空表示这题还没记。 */
   answer?: string;
 }

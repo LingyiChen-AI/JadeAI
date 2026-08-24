@@ -113,6 +113,45 @@ describe('buildDimensionQuestionsPrompt', () => {
     expect(system).toContain('JSON');
     expect(system).toContain('referenceAnswer');
   });
+
+  it('system prompt 要求把题型与考察维度分开并组成完整面试题组', () => {
+    const { system } = buildDimensionQuestionsPrompt({
+      ...base,
+      dimension: DIMENSIONS[0],
+      count: 6,
+    });
+    expect(system).toContain('Question archetype is NOT the same as competency dimension');
+    expect(system).toContain('project deep-dive');
+    expect(system).toContain('work scenario');
+    expect(system).toContain('fundamentals');
+    expect(system).toContain('HR pressure');
+    expect(system).toContain('communication / collaboration');
+    expect(system).toContain('JD gap probe');
+  });
+
+  it('system prompt 分别约束简历题、JD 场景题和事实边界', () => {
+    const { system } = buildDimensionQuestionsPrompt({
+      ...base,
+      dimension: DIMENSIONS[0],
+      count: 2,
+    });
+    expect(system).toContain('Evidence anchor');
+    expect(system).toContain('Resume-backed questions');
+    expect(system).toContain('JD-backed questions');
+    expect(system).toContain('Never invent');
+  });
+
+  it('system prompt 要求从 JD 和简历推断资历并匹配题目难度', () => {
+    const { system } = buildDimensionQuestionsPrompt({
+      ...base,
+      dimension: DIMENSIONS[0],
+      count: 2,
+    });
+    expect(system).toContain('Infer the expected seniority');
+    expect(system).toContain('Junior');
+    expect(system).toContain('Mid-level');
+    expect(system).toContain('Senior / staff');
+  });
 });
 
 describe('buildEvaluationPrompt', () => {

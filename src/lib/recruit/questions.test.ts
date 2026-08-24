@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeFollowUps, normalizeQuestions } from './questions';
+import {
+  markQuestionSkipped,
+  normalizeFollowUps,
+  normalizeQuestions,
+  questionsForEvaluation,
+  setQuestionAnswer,
+} from './questions';
 
 describe('normalizeFollowUps', () => {
   it('老数据的纯字符串补成 purpose 为空', () => {
@@ -60,5 +66,59 @@ describe('normalizeQuestions', () => {
     expect(out![0].followUps).toEqual([{ purpose: '', question: '旧格式', answer: '' }]);
     expect(out![0].answer).toBe('记过的答案');
     expect(out![0].referencePoints).toEqual(['要点']);
+    expect(out![0].status).toBe('answered');
+  });
+
+  it('老题目根据答案补齐 pending 或 answered 状态', () => {
+    const base = {
+      id: 'q', dimension: 'logic', question: '题', intent: '',
+      rubric: { excellent: '', pass: '', fail: '' }, followUps: [],
+      referencePoints: [], estimatedMinutes: 5, difficulty: 'medium',
+    };
+    const out = normalizeQuestions([
+      { ...base, id: 'blank', answer: '  ' },
+      { ...base, id: 'done', answer: '记录' },
+    ] as never)!;
+    expect(out.map((q) => q.status)).toEqual(['pending', 'answered']);
+  });
+
+  it('保留合法 skipped 状态，非法状态按答案重新推导', () => {
+    const base = {
+      id: 'q', dimension: 'logic', question: '题', intent: '',
+      rubric: { excellent: '', pass: '', fail: '' }, followUps: [],
+      referencePoints: [], estimatedMinutes: 5, difficulty: 'medium', answer: '',
+    };
+    const out = normalizeQuestions([
+      { ...base, id: 'skip', status: 'skipped' },
+      { ...base, id: 'bad', status: 'unknown', answer: '记录' },
+    ] as never)!;
+    expect(out.map((q) => q.status)).toEqual(['skipped', 'answered']);
+  });
+});
+
+describe('题目状态转换', () => {
+  const question = {
+    id: 'q1', dimension: 'logic', question: '题干', intent: '',
+    rubric: { excellent: '', pass: '', fail: '' }, followUps: [], referencePoints: [],
+    estimatedMinutes: 5, difficulty: 'medium' as const, status: 'pending' as const,
+  };
+
+  it('填写答案变为 answered，清空答案恢复 pending', () => {
+    const answered = setQuestionAnswer(question, '候选人回答');
+    expect(answered).toMatchObject({ answer: '候选人回答', status: 'answered' });
+    expect(setQuestionAnswer(answered, '  ')).toMatchObject({ answer: '  ', status: 'pending' });
+  });
+
+  it('跳过时清空答案并标记 skipped', () => {
+    expect(markQuestionSkipped({ ...question, answer: '草稿', status: 'answered' })).toMatchObject({
+      answer: '',
+      status: 'skipped',
+    });
+  });
+
+  it('评分题集彻底排除 skipped 题', () => {
+    const answered = setQuestionAnswer(question, '回答');
+    const skipped = markQuestionSkipped({ ...question, id: 'q2' });
+    expect(questionsForEvaluation([answered, skipped]).map((q) => q.id)).toEqual(['q1']);
   });
 });

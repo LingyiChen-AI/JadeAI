@@ -12,6 +12,8 @@ import {
   Sparkles,
   Eye,
   EyeOff,
+  SkipForward,
+  Ban,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,7 +35,8 @@ import {
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import { getAIHeaders } from '@/stores/settings-store';
 import { dimensionColor } from '@/lib/recruit/dimension-colors';
-import { countAnswered } from '@/lib/recruit/answers';
+import { countAnswered, countSkipped } from '@/lib/recruit/answers';
+import { markQuestionSkipped, setQuestionAnswer } from '@/lib/recruit/questions';
 import { cn } from '@/lib/utils';
 import type {
   DimensionConfig,
@@ -125,7 +128,7 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
         setJob(data.job);
         // 从第一道还没记答案的题开始，「继续面试」才名副其实
         const qs: InterviewQuestion[] = data.candidate.questions ?? [];
-        const firstBlank = qs.findIndex((q) => !q.answer?.trim());
+        const firstBlank = qs.findIndex((q) => q.status !== 'skipped' && !q.answer?.trim());
         const start = firstBlank === -1 ? 0 : firstBlank;
         setIndex(start);
         setDraft(qs[start]?.answer ?? '');
@@ -146,7 +149,7 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
     if (pending.size === 0) return;
 
     const next = questionsRef.current.map((q) =>
-      pending.has(q.id) ? { ...q, answer: pending.get(q.id) } : q,
+      pending.has(q.id) ? setQuestionAnswer(q, pending.get(q.id) ?? '') : q,
     );
     setSaveState('saving');
     try {
@@ -174,6 +177,12 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
     if (!current) return;
     setDraft(value);
     pendingRef.current.set(current.id, value);
+    setCandidate((prev) => prev && {
+      ...prev,
+      questions: (prev.questions ?? []).map((q) =>
+        q.id === current.id ? setQuestionAnswer(q, value) : q,
+      ),
+    });
     setSaveState('saving');
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => void flush(), AUTOSAVE_DELAY);
@@ -288,6 +297,7 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
   }
 
   const done = countAnswered(questions);
+  const skipped = countSkipped(questions);
   // 新题目给 referenceAnswer，老题目只有 referencePoints，两者都算「有正面参考」
   const hasAnswerBody =
     Boolean(current.referenceAnswer?.trim()) || current.referencePoints.length > 0;
@@ -342,10 +352,12 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <nav className="shrink-0 overflow-y-auto border-b bg-zinc-50 py-3 dark:border-zinc-800 dark:bg-zinc-950 lg:w-[300px] lg:border-b-0 lg:border-r">
           <p className="px-4 pb-2 text-[10.5px] uppercase tracking-wider text-zinc-400">
-            {t('questions.recorded', { done, total: questions.length })}
+            {skipped > 0
+              ? t('questions.recordedWithSkipped', { done, skipped, total: questions.length })
+              : t('questions.recorded', { done, total: questions.length })}
           </p>
           {questions.map((q, i) => {
-            const answered = Boolean(q.answer?.trim());
+            const answered = q.status !== 'skipped' && Boolean(q.answer?.trim());
             const on = i === index;
             return (
               <button
@@ -364,7 +376,9 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
                 />
                 <span className="w-4 shrink-0 text-right tabular-nums text-zinc-400">{i + 1}</span>
                 <span className="min-w-0 flex-1 truncate">{q.question}</span>
-                {answered && <Check className="h-3 w-3 shrink-0 text-brand" />}
+                {q.status === 'skipped'
+                  ? <Ban className="h-3 w-3 shrink-0 text-zinc-400" />
+                  : answered && <Check className="h-3 w-3 shrink-0 text-brand" />}
               </button>
             );
           })}
@@ -523,6 +537,14 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
                 {t('stage.prev')}
               </Button>
               <Button
+                variant="outline"
+                onClick={() => void handleSkipToggle()}
+                className="cursor-pointer gap-1.5 text-zinc-600"
+              >
+                <SkipForward className="h-4 w-4" />
+                {current.status === 'skipped' ? t('stage.unskip') : t('stage.skip')}
+              </Button>
+              <Button
                 onClick={() => (isLast ? void finish() : goTo(index + 1))}
                 className="cursor-pointer gap-1.5"
               >
@@ -576,6 +598,47 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
       setIndex(Math.max(0, nextIndex));
       setDraft(next[Math.max(0, nextIndex)]?.answer ?? '');
     } catch {
+      toast.error(t('errors.saveFailed'));
+    }
+  }
+
+  async function handleSkipToggle() {
+    if (!current) return;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
+    const unskip = current.status === 'skipped';
+    const next = questionsRef.current.map((q) => {
+      if (q.id === current.id) return unskip ? setQuestionAnswer(q, '') : markQuestionSkipped(q);
+      const pending = pendingRef.current.get(q.id);
+      return pending === undefined ? q : setQuestionAnswer(q, pending);
+    });
+
+    setSaveState('saving');
+    try {
+      const res = await fetch(`/api/recruit/candidates/${candidateId}`, {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}),
+        },
+        body: JSON.stringify({ questions: next }),
+      });
+      if (!res.ok) throw new Error('save failed');
+      const data = await res.json();
+      pendingRef.current.clear();
+      setCandidate(data.candidate);
+      setSaveState('saved');
+      setDraft('');
+      if (!unskip && !isLast) {
+        setIndex(index + 1);
+      }
+    } catch {
+      // 跳过是一次显式动作，不复用答案自动保存的“重试”按钮；保存失败时
+      // 保持当前题和草稿不动，面试官可以直接再次点击跳过。
+      setSaveState('idle');
       toast.error(t('errors.saveFailed'));
     }
   }
