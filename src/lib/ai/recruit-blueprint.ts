@@ -1,6 +1,17 @@
 import type { DimensionConfig, InterviewBlueprint, QuestionSlot } from '@/types/recruit';
 import type { QuestionsOutput } from './recruit-schema';
 
+type IndexedQuestionSlot = QuestionSlot & { slotIndex: number };
+
+export type GeneratedGroup = {
+  slots: QuestionSlot[];
+  questions: QuestionsOutput['questions'];
+};
+
+export function detectGoRole(jobTitle: string, jobDescription: string): boolean {
+  return /\b(?:go|golang)\b/i.test(`${jobTitle}\n${jobDescription}`);
+}
+
 export function validateBlueprint(
   input: InterviewBlueprint,
   options: {
@@ -54,15 +65,16 @@ export function validateBlueprint(
 
 export function groupBlueprintSlots(
   slots: QuestionSlot[],
-): Array<{ dimension: string; slots: QuestionSlot[] }> {
-  const groups = new Map<string, QuestionSlot[]>();
+): Array<{ dimension: string; slots: IndexedQuestionSlot[] }> {
+  const groups = new Map<string, IndexedQuestionSlot[]>();
 
-  for (const slot of slots) {
+  for (const [slotIndex, slot] of slots.entries()) {
+    const indexedSlot = { ...slot, slotIndex };
     const dimensionSlots = groups.get(slot.dimension);
     if (dimensionSlots) {
-      dimensionSlots.push({ ...slot });
+      dimensionSlots.push(indexedSlot);
     } else {
-      groups.set(slot.dimension, [{ ...slot }]);
+      groups.set(slot.dimension, [indexedSlot]);
     }
   }
 
@@ -90,4 +102,31 @@ export function bindQuestionsToSlots(
 
 export function meetsGenerationThreshold(generated: number, planned: number): boolean {
   return generated >= Math.ceil(planned * 0.7);
+}
+
+export function assembleGeneratedQuestions(
+  groups: GeneratedGroup[],
+  plannedCount: number,
+): QuestionsOutput['questions'] {
+  const ordered = groups
+    .flatMap((group) => {
+      const bound = bindQuestionsToSlots(group.questions, group.slots);
+
+      return bound.map((question, index) => {
+        const slot = group.slots[index] as Partial<IndexedQuestionSlot>;
+        if (typeof slot.slotIndex !== 'number') {
+          throw new Error('Generated question slot is missing its blueprint index.');
+        }
+        return { question, slotIndex: slot.slotIndex };
+      });
+    })
+    .sort((left, right) => left.slotIndex - right.slotIndex);
+
+  if (!meetsGenerationThreshold(ordered.length, plannedCount)) {
+    throw new Error(
+      `Generated ${ordered.length} of ${plannedCount} planned questions, below the 70% save threshold.`,
+    );
+  }
+
+  return ordered.slice(0, plannedCount).map(({ question }) => question);
 }

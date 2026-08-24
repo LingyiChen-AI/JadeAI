@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   buildInterviewBlueprintPrompt,
   buildDimensionQuestionsPrompt,
-  planQuestionGeneration,
   buildEvaluationPrompt,
 } from './recruit-prompts';
 import { PRESET_DIMENSION_GUIDES } from '@/lib/recruit/dimension-guides';
@@ -17,34 +16,6 @@ const DIMENSIONS: DimensionConfig[] = [
   { key: 'professional', label: '专业技能', weight: 3, custom: false },
   { key: 'logic', label: '逻辑思维', weight: 2, custom: false },
 ];
-
-describe('planQuestionGeneration', () => {
-  it('按权重把题数分给各维度', () => {
-    const tasks = planQuestionGeneration({
-      jobTitle: 'T',
-      jobDescription: 'JD',
-      resumeText: 'R',
-      dimensions: DIMENSIONS,
-      questionCount: 10,
-    });
-    // 3:2 权重、共 10 题 -> 专业技能 6 题、逻辑思维 4 题
-    expect(tasks).toEqual([
-      { dimension: DIMENSIONS[0], count: 6 },
-      { dimension: DIMENSIONS[1], count: 4 },
-    ]);
-  });
-
-  it('分到 0 题的维度不生成请求', () => {
-    const tasks = planQuestionGeneration({
-      jobTitle: 'T',
-      jobDescription: 'JD',
-      resumeText: 'R',
-      dimensions: DIMENSIONS,
-      questionCount: 5,
-    });
-    expect(tasks.every((t) => t.count > 0)).toBe(true);
-  });
-});
 
 describe('buildDimensionQuestionsPrompt', () => {
   const base = {
@@ -77,6 +48,15 @@ describe('buildDimensionQuestionsPrompt', () => {
       },
     ],
   };
+
+  if (false) {
+    buildDimensionQuestionsPrompt({
+      ...base,
+      dimension: DIMENSIONS[0],
+      // @ts-expect-error Route-facing generation requires blueprint slots, not a legacy count.
+      count: 2,
+    });
+  }
 
   it('按 slot 顺序渲染题目依据和全局事实列表', () => {
     const slots: QuestionSlot[] = [
@@ -236,19 +216,6 @@ difficulty: medium`);
     expect(system).toContain('Senior / staff');
   });
 
-  it('临时 count 分支使用独立 legacy system，而不是 slot-only 指令', () => {
-    const { system, prompt } = buildDimensionQuestionsPrompt({
-      ...base,
-      dimension: DIMENSIONS[0],
-      count: 2,
-    });
-
-    expect(system).toContain('LEGACY COUNT REQUEST');
-    expect(system).not.toContain('SLOT ASSIGNMENT');
-    expect(system).toContain('At least one third must be "hard"');
-    expect(prompt).toContain('exactly 2 questions');
-    expect(prompt).not.toContain('Assigned slots:');
-  });
 });
 
 describe('buildInterviewBlueprintPrompt', () => {

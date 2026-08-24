@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { DimensionConfig, InterviewBlueprint, QuestionSlot } from '@/types/recruit';
 import type { QuestionsOutput } from './recruit-schema';
 import {
+  assembleGeneratedQuestions,
   bindQuestionsToSlots,
+  detectGoRole,
   groupBlueprintSlots,
   meetsGenerationThreshold,
   validateBlueprint,
@@ -179,8 +181,11 @@ describe('validateBlueprint', () => {
 describe('groupBlueprintSlots', () => {
   it('groups slots by dimension in stable first-seen order', () => {
     expect(groupBlueprintSlots([slotA, slotB, slotC])).toEqual([
-      { dimension: 'professional', slots: [slotA, slotC] },
-      { dimension: 'communication', slots: [slotB] },
+      {
+        dimension: 'professional',
+        slots: [{ ...slotA, slotIndex: 0 }, { ...slotC, slotIndex: 2 }],
+      },
+      { dimension: 'communication', slots: [{ ...slotB, slotIndex: 1 }] },
     ]);
   });
 });
@@ -209,5 +214,89 @@ describe('meetsGenerationThreshold', () => {
 
   it('rejects generation below the rounded-up seventy percent threshold', () => {
     expect(meetsGenerationThreshold(6, 10)).toBe(false);
+  });
+});
+
+describe('assembleGeneratedQuestions', () => {
+  it('restores global blueprint order after positional binding within dimension groups', () => {
+    const groups = groupBlueprintSlots([slotA, slotB, slotC]);
+    const generated = groups.map((group) => ({
+      slots: group.slots,
+      questions: group.dimension === 'professional'
+        ? [
+            { ...rawQuestion, question: 'question A' },
+            { ...rawQuestion, question: 'question C' },
+          ]
+        : [{ ...rawQuestion, question: 'question B' }],
+    }));
+
+    expect(assembleGeneratedQuestions(generated, 3).map((question) => question.question)).toEqual([
+      'question A',
+      'question B',
+      'question C',
+    ]);
+  });
+
+  it('rejects six generated questions when ten were planned', () => {
+    const slots = Array.from({ length: 10 }, (_, index) => ({
+      ...slotA,
+      topic: `topic ${index}`,
+    }));
+    const [group] = groupBlueprintSlots(slots);
+
+    expect(() => assembleGeneratedQuestions([{
+      slots: group.slots,
+      questions: Array.from({ length: 6 }, (_, index) => ({
+        ...rawQuestion,
+        question: `question ${index}`,
+      })),
+    }], 10)).toThrow(/6.*10.*70%/);
+  });
+
+  it('accepts seven generated questions when ten were planned', () => {
+    const slots = Array.from({ length: 10 }, (_, index) => ({
+      ...slotA,
+      topic: `topic ${index}`,
+    }));
+    const [group] = groupBlueprintSlots(slots);
+
+    const assembled = assembleGeneratedQuestions([{
+      slots: group.slots,
+      questions: Array.from({ length: 7 }, (_, index) => ({
+        ...rawQuestion,
+        question: `question ${index}`,
+      })),
+    }], 10);
+
+    expect(assembled).toHaveLength(7);
+  });
+
+  it('never returns more questions than were planned', () => {
+    const slots = Array.from({ length: 11 }, (_, index) => ({
+      ...slotA,
+      topic: `topic ${index}`,
+    }));
+    const [group] = groupBlueprintSlots(slots);
+
+    const assembled = assembleGeneratedQuestions([{
+      slots: group.slots,
+      questions: Array.from({ length: 11 }, (_, index) => ({
+        ...rawQuestion,
+        question: `question ${index}`,
+      })),
+    }], 10);
+
+    expect(assembled).toHaveLength(10);
+  });
+});
+
+describe('detectGoRole', () => {
+  it.each([
+    ['Golang engineer', '', true],
+    ['Backend engineer', 'Build Go backend services', true],
+    ['Java engineer', 'Build Spring services', false],
+    ['Cloud engineer', 'Operate Google Cloud infrastructure', false],
+  ])('detects Go from role text without substring false positives', (title, description, expected) => {
+    expect(detectGoRole(title, description)).toBe(expected);
   });
 });

@@ -1,4 +1,3 @@
-import { allocateQuestions } from '@/lib/recruit/scoring';
 import { resolveDimensionGuide } from '@/lib/recruit/dimension-guides';
 import type {
   DimensionConfig,
@@ -89,36 +88,6 @@ Return JSON with this exact shape:
 {"questions":[{"dimension":"","question":"","intent":"","rubric":{"excellent":"","pass":"","fail":""},"followUps":[{"purpose":"要细节","question":"","answer":""}],"redFlags":[],"referenceAnswer":"","estimatedMinutes":8,"difficulty":"medium"}]}
 
 ${JSON_RULE}`;
-
-/** Temporary, private system for the pre-blueprint API route; Task 4 removes this branch. */
-const LEGACY_COUNT_QUESTIONS_SYSTEM = SLOT_QUESTIONS_SYSTEM
-  .replace(
-    /SLOT ASSIGNMENT[\s\S]*?non-discriminatory\.\n\n/,
-    `LEGACY COUNT REQUEST — no blueprint slots are available yet. Select a balanced mix of résumé-backed
-project deep-dives, JD-backed scenarios, fundamentals, communication, and HR pressure appropriate to the
-requested competency. Keep every question evidence-anchored and do not duplicate an event or knowledge point.
-
-`,
-  )
-  .replace(
-    /Evidence anchor and factual boundaries:[\s\S]*?\n\nSeniority calibration:/,
-    `Evidence anchor and factual boundaries:
-- Every question needs a clear evidence anchor in the résumé, JD, or an explicit mismatch between them.
-- Resume-backed questions may name only facts in the résumé; never invent metrics, architecture, incidents,
-  ownership, tools, scale, or outcomes. If ownership is unclear, ask who owned it.
-- JD-backed questions may create only a clearly hypothetical scenario from the JD; never imply it happened.
-- A mismatch is a neutral gap probe and must not imply prior experience.
-
-Seniority calibration:`,
-  )
-  .replace(
-    "- Honor each slot's assigned difficulty. Infer the expected seniority from the job title, JD scope and résumé evidence to calibrate the follow-up depth; if signals conflict, calibrate to the JD and use follow-ups to find the candidate's ceiling.",
-    "- Infer the expected seniority from the job title, JD scope and résumé evidence to calibrate difficulty and follow-up depth; if signals conflict, calibrate to the JD and use follow-ups to find the candidate's ceiling.",
-  )
-  .replace(
-    '- No warm-ups, no "tell me about yourself", no "what are your strengths".',
-    '- At least one third must be "hard" — the kind where someone who only used the tool superficially runs out of things to say within a minute.\n- No warm-ups, no "tell me about yourself", no "what are your strengths".',
-  );
 
 const EVALUATION_SYSTEM = `You are a seasoned hiring interviewer scoring a completed interview. You are given the JD, the candidate's resume, the question set (with rubrics), and the raw interview transcript.
 
@@ -227,29 +196,10 @@ Plan the interview blueprint now.`;
   return { system, prompt };
 }
 
-/**
- * 按权重把题数分给各维度。出题按维度分开、并发去请求，
- * 调用方拿这个结果决定每一路要几道题。
- */
-export function planQuestionGeneration(
-  input: QuestionsPromptInput,
-): { dimension: DimensionConfig; count: number }[] {
-  const allocation = allocateQuestions(input.dimensions, input.questionCount);
-  return input.dimensions
-    .map((dimension) => ({ dimension, count: allocation[dimension.key] ?? 0 }))
-    .filter((task) => task.count > 0);
-}
-
 export interface DimensionQuestionsPromptInput extends Omit<QuestionsPromptInput, 'questionCount'> {
   dimension: DimensionConfig;
   blueprint: InterviewBlueprint;
   slots: QuestionSlot[];
-}
-
-/** @deprecated Transitional input for the API route until it is migrated to blueprint generation. */
-interface LegacyDimensionQuestionsPromptInput extends Omit<QuestionsPromptInput, 'questionCount'> {
-  dimension: DimensionConfig;
-  count: number;
 }
 
 /**
@@ -260,7 +210,7 @@ interface LegacyDimensionQuestionsPromptInput extends Omit<QuestionsPromptInput,
  * 而且那个维度的描述能整段进 prompt，问法才真的有区别。
  */
 export function buildDimensionQuestionsPrompt(
-  input: DimensionQuestionsPromptInput | LegacyDimensionQuestionsPromptInput,
+  input: DimensionQuestionsPromptInput,
 ): {
   system: string;
   prompt: string;
@@ -277,9 +227,7 @@ export function buildDimensionQuestionsPrompt(
     : '';
   const listFacts = (facts: string[]) =>
     facts.length ? facts.map((fact) => `- ${fact}`).join('\n') : '- (none)';
-  const hasBlueprint = 'blueprint' in input;
-  const slots = hasBlueprint ? input.slots : [];
-  const slotBlocks = slots
+  const slotBlocks = input.slots
     .map(
       (slot, index) => `Slot ${index + 1}
 category: ${slot.category}
@@ -298,7 +246,7 @@ ${input.jobDescription}
 
 Candidate resume:
 ${input.resumeText}
-${hasBlueprint ? `
+
 Global blueprint facts — these are the shared factual boundaries for every question:
 Resume facts:
 ${listFacts(input.blueprint.resumeFacts)}
@@ -308,18 +256,17 @@ ${listFacts(input.blueprint.jdRequirements)}
 
 Gaps:
 ${listFacts(input.blueprint.gaps)}
-` : ''}
 
 Competency to assess: ${input.dimension.label} (key: ${input.dimension.key})
-${guideBlock}${othersBlock}${hasBlueprint ? `Assigned slots:
+${guideBlock}${othersBlock}Assigned slots:
 ${slotBlocks}
 
 Produce one output question per slot, in order. Preserve each slot's category, source, dimension, topic,
-evidence, and difficulty; the slot is the complete question assignment.` : `Produce exactly ${input.count} questions, all with "dimension" set to "${input.dimension.key}".`}
+evidence, and difficulty; the slot is the complete question assignment.
 
 Respond with JSON only.`;
 
-  return { system: hasBlueprint ? SLOT_QUESTIONS_SYSTEM : LEGACY_COUNT_QUESTIONS_SYSTEM, prompt };
+  return { system: SLOT_QUESTIONS_SYSTEM, prompt };
 }
 
 export interface EvaluationPromptInput {
