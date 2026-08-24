@@ -12,7 +12,11 @@ import {
 } from '@/lib/ai/recruit-blueprint';
 import { recruitRepository } from '@/lib/db/repositories/recruit.repository';
 import { requireOwnedCandidate } from '@/lib/recruit/access';
-import { interviewDimensions, QUESTION_DIMENSION_LABELS } from '@/lib/recruit/dimensions';
+import {
+  interviewDimensions,
+  QUESTION_DIMENSION_DESCRIPTIONS,
+  QUESTION_DIMENSION_LABELS,
+} from '@/lib/recruit/dimensions';
 import type { DimensionConfig, InterviewQuestion } from '@/types/recruit';
 
 export const maxDuration = 300;
@@ -39,7 +43,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const dimensions = interviewDimensions(
       configuredDimensions,
       isGoRole,
-      (key) => QUESTION_DIMENSION_LABELS[key as keyof typeof QUESTION_DIMENSION_LABELS] ?? key,
+      (key) => QUESTION_DIMENSION_DESCRIPTIONS[key as keyof typeof QUESTION_DIMENSION_DESCRIPTIONS] ?? key,
       (key) => QUESTION_DIMENSION_LABELS[key as keyof typeof QUESTION_DIMENSION_LABELS] ?? key,
     );
 

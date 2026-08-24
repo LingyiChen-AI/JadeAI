@@ -19,6 +19,14 @@ describe('fillPresetDescriptions', () => {
     expect(out[0].description).toBe('默认描述:project_deep_dive');
   });
 
+  it('迁移时把维度名称当描述的占位值会替换成完整考察范围', () => {
+    const out = fillPresetDescriptions(
+      [dim({ description: '项目深挖' })],
+      describeOf,
+    );
+    expect(out[0].description).toBe('默认描述:project_deep_dive');
+  });
+
   it('用户改过的描述原样保留', () => {
     const out = fillPresetDescriptions([dim({ description: '我自己写的' })], describeOf);
     expect(out[0].description).toBe('我自己写的');
