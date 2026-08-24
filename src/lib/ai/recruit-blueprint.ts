@@ -37,6 +37,36 @@ function normalizeEvidence(value: string): string {
     .replace(/[\p{P}\p{S}\s]+/gu, '');
 }
 
+function evidenceSimilarity(left: string, right: string): number {
+  const a = normalizeEvidence(left);
+  const b = normalizeEvidence(right);
+  if (a === b) return Number.POSITIVE_INFINITY;
+  if (a.includes(b) || b.includes(a)) return Math.min(a.length, b.length) * 2;
+  const chars = new Set(a);
+  return [...new Set(b)].reduce((score, char) => score + (chars.has(char) ? 1 : 0), 0);
+}
+
+/** 将模型可能改写过的 evidence 重新绑定到对应来源列表中的原文。 */
+export function canonicalizeBlueprintEvidence(input: InterviewBlueprint): InterviewBlueprint {
+  const entries = {
+    resume: input.resumeFacts,
+    jd: input.jdRequirements,
+    gap: input.gaps,
+  } satisfies Record<QuestionSlot['source'], string[]>;
+
+  return {
+    ...input,
+    slots: input.slots.map((slot) => {
+      const candidates = entries[slot.source];
+      if (candidates.length === 0) return { ...slot };
+      const evidence = [...candidates].sort(
+        (left, right) => evidenceSimilarity(slot.evidence, right) - evidenceSimilarity(slot.evidence, left),
+      )[0];
+      return { ...slot, evidence };
+    }),
+  };
+}
+
 export function validateBlueprint(
   input: InterviewBlueprint,
   options: {

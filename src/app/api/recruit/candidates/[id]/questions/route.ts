@@ -6,6 +6,7 @@ import { interviewBlueprintOutputSchema, questionsOutputSchema } from '@/lib/ai/
 import { buildDimensionQuestionsPrompt, buildInterviewBlueprintPrompt } from '@/lib/ai/recruit-prompts';
 import {
   assembleGeneratedQuestions,
+  canonicalizeBlueprintEvidence,
   detectGoRole,
   groupBlueprintSlots,
   validateBlueprint,
@@ -69,7 +70,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       prompt: blueprintPrompt.prompt,
       providerOptions: getJsonProviderOptions(aiConfig),
     });
-    const extractedBlueprint = extractJson(blueprintResult.text, interviewBlueprintOutputSchema);
+    const extractedBlueprint = canonicalizeBlueprintEvidence(
+      extractJson(blueprintResult.text, interviewBlueprintOutputSchema),
+    );
     const blueprint = validateBlueprint(
       {
         ...extractedBlueprint,

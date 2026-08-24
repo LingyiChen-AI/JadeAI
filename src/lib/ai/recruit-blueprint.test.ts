@@ -3,11 +3,32 @@ import type { DimensionConfig, InterviewBlueprint, QuestionSlot } from '@/types/
 import type { QuestionsOutput } from './recruit-schema';
 import {
   assembleGeneratedQuestions,
+  canonicalizeBlueprintEvidence,
   bindQuestionsToSlots,
   detectGoRole,
   groupBlueprintSlots,
   validateBlueprint,
 } from './recruit-blueprint';
+
+describe('canonicalizeBlueprintEvidence', () => {
+  it('把模型改写的证据绑定回对应来源列表中的原文', () => {
+    const result = canonicalizeBlueprintEvidence({
+      resumeFacts: ['负责高并发服务开发', '参与前端页面维护'],
+      jdRequirements: ['熟悉 Redis 和 Kafka'],
+      gaps: [],
+      slots: [{
+        category: 'project_deep_dive',
+        source: 'resume',
+        dimension: 'project_deep_dive',
+        topic: '高并发服务',
+        evidence: '候选人负责过高并发后端服务的开发',
+        difficulty: 'medium',
+      }],
+    });
+
+    expect(result.slots[0].evidence).toBe('负责高并发服务开发');
+  });
+});
 
 const dimensions: DimensionConfig[] = [
   { key: 'professional', label: 'Professional skill', weight: 6, custom: false },
