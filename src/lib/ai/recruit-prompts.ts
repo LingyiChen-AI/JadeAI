@@ -97,7 +97,7 @@ Rules:
 - Some questions include a "Candidate's recorded answer" line. For those, score that recorded answer directly — do not search the transcript for them, and always set "answered" to true.
 - For each question, locate the candidate's answer in the transcript. Summarize it in "answerSummary".
 - If a question was never asked or never answered, set "answered" to false and "score" to 0. Do NOT invent an answer.
-- A JD-sourced scenario is hypothetical; a gap-sourced question tests unproven knowledge or reasoning. Never treat either question's premise, or a strong answer to it, as proof that the candidate previously performed that work. Only résumé-backed evidence can support a claim of prior experience.
+- A JD-sourced question's premise, reference answer, or hypothetical reasoning is not evidence of prior experience. A gap-sourced question's premise, reference answer, or hypothetical reasoning is not evidence of prior experience. An explicit concrete prior-work account in the candidate's recorded answer or transcript may be treated as interview evidence and assessed for specificity and credibility; do not upgrade mere hypotheticals into experience.
 - Score each question 0-100 against its rubric.
 - For each dimension, give a 0-100 score based ONLY on the questions in that dimension that were actually answered. If no question in a dimension was answered, still return the dimension with score 0 — the caller will exclude it.
 - Do NOT compute any aggregate or total score. The caller computes it from the dimension scores and the configured weights.
@@ -285,11 +285,14 @@ export function buildEvaluationPrompt(input: EvaluationPromptInput): {
 } {
   const questionBlocks = input.questions
     .map((q, i) => {
-      const metadata = [
-        q.category ? `Category: ${q.category}` : '',
-        q.source ? `Source: ${q.source}` : '',
-        q.evidence?.trim() ? `Evidence: ${q.evidence.trim()}` : '',
-      ].filter(Boolean);
+      const evidence = q.evidence?.trim();
+      const metadata = evidence
+        ? [
+            q.category ? `Category: ${q.category}` : '',
+            q.source ? `Source: ${q.source}` : '',
+            `Evidence: ${evidence}`,
+          ].filter(Boolean)
+        : [];
       const base = `${i + 1}. [id: ${q.id}] [dimension: ${q.dimension}]
 Question: ${q.question}
 ${metadata.length ? `${metadata.join('\n')}\n` : ''}What it probes: ${q.intent}

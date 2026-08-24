@@ -5,6 +5,7 @@ import {
   buildEvaluationPrompt,
 } from './recruit-prompts';
 import { PRESET_DIMENSION_GUIDES } from '@/lib/recruit/dimension-guides';
+import { normalizeQuestions } from '@/lib/recruit/questions';
 import type {
   DimensionConfig,
   InterviewBlueprint,
@@ -326,7 +327,26 @@ describe('buildEvaluationPrompt', () => {
     expect(prompt).toContain('Category: system_scenario');
     expect(prompt).toContain('Source: jd');
     expect(prompt).toContain('Evidence: JD requires high-concurrency AI conversations');
-    expect(system).toContain('A JD-sourced scenario is hypothetical');
+    expect(system).toContain("A JD-sourced question's premise, reference answer, or hypothetical reasoning is not evidence of prior experience");
+    expect(system).toContain("A gap-sourced question's premise, reference answer, or hypothetical reasoning is not evidence of prior experience");
+    expect(system).toContain("An explicit concrete prior-work account in the candidate's recorded answer or transcript may be treated as interview evidence");
+  });
+
+  it('规范化后的历史题不把默认来源当作候选人经历证据', () => {
+    const [legacyQuestion] = normalizeQuestions([questions[0]])!;
+    const { prompt } = buildEvaluationPrompt({
+      jobTitle: 'T',
+      jobDescription: 'JD',
+      resumeText: 'R',
+      dimensions: DIMENSIONS,
+      questions: [legacyQuestion],
+      transcript: 'x',
+    });
+
+    expect(legacyQuestion).toMatchObject({ source: 'resume', evidence: '' });
+    expect(prompt).not.toContain('Category:');
+    expect(prompt).not.toContain('Source:');
+    expect(prompt).not.toContain('Evidence:');
   });
 
   it('system prompt 明确要求不给总分、且未作答的题不计入维度分', () => {
