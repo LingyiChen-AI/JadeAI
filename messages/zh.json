@@ -1100,6 +1100,15 @@
       "referenceAnswer": "参考答案",
       "redFlags": "危险信号",
       "referencePoints": "参考答案要点",
+      "categories": {
+        "go_fundamentals": "Go 基础",
+        "backend_fundamentals": "后端基础",
+        "middleware_database": "中间件与数据库",
+        "project_deep_dive": "项目深挖",
+        "system_scenario": "系统场景",
+        "communication_pressure": "沟通与压力",
+        "hr_motivation": "求职动机"
+      },
       "minutes": "{count} 分钟",
       "regenerateConfirm": "重新生成会覆盖现有全部题目，确定吗？"
     },

@@ -121,6 +121,9 @@ describe('recruitRepository — candidates', () => {
       {
         id: 'q1',
         dimension: 'logic',
+        category: 'project_deep_dive' as const,
+        source: 'resume' as const,
+        evidence: '简历中的线上故障排查经历',
         question: '讲一个你排查过的线上问题',
         intent: '看拆解问题的路径',
         rubric: { excellent: '有假设有验证', pass: '能说清现象', fail: '只会复述结论' },

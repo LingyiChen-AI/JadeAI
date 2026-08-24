@@ -1100,6 +1100,15 @@
       "referenceAnswer": "Reference answer",
       "redFlags": "Red flags",
       "referencePoints": "Reference points",
+      "categories": {
+        "go_fundamentals": "Go Fundamentals",
+        "backend_fundamentals": "Backend Fundamentals",
+        "middleware_database": "Middleware & Databases",
+        "project_deep_dive": "Project Deep Dive",
+        "system_scenario": "System Scenarios",
+        "communication_pressure": "Communication & Pressure",
+        "hr_motivation": "Motivation & HR"
+      },
       "minutes": "{count} min",
       "regenerateConfirm": "Regenerating replaces all current questions. Continue?"
     },

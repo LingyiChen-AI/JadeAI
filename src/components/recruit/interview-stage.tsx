@@ -390,6 +390,11 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
               <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', color.dot)} />
               {label}
             </Badge>
+            {current.category && (
+              <Badge variant="outline" className="text-zinc-500">
+                {t(`questions.categories.${current.category}`)}
+              </Badge>
+            )}
             <span>
               {current.difficulty} · {t('questions.minutes', { count: current.estimatedMinutes })}
             </span>

@@ -94,6 +94,47 @@ describe('normalizeQuestions', () => {
     ] as never)!;
     expect(out.map((q) => q.status)).toEqual(['skipped', 'answered']);
   });
+
+  it('为旧题补齐默认元数据，同时保留新题的元数据', () => {
+    const legacyQuestion = {
+      id: 'legacy', dimension: 'logic', question: '题', intent: '',
+      rubric: { excellent: '', pass: '', fail: '' }, followUps: [],
+      referencePoints: [], estimatedMinutes: 5, difficulty: 'medium',
+    };
+    const [legacy] = normalizeQuestions([legacyQuestion] as never)!;
+    expect(legacy).toMatchObject({
+      category: 'project_deep_dive',
+      source: 'resume',
+      evidence: '',
+    });
+
+    const [modern] = normalizeQuestions([{
+      ...legacyQuestion,
+      category: 'go_fundamentals',
+      source: 'jd',
+      evidence: 'JD 要求 Go 高性能优化',
+    }] as never)!;
+    expect(modern).toMatchObject({
+      category: 'go_fundamentals',
+      source: 'jd',
+      evidence: 'JD 要求 Go 高性能优化',
+    });
+  });
+
+  it('将无效元数据归一为旧题默认值', () => {
+    const [question] = normalizeQuestions([{
+      id: 'invalid', dimension: 'logic', question: '题', intent: '',
+      rubric: { excellent: '', pass: '', fail: '' }, followUps: [],
+      referencePoints: [], estimatedMinutes: 5, difficulty: 'medium',
+      category: 'unknown', source: 'unknown', evidence: 42,
+    }] as never)!;
+
+    expect(question).toMatchObject({
+      category: 'project_deep_dive',
+      source: 'resume',
+      evidence: '',
+    });
+  });
 });
 
 describe('题目状态转换', () => {

@@ -40,8 +40,24 @@ export function normalizeFollowUps(raw: unknown): FollowUp[] {
 
 /** 单道题的规整。只碰会变形的字段，其余原样带过。 */
 export function normalizeQuestion(q: InterviewQuestion): InterviewQuestion {
+  const category = [
+    'go_fundamentals',
+    'backend_fundamentals',
+    'middleware_database',
+    'project_deep_dive',
+    'system_scenario',
+    'communication_pressure',
+    'hr_motivation',
+  ].includes(q.category ?? '')
+    ? q.category
+    : 'project_deep_dive';
+  const source = ['resume', 'jd', 'gap'].includes(q.source ?? '') ? q.source : 'resume';
+
   return {
     ...q,
+    category,
+    source,
+    evidence: typeof q.evidence === 'string' ? q.evidence : '',
     followUps: normalizeFollowUps(q.followUps),
     referencePoints: Array.isArray(q.referencePoints) ? q.referencePoints : [],
     redFlags: Array.isArray(q.redFlags) ? q.redFlags : undefined,
