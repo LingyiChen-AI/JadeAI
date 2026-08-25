@@ -461,6 +461,11 @@ describe('buildEvaluationPrompt', () => {
     });
     expect(system).toContain('recorded answer');
     expect(system).toContain('do not search the transcript');
+    expect(system).toContain('3-5 substantive advantages');
+    expect(system).toContain('3-5 substantive weaknesses or risks');
+    expect(system).toContain('600-1000 Chinese');
+    expect(system).toContain('match against the JD');
+    expect(system).toContain('Distinguish "not demonstrated" from "cannot do"');
   });
 });
 

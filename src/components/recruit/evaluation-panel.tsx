@@ -243,6 +243,9 @@ export function EvaluationPanel({
             <h3 className="mb-2 text-xs uppercase tracking-wide text-zinc-400">
               {t('evaluation.overallComment')}
             </h3>
+            <p className="mb-3 text-xs text-zinc-400">
+              {t('evaluation.overallCommentHint')}
+            </p>
             <p className="whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
               {evaluation.overallComment}
             </p>

@@ -1153,8 +1153,9 @@
       "highlights": "Highlights",
       "weaknesses": "Gaps",
       "strengths": "Strengths",
-      "concerns": "Concerns",
-      "overallComment": "Overall assessment",
+      "concerns": "Weaknesses",
+      "overallComment": "Comprehensive feedback",
+      "overallCommentHint": "Use concrete answers to assess technical ability, problem solving, collaboration, JD fit, risks, and the hiring decision",
       "recommendationReason": "Rationale",
       "regenerateConfirm": "Re-evaluating replaces the current evaluation. Continue?"
     },

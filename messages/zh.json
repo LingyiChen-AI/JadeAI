@@ -1153,8 +1153,9 @@
       "highlights": "亮点",
       "weaknesses": "不足",
       "strengths": "优势",
-      "concerns": "顾虑",
-      "overallComment": "整体评价",
+      "concerns": "不足",
+      "overallComment": "综合反馈",
+      "overallCommentHint": "结合具体回答说明候选人的技术能力、问题解决、沟通协作、JD 匹配度、风险与录用建议",
       "recommendationReason": "结论理由",
       "regenerateConfirm": "重新评价会覆盖现有评价，确定吗？"
     },

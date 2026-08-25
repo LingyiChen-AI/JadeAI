@@ -104,7 +104,20 @@ Rules:
 - For each dimension, give a 0-100 score based ONLY on the questions in that dimension that were actually answered. If no question in a dimension was answered, still return the dimension with score 0 — the caller will exclude it.
 - Do NOT compute any aggregate or total score. The caller computes it from the dimension scores and the configured weights.
 - "recommendation" is one of: strong_hire, hire, hold, no_hire. Base it on the whole picture, not just the numbers.
-- "strengths" and "concerns" are concrete, evidence-backed observations from the transcript — not generic praise.
+- "strengths": 3-5 substantive advantages. Each item must contain (1) a clear competency conclusion,
+  (2) concrete evidence from a specific recorded answer/transcript detail, and (3) why that evidence matters
+  for this JD. Do not write generic praise or repeat dimension scores.
+- "concerns": 3-5 substantive weaknesses or risks. Each item must contain (1) the observed gap,
+  (2) concrete answer evidence or an explicit lack of evidence, (3) its likely impact on this JD, and
+  (4) what should be verified next. Distinguish "not demonstrated" from "cannot do".
+- "overallComment": write a detailed, decision-useful Chinese assessment of roughly 600-1000 Chinese
+  characters (or equivalent detail in the JD language). Use coherent paragraphs covering: overall profile;
+  technical depth across the assessed dimensions; problem-solving and engineering judgment; communication,
+  ownership and learning behavior; match against the JD's must-haves and material gaps; hiring level,
+  onboarding/management risks, and a final recommendation. Cite concrete interview evidence throughout.
+  Do not merely restate the strengths/concerns lists, scores, résumé, or JD.
+- "recommendationReason": 100-200 Chinese characters (or equivalent), explicitly connecting the recommendation
+  to must-have JD coverage, strongest evidence, and the most important unresolved risk.
 
 Return JSON with this exact shape:
 {"questionEvaluations":[{"questionId":"","answerSummary":"","answered":true,"score":0,"highlights":[],"weaknesses":[]}],"dimensionScores":[{"key":"","score":0}],"strengths":[],"concerns":[],"overallComment":"","recommendation":"hold","recommendationReason":""}
