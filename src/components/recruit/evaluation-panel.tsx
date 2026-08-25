@@ -204,6 +204,16 @@ export function EvaluationPanel({
               <p className="max-w-md text-sm text-zinc-600 dark:text-zinc-400">
                 {evaluation.recommendationReason}
               </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerate}
+                className="ml-2 shrink-0 cursor-pointer gap-1.5"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {t('evaluation.regenerate')}
+              </Button>
             </div>
           </Card>
 

@@ -1139,7 +1139,7 @@
       "transcriptSupplement": "逐题已记录 {done} 题，这里补充未逐题记录的部分",
       "transcriptCollapsed": "面试记录（{chars} 字）· 展开编辑",
       "generate": "生成评价",
-      "regenerate": "重新评价",
+      "regenerate": "重新生成评价",
       "generating": "正在分析面试记录…",
       "needQuestions": "请先生成面试题",
       "needTranscript": "请先粘贴面试记录",

@@ -1139,7 +1139,7 @@
       "transcriptSupplement": "{done} answers recorded per question — add anything else here",
       "transcriptCollapsed": "Transcript ({chars} chars) · Edit",
       "generate": "Generate evaluation",
-      "regenerate": "Re-evaluate",
+      "regenerate": "Regenerate evaluation",
       "generating": "Analyzing the transcript…",
       "needQuestions": "Generate the questions first",
       "needTranscript": "Paste the interview transcript first",
