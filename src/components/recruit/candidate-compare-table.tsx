@@ -101,6 +101,9 @@ export function CandidateCompareTable({ jobId, dimensions, evaluated }: Candidat
               ))}
               <th className="px-3 py-3 text-center font-medium">{t('candidates.score')}</th>
               <th className="px-4 py-3 font-medium">{t('candidates.recommendation')}</th>
+              <th className="px-4 py-3 text-right font-medium">
+                <span className="sr-only">{t('actions.viewReport')}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -108,7 +111,7 @@ export function CandidateCompareTable({ jobId, dimensions, evaluated }: Candidat
               <tr key={r.id} className="border-b last:border-0">
                 <td className="px-4 py-3">
                   <Link
-                    href={`/recruit/${jobId}/c/${r.id}`}
+                    href={`/recruit/${jobId}/c/${r.id}/report`}
                     className="cursor-pointer font-medium hover:text-brand"
                   >
                     {r.name || '—'}
@@ -136,6 +139,14 @@ export function CandidateCompareTable({ jobId, dimensions, evaluated }: Candidat
                   <Badge className={RECOMMENDATION_STYLE[r.recommendation]}>
                     {t(`recommendation.${r.recommendation}`)}
                   </Badge>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <Link
+                    href={`/recruit/${jobId}/c/${r.id}/report`}
+                    className="inline-flex cursor-pointer whitespace-nowrap text-xs font-medium text-brand hover:underline"
+                  >
+                    {t('actions.viewReport')}
+                  </Link>
                 </td>
               </tr>
             ))}
