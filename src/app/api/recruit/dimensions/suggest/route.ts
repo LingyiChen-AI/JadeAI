@@ -37,7 +37,10 @@ export async function POST(request: NextRequest) {
 Use exactly these dimension keys, once each: ${allowedKeys.join(', ')}.
 For every dimension provide:
 - weight: integer 1-5 meaning the exact number of questions to generate for this dimension;
-- description: a detailed Chinese assessment scope covering relevant knowledge, typical scenarios, probing directions, and what distinguishes strong from weak evidence.
+- description: 250-600 Chinese characters, written as a professional competency model using exactly these sections:
+  【考察目标】【知识/能力范围】【工程实践或行为场景】【追问与验证】【评价重点】.
+  Each section must contain JD-specific, actionable content. Cover fundamentals, applied practice, failure diagnosis,
+  trade-offs, evidence to request, strong-answer signals, and risk signals where applicable. Do not write a short summary.
 Ground every technology-specific scope in the JD. Do not invent required technologies. Keep behavioral dimensions role-specific.
 Shape: {"dimensions":[{"key":"...","weight":3,"description":"..."}]}`,
       prompt: `岗位名称：${title}\n\n职位描述（JD）：\n${jobDescription}`,
