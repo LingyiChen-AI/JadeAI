@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Eye } from 'lucide-react';
 import { Link } from '@/i18n/routing';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -89,27 +90,28 @@ export function CandidateCompareTable({ jobId, dimensions, evaluated }: Candidat
   return (
     <div>
       <h2 className="mb-3 text-sm font-medium">{t('overview.compare')}</h2>
-      <Card className="overflow-x-auto p-0">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead className="border-b bg-zinc-50 text-left text-xs text-zinc-500 dark:bg-zinc-900">
+      <Card className="overflow-x-auto p-0 shadow-sm">
+        <table className="w-full min-w-[760px] text-sm">
+          <thead className="border-b bg-zinc-50/80 text-left text-xs text-zinc-500 dark:bg-zinc-900/80">
             <tr>
-              <th className="px-4 py-3 font-medium">{t('candidates.name')}</th>
+              <th className="w-[180px] px-5 py-3.5 font-medium">{t('candidates.name')}</th>
               {dimensions.map((d) => (
                 <th key={d.key} className="px-3 py-3 text-center font-medium">
                   {d.label}
                 </th>
               ))}
               <th className="px-3 py-3 text-center font-medium">{t('candidates.score')}</th>
-              <th className="px-4 py-3 font-medium">{t('candidates.recommendation')}</th>
-              <th className="px-4 py-3 text-right font-medium">
-                <span className="sr-only">{t('actions.viewReport')}</span>
-              </th>
+              <th className="w-[120px] px-4 py-3.5 font-medium">{t('candidates.recommendation')}</th>
+              <th className="w-[110px] px-5 py-3.5 text-right font-medium">{t('actions.operation')}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b last:border-0">
-                <td className="px-4 py-3">
+              <tr
+                key={r.id}
+                className="border-b transition-colors last:border-0 hover:bg-zinc-50/70 dark:hover:bg-zinc-900/60"
+              >
+                <td className="px-5 py-3.5">
                   <Link
                     href={`/recruit/${jobId}/c/${r.id}/report`}
                     className="cursor-pointer font-medium hover:text-brand"
@@ -135,17 +137,18 @@ export function CandidateCompareTable({ jobId, dimensions, evaluated }: Candidat
                   );
                 })}
                 <td className="px-3 py-3 text-center font-semibold tabular-nums">{r.overallScore}</td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3.5">
                   <Badge className={RECOMMENDATION_STYLE[r.recommendation]}>
                     {t(`recommendation.${r.recommendation}`)}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-5 py-3.5 text-right">
                   <Link
-                    href={`/recruit/${jobId}/c/${r.id}/report`}
-                    className="inline-flex cursor-pointer whitespace-nowrap text-xs font-medium text-brand hover:underline"
+                    href={`/recruit/${jobId}/c/${r.id}/stage?mode=view`}
+                    className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 shadow-sm transition-colors hover:border-brand/40 hover:text-brand dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                   >
-                    {t('actions.viewReport')}
+                    <Eye className="h-3.5 w-3.5" />
+                    {t('actions.viewRecord')}
                   </Link>
                 </td>
               </tr>

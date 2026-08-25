@@ -943,7 +943,9 @@
         "generateQuestions": "生成题目",
         "startInterview": "开始面试",
         "continueInterview": "继续面试 {done}/{total}",
-        "viewReport": "看报告"
+        "viewReport": "看报告",
+        "viewRecord": "查看",
+        "operation": "操作"
     },
     "prep": {
         "title": "准备",
@@ -956,6 +958,9 @@
     "stage": {
         "elapsed": "已用 {minutes} 分钟",
         "finish": "结束面试",
+        "backToReport": "返回报告",
+        "next": "下一题",
+        "noRecord": "本题没有面试记录",
         "prev": "上一题",
         "recordNext": "记录并下一题",
         "recordFinish": "记录并结束",

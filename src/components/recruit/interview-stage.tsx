@@ -55,7 +55,15 @@ const RUBRIC_TEXT = {
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-export function InterviewStage({ jobId, candidateId }: { jobId: string; candidateId: string }) {
+export function InterviewStage({
+  jobId,
+  candidateId,
+  readOnly = false,
+}: {
+  jobId: string;
+  candidateId: string;
+  readOnly?: boolean;
+}) {
   const t = useTranslations('recruit');
   const tc = useTranslations('common');
   const router = useRouter();
@@ -126,7 +134,7 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
         // 从第一道还没记答案的题开始，「继续面试」才名副其实
         const qs: InterviewQuestion[] = data.candidate.questions ?? [];
         const firstBlank = qs.findIndex((q) => q.status !== 'skipped' && !q.answer?.trim());
-        const start = firstBlank === -1 ? 0 : firstBlank;
+        const start = readOnly || firstBlank === -1 ? 0 : firstBlank;
         setIndex(start);
         setDraft(qs[start]?.answer ?? '');
       } catch {
@@ -135,7 +143,7 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
         setLoading(false);
       }
     })();
-  }, [fpLoading, fingerprint, candidateId, t]);
+  }, [fpLoading, fingerprint, candidateId, readOnly, t]);
 
   const flush = useCallback(async () => {
     if (timerRef.current) {
@@ -171,7 +179,7 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
   }, [candidateId, fingerprint, t]);
 
   function handleDraftChange(value: string) {
-    if (!current) return;
+    if (!current || readOnly) return;
     setDraft(value);
     pendingRef.current.set(current.id, value);
     setCandidate((prev) => prev && {
@@ -202,9 +210,13 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
   }, [flush, router, jobId]);
 
   const finish = useCallback(async () => {
+    if (readOnly) {
+      router.push(`/recruit/${jobId}/c/${candidateId}/report`);
+      return;
+    }
     await flush();
     router.push(`/recruit/${jobId}/c/${candidateId}/report`);
-  }, [flush, router, jobId, candidateId]);
+  }, [flush, router, jobId, candidateId, readOnly]);
 
   async function doRegenerate() {
     setRegenerating(true);
@@ -309,28 +321,34 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
           {t('stage.elapsed', { minutes: elapsed })}
         </span>
         <span className="ml-auto flex shrink-0 items-center gap-2">
-          {/* 绿 = AI 生成，和「生成题目」「生成评价」同一类 */}
-          <Button
-            size="sm"
-            onClick={() => setRegenerateOpen(true)}
-            disabled={regenerating}
-            className="cursor-pointer gap-1.5"
-          >
-            {regenerating ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="h-3.5 w-3.5" />
-            )}
-            {regenerating ? t('questions.generating') : t('questions.regenerate')}
-          </Button>
-          {/* 红 = 终止这场面试。和删除类操作用同一支红，语义是「到此为止」 */}
-          <Button
-            size="sm"
-            onClick={() => void finish()}
-            className="cursor-pointer bg-red-600 text-white hover:bg-red-700"
-          >
-            {t('stage.finish')}
-          </Button>
+          {readOnly ? (
+            <Button size="sm" variant="outline" onClick={() => void finish()} className="cursor-pointer">
+              {t('stage.backToReport')}
+            </Button>
+          ) : (
+            <>
+              <Button
+                size="sm"
+                onClick={() => setRegenerateOpen(true)}
+                disabled={regenerating}
+                className="cursor-pointer gap-1.5"
+              >
+                {regenerating ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                {regenerating ? t('questions.generating') : t('questions.regenerate')}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => void finish()}
+                className="cursor-pointer bg-red-600 text-white hover:bg-red-700"
+              >
+                {t('stage.finish')}
+              </Button>
+            </>
+          )}
           <button
             type="button"
             onClick={() => void exit()}
@@ -393,14 +411,16 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
             </span>
             <span className="ml-auto flex items-center gap-3">
               <SaveIndicator state={saveState} onRetry={() => void flush()} />
-              <button
-                type="button"
-                onClick={() => void handleRemove()}
-                aria-label={t('questions.remove')}
-                className="cursor-pointer text-zinc-300 hover:text-red-600 dark:text-zinc-600"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => void handleRemove()}
+                  aria-label={t('questions.remove')}
+                  className="cursor-pointer text-zinc-300 hover:text-red-600 dark:text-zinc-600"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
             </span>
           </div>
 
@@ -519,8 +539,9 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
             <Textarea
               value={draft}
               onChange={(e) => handleDraftChange(e.target.value)}
-              placeholder={t('questions.answerPlaceholder')}
-              autoFocus
+              placeholder={readOnly ? t('stage.noRecord') : t('questions.answerPlaceholder')}
+              readOnly={readOnly}
+              autoFocus={!readOnly}
               // 五行。再高就是在假设你要写逐字稿了
               className="max-h-[40vh] min-h-[132px] bg-white text-[15px] leading-relaxed dark:bg-zinc-900"
             />
@@ -534,25 +555,35 @@ export function InterviewStage({ jobId, candidateId }: { jobId: string; candidat
                 <ChevronLeft className="h-4 w-4" />
                 {t('stage.prev')}
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => void handleSkipToggle()}
-                className="cursor-pointer gap-1.5 text-zinc-600"
-              >
-                <SkipForward className="h-4 w-4" />
-                {current.status === 'skipped' ? t('stage.unskip') : t('stage.skip')}
-              </Button>
+              {!readOnly && (
+                <Button
+                  variant="outline"
+                  onClick={() => void handleSkipToggle()}
+                  className="cursor-pointer gap-1.5 text-zinc-600"
+                >
+                  <SkipForward className="h-4 w-4" />
+                  {current.status === 'skipped' ? t('stage.unskip') : t('stage.skip')}
+                </Button>
+              )}
               <Button
                 onClick={() => (isLast ? void finish() : goTo(index + 1))}
                 className="cursor-pointer gap-1.5"
               >
-                {isLast ? t('stage.recordFinish') : t('stage.recordNext')}
+                {readOnly
+                  ? isLast
+                    ? t('stage.backToReport')
+                    : t('stage.next')
+                  : isLast
+                    ? t('stage.recordFinish')
+                    : t('stage.recordNext')}
                 {!isLast && <ChevronRight className="h-4 w-4" />}
               </Button>
-              <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-400">
-                <Kbd>⌘↵</Kbd> {t('stage.shortcutNext')}
-                <Kbd>esc</Kbd> {t('stage.shortcutExit')}
-              </span>
+              {!readOnly && (
+                <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-400">
+                  <Kbd>⌘↵</Kbd> {t('stage.shortcutNext')}
+                  <Kbd>esc</Kbd> {t('stage.shortcutExit')}
+                </span>
+              )}
             </div>
           </div>
         </div>

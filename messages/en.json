@@ -943,7 +943,9 @@
         "generateQuestions": "Generate questions",
         "startInterview": "Start interview",
         "continueInterview": "Resume {done}/{total}",
-        "viewReport": "View report"
+        "viewReport": "View report",
+        "viewRecord": "View",
+        "operation": "Action"
     },
     "prep": {
         "title": "Prepare",
@@ -956,6 +958,9 @@
     "stage": {
         "elapsed": "{minutes} min elapsed",
         "finish": "End interview",
+        "backToReport": "Back to report",
+        "next": "Next",
+        "noRecord": "No interview notes for this question",
         "prev": "Previous",
         "recordNext": "Save & next",
         "recordFinish": "Save & finish",
