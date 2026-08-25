@@ -83,6 +83,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         questionCount,
         dimensions,
         isGoRole,
+        enforceJdCoverage: true,
       },
     );
     const groups = groupBlueprintSlots(blueprint.slots);

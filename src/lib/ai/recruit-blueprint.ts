@@ -73,6 +73,7 @@ export function validateBlueprint(
     questionCount: number;
     dimensions: DimensionConfig[];
     isGoRole: boolean;
+    enforceJdCoverage?: boolean;
   },
 ): InterviewBlueprint {
   if (input.slots.length !== options.questionCount) {
@@ -85,6 +86,8 @@ export function validateBlueprint(
   const expectedDimensionCounts = allocateQuestions(options.dimensions, options.questionCount);
   const actualDimensionCounts = new Map<string, number>();
   const categoryCounts = new Map<QuestionSlot['category'], number>();
+  const sourceCounts = new Map<QuestionSlot['source'], number>();
+  const distinctJdEvidence = new Set<string>();
   const evidenceBySource = {
     resume: new Set(input.resumeFacts.map(normalizeEvidence)),
     jd: new Set(input.jdRequirements.map(normalizeEvidence)),
@@ -120,6 +123,37 @@ export function validateBlueprint(
       (actualDimensionCounts.get(slot.dimension) ?? 0) + 1,
     );
     categoryCounts.set(slot.category, (categoryCounts.get(slot.category) ?? 0) + 1);
+    sourceCounts.set(slot.source, (sourceCounts.get(slot.source) ?? 0) + 1);
+    if (slot.source === 'jd') distinctJdEvidence.add(normalizeEvidence(slot.evidence));
+  }
+
+  if (options.enforceJdCoverage) {
+    const resumeCount = sourceCounts.get('resume') ?? 0;
+    const jdCount = sourceCounts.get('jd') ?? 0;
+    const gapCount = sourceCounts.get('gap') ?? 0;
+    const maxResume = Math.floor(options.questionCount * 0.4);
+    const minJd = Math.ceil(options.questionCount * 0.35);
+    const minJdAndGap = Math.ceil(options.questionCount * 0.6);
+    const minGap = input.gaps.length > 0
+      ? Math.max(2, Math.ceil(options.questionCount * 0.15))
+      : 0;
+    const minDistinctJd = Math.min(3, input.jdRequirements.length, minJd);
+
+    if (resumeCount > maxResume) {
+      throw new Error(`Blueprint may use at most ${maxResume} resume-sourced slots; received ${resumeCount}.`);
+    }
+    if (jdCount < minJd) {
+      throw new Error(`Blueprint requires at least ${minJd} JD-sourced slots; received ${jdCount}.`);
+    }
+    if (gapCount < minGap) {
+      throw new Error(`Blueprint requires at least ${minGap} gap-sourced slots; received ${gapCount}.`);
+    }
+    if (jdCount + gapCount < minJdAndGap) {
+      throw new Error(`Blueprint requires at least ${minJdAndGap} JD-or-gap slots.`);
+    }
+    if (distinctJdEvidence.size < minDistinctJd) {
+      throw new Error(`Blueprint must cover at least ${minDistinctJd} distinct JD requirements.`);
+    }
   }
 
   for (const dimension of options.dimensions) {

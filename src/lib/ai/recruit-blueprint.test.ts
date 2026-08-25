@@ -106,6 +106,14 @@ const rawQuestion: QuestionsOutput['questions'][number] = {
 };
 
 describe('validateBlueprint', () => {
+  it('enforces JD and gap source coverage when enabled', () => {
+    expect(() => validateBlueprint(blueprintWith8SlotsAnd2Go, {
+      questionCount: 8,
+      dimensions,
+      isGoRole: true,
+      enforceJdCoverage: true,
+    })).toThrow(/gap-sourced/);
+  });
   it('accepts source evidence that differs only in punctuation and whitespace', () => {
     const input = structuredClone(blueprintWith8SlotsAnd2Go);
     input.jdRequirements[0] = 'Strong Go experience。';

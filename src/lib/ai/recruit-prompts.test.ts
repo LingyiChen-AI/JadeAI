@@ -252,8 +252,12 @@ describe('buildInterviewBlueprintPrompt', () => {
     expect(system).toContain('gaps');
     expect(system).toContain('Never convert an inference into a résumé fact');
     expect(system).toContain('easy | medium | hard');
-    expect(system).toContain('If gaps is non-empty, include at least one gap slot');
+    expect(system).toContain('If gaps is non-empty, satisfy the mandatory gap quota');
     expect(system).toContain('If gaps is empty, include at least one jd system_scenario slot');
+    expect(system).toContain('jd + gap combined');
+    expect(system).toContain('≥60%');
+    expect(system).toContain('resume: at most 4 slots');
+    expect(system).toContain('covering at least 3 distinct JD requirements');
     expect(system).toContain('professional');
     expect(system).toContain('exactly 6 slots');
     expect(system).toContain('重点考察技术原理与工程取舍');

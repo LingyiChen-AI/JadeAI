@@ -164,6 +164,10 @@ export function buildInterviewBlueprintPrompt(input: QuestionsPromptInput): {
 - at least 1 hr_motivation slot`
     : '';
   const portfolioRules = buildPortfolioRules(input.questionCount);
+  const maxResume = Math.floor(input.questionCount * 0.4);
+  const minJd = Math.ceil(input.questionCount * 0.35);
+  const minGap = Math.max(2, Math.ceil(input.questionCount * 0.15));
+  const minJdAndGap = Math.ceil(input.questionCount * 0.6);
 
   const system = `You are an interview planner. Return only one strict interview blueprint JSON object.
 
@@ -171,7 +175,9 @@ ${LANGUAGE_RULE}
 
 First extract concise, explicit facts into three separate lists:
 - "resumeFacts": only facts stated in the résumé.
-- "jdRequirements": only requirements stated in the JD.
+- "jdRequirements": split the JD into atomic requirements. Include every material must-have responsibility
+  and skill (language, tools, workflow, deliverables, engineering practices), not only requirements that overlap
+  with the résumé.
 - "gaps": neutral, explicit comparisons where a material JD requirement is not proven by the résumé.
 Never convert an inference into a résumé fact. Do not invent metrics, architecture, incidents, ownership,
 tools, scale, outcomes, or a candidate's experience.
@@ -188,11 +194,20 @@ duplicating the same event or knowledge point.
 For every slot, copy one complete entry exactly from the corresponding source list into "evidence":
 resume → resumeFacts, jd → jdRequirements, gap → gaps. Do not paraphrase, shorten, combine, or extend it.
 
+Mandatory source portfolio:
+- resume: at most ${maxResume} slots (≤40%).
+- jd: at least ${minJd} slots (≥35%), covering at least 3 distinct JD requirements when available.
+- gap: when gaps is non-empty, at least ${minGap} slots (≥15% and at least 2); otherwise 0 gap slots.
+- jd + gap combined: at least ${minJdAndGap} slots (≥60%).
+Prioritize the JD's must-have requirements before bonus items. Reusing one evidence entry is allowed only for
+genuinely different topics; do not let a strong résumé crowd out Python, AI coding tools, Skill/plugin/CLI,
+Prompt/API integration, Git/automation, or other explicit JD requirements.
+
 ${portfolioRules}
 
 ${requiredGoPortfolio}
 
-If gaps is non-empty, include at least one gap slot. If gaps is empty, include at least one jd system_scenario slot instead, and do not create a gap slot.
+If gaps is non-empty, satisfy the mandatory gap quota above. If gaps is empty, include at least one jd system_scenario slot instead, and do not create a gap slot.
 
 Configured dimensions and mandatory slot allocations (use every key exactly the stated number of times):
 ${dimensionLines}
