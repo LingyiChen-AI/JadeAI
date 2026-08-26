@@ -1048,6 +1048,7 @@
         "stepResume": "Parse resume",
         "stepQuestions": "Generate questions",
         "submit": "Create & generate questions",
+        "retry": "Retry failed step",
         "needResumeFirst": "Upload a resume file or paste the text first",
         "reupload": "Replace resume",
         "reuploadSubmit": "Save & regenerate questions"

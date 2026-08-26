@@ -1048,6 +1048,7 @@
         "stepResume": "解析简历",
         "stepQuestions": "生成面试题",
         "submit": "创建并生成面试题",
+        "retry": "从失败步骤重试",
         "needResumeFirst": "先上传简历文件或粘贴简历文本",
         "reupload": "重传简历",
         "reuploadSubmit": "保存并重新出题"

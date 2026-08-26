@@ -19,6 +19,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useFingerprint } from '@/hooks/use-fingerprint';
 import { getAIHeaders } from '@/stores/settings-store';
 import { cn } from '@/lib/utils';
+import {
+  CandidateSetupError,
+  runCandidateSetup,
+  type CandidateSetupProgress,
+} from '@/lib/recruit/candidate-setup-flow';
 import type { CandidateSummary } from '@/types/recruit';
 
 type Step = 'create' | 'resume' | 'questions';
@@ -51,6 +56,10 @@ export function CandidateDialog({
   const router = useRouter();
   const { fingerprint } = useFingerprint();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [progress, setProgress] = useState<CandidateSetupProgress>({
+    candidateId: candidate?.id ?? null,
+    resumeSaved: false,
+  });
 
   const editing = Boolean(candidate);
   const [name, setName] = useState('');
@@ -66,90 +75,94 @@ export function CandidateDialog({
     setText('');
     setRunning(null);
     setFailedAt(null);
+    setProgress({ candidateId: candidate?.id ?? null, resumeSaved: false });
   }, [open, candidate]);
 
-  const hasResume = Boolean(file) || Boolean(text.trim());
+  const hasResume = progress.resumeSaved || Boolean(file) || Boolean(text.trim());
   const canSubmit = (editing || name.trim()) && hasResume && running === null;
+  const createdInThisFlow = !editing && Boolean(progress.candidateId);
+  const resumeLocked = progress.resumeSaved;
 
   const headers = (): Record<string, string> =>
     fingerprint ? { 'x-fingerprint': fingerprint } : {};
 
   async function handleSubmit() {
     setFailedAt(null);
-    let candidateId = candidate?.id;
 
-    // ── 建人 ────────────────────────────────────────────────
-    if (!candidateId) {
-      setRunning('create');
-      try {
-        const res = await fetch(`/api/recruit/jobs/${jobId}/candidates`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', ...headers() },
-          body: JSON.stringify({ name: name.trim() }),
-        });
-        if (!res.ok) throw new Error();
-        candidateId = (await res.json()).candidate.id as string;
-      } catch {
-        setRunning(null);
-        setFailedAt('create');
-        toast.error(t('errors.saveFailed'));
-        return;
-      }
-    } else if (name.trim() && name.trim() !== candidate?.name) {
-      await fetch(`/api/recruit/candidates/${candidateId}`, {
+    if (candidate?.id && name.trim() && name.trim() !== candidate.name) {
+      await fetch(`/api/recruit/candidates/${candidate.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json', ...headers() },
         body: JSON.stringify({ name: name.trim() }),
       }).catch(() => {});
     }
 
-    // ── 简历：文件走解析，纯文本直接存 ────────────────────────
-    setRunning('resume');
     try {
-      if (file) {
-        const fd = new FormData();
-        fd.append('file', file);
-        const res = await fetch(`/api/recruit/candidates/${candidateId}/resume`, {
-          method: 'POST',
-          headers: { ...headers(), ...getAIHeaders() },
-          body: fd,
-        });
-        if (!res.ok) throw new Error();
-      } else {
-        const res = await fetch(`/api/recruit/candidates/${candidateId}`, {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json', ...headers() },
-          body: JSON.stringify({ resumeText: text.trim() }),
-        });
-        if (!res.ok) throw new Error();
-      }
-    } catch {
-      setRunning(null);
-      setFailedAt('resume');
-      // 人已经建出来了，列表要刷新——否则用户看不到他，会重复创建
-      onDone?.();
-      toast.error(t('errors.parseFailed'));
-      return;
-    }
+      const completed = await runCandidateSetup(progress, {
+        onStep: setRunning,
+        createCandidate: async () => {
+          const res = await fetch(`/api/recruit/jobs/${jobId}/candidates`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', ...headers() },
+            body: JSON.stringify({ name: name.trim() }),
+          });
+          if (!res.ok) throw new Error('create failed');
+          return (await res.json()).candidate.id as string;
+        },
+        saveResume: async (candidateId) => {
+          if (file) {
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch(`/api/recruit/candidates/${candidateId}/resume`, {
+              method: 'POST',
+              headers: { ...headers(), ...getAIHeaders() },
+              body: fd,
+            });
+            if (!res.ok) throw new Error('resume parse failed');
+            return;
+          }
 
-    // ── 出题 ────────────────────────────────────────────────
-    setRunning('questions');
-    try {
-      const res = await fetch(`/api/recruit/candidates/${candidateId}/questions`, {
-        method: 'POST',
-        headers: { ...headers(), ...getAIHeaders() },
+          const res = await fetch(`/api/recruit/candidates/${candidateId}`, {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json', ...headers() },
+            body: JSON.stringify({ resumeText: text.trim() }),
+          });
+          if (!res.ok) throw new Error('resume save failed');
+        },
+        generateQuestions: async (candidateId) => {
+          const res = await fetch(`/api/recruit/candidates/${candidateId}/questions`, {
+            method: 'POST',
+            headers: { ...headers(), ...getAIHeaders() },
+          });
+          if (!res.ok) throw new Error('question generation failed');
+        },
       });
-      if (!res.ok) throw new Error();
-    } catch {
-      setRunning(null);
-      setFailedAt('questions');
-      onDone?.();
-      toast.error(t('errors.generateFailed'));
-      return;
-    }
 
-    onOpenChange(false);
-    router.push(`/recruit/${jobId}/c/${candidateId}/stage`);
+      setProgress(completed);
+      const candidateId = completed.candidateId;
+      if (!candidateId) throw new Error('candidate id missing after setup');
+      onOpenChange(false);
+      router.push(`/recruit/${jobId}/c/${candidateId}/stage`);
+    } catch (error) {
+      setRunning(null);
+      if (!(error instanceof CandidateSetupError)) {
+        toast.error(t('errors.saveFailed'));
+        return;
+      }
+
+      setProgress(error.progress);
+      setFailedAt(error.step);
+      if (error.progress.candidateId) onDone?.();
+      toast.error(
+        t(
+          error.step === 'create'
+            ? 'errors.saveFailed'
+            : error.step === 'resume'
+              ? 'errors.parseFailed'
+              : 'errors.generateFailed',
+        ),
+      );
+    }
   }
 
   return (
@@ -173,7 +186,7 @@ export function CandidateDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t('candidates.namePlaceholder')}
-              disabled={running !== null}
+              disabled={running !== null || createdInThisFlow}
             />
           </div>
 
@@ -201,7 +214,7 @@ export function CandidateDialog({
                 <button
                   type="button"
                   onClick={() => setFile(null)}
-                  disabled={running !== null}
+                  disabled={running !== null || resumeLocked}
                   aria-label={t('cancel')}
                   className="shrink-0 cursor-pointer text-zinc-400 hover:text-zinc-700 disabled:opacity-40 dark:hover:text-zinc-200"
                 >
@@ -212,7 +225,7 @@ export function CandidateDialog({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                disabled={running !== null}
+                disabled={running !== null || resumeLocked}
                 className="flex w-full cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed px-3 py-3 text-left transition-colors hover:border-brand disabled:opacity-40 dark:border-zinc-700"
               >
                 <Upload className="h-4 w-4 shrink-0 text-zinc-400" />
@@ -234,7 +247,7 @@ export function CandidateDialog({
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder={t('resume.pastePlaceholder')}
-                disabled={running !== null}
+                disabled={running !== null || resumeLocked}
                 className="max-h-[220px] min-h-[92px]"
               />
             </div>
@@ -290,7 +303,11 @@ export function CandidateDialog({
             className="cursor-pointer gap-2"
           >
             {running !== null && <Loader2 className="h-4 w-4 animate-spin" />}
-            {editing ? t('addFlow.reuploadSubmit') : t('addFlow.submit')}
+            {failedAt
+              ? t('addFlow.retry')
+              : editing
+                ? t('addFlow.reuploadSubmit')
+                : t('addFlow.submit')}
           </Button>
         </DialogFooter>
       </DialogContent>
