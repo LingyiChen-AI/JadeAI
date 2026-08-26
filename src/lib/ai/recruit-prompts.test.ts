@@ -467,6 +467,30 @@ describe('buildEvaluationPrompt', () => {
     expect(system).toContain('match against the JD');
     expect(system).toContain('Distinguish "not demonstrated" from "cannot do"');
   });
+
+  it('评价采用 HR 内部决策口径并禁止称呼、身份化和证据外推', () => {
+    const { system, prompt } = buildEvaluationPrompt({
+      jobTitle: 'AI 实习生',
+      jobDescription: '负责 Python CLI 与 Agent 工程化',
+      resumeText: '参与 RAG 项目',
+      dimensions: [
+        ...DIMENSIONS,
+        { key: 'communication', label: '沟通协作', weight: 2, custom: false },
+      ],
+      questions,
+      transcript: 'x',
+    });
+
+    expect(system).toContain('internal hiring decision memo for HR');
+    expect(system).toContain('Never use the candidate name');
+    expect(system).toContain('Do not use demographic or identity labels');
+    expect(system).toContain('本轮未验证');
+    expect(system).toContain('岗位匹配');
+    expect(system).toContain('已验证能力');
+    expect(system).toContain('主要风险');
+    expect(system).toContain('录用建议');
+    expect(prompt).toContain('Interview coverage: 1 questions across 1 of 3 configured dimensions');
+  });
 });
 
 describe('buildEvaluationPrompt 与参考答案', () => {
@@ -548,6 +572,15 @@ describe('出题 system prompt 的硬约束', () => {
   it('要求给危险信号，且不许写成泛泛的话', () => {
     expect(system).toContain('redFlags');
     expect(system).toContain('回答不深入');
+  });
+
+  it('禁止偏题式冷知识，并要求不同题型遵循真实面试提问链', () => {
+    expect(system).toContain('Do not ask for an obscure constant, default value, API name, or library name');
+    expect(system).toContain('Project deep-dive stem');
+    expect(system).toContain('Scenario stem');
+    expect(system).toContain('Fundamentals stem');
+    expect(system).toContain('Behavioral / pressure stem');
+    expect(system).toContain('JD must-have');
   });
 
   it('返回格式里追问是「目的 + 问题」的对象', () => {

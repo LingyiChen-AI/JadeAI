@@ -7,6 +7,7 @@ import { buildEvaluationPrompt } from '@/lib/ai/recruit-prompts';
 import { computeOverallScore } from '@/lib/recruit/scoring';
 import { hasAnyAnswer } from '@/lib/recruit/answers';
 import { questionsForEvaluation } from '@/lib/recruit/questions';
+import { finalizeEvaluationForHr } from '@/lib/recruit/evaluation';
 import { recruitRepository } from '@/lib/db/repositories/recruit.repository';
 import { requireOwnedCandidate } from '@/lib/recruit/access';
 import type {
@@ -98,17 +99,40 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }));
 
     const overallScore = computeOverallScore(dimensionScores);
+    const finalized = finalizeEvaluationForHr({
+      ...parsed,
+      questionEvaluations: questionEvaluations.map((evaluation) => ({
+        questionId: evaluation.questionId,
+        answerSummary: evaluation.answerSummary,
+        answered: evaluation.answered,
+        score: evaluation.score,
+        highlights: evaluation.highlights,
+        weaknesses: evaluation.weaknesses,
+      })),
+    }, {
+      candidateName: candidate.name,
+      substantiveQuestionCount: questionEvaluations.filter((evaluation) => evaluation.answered).length,
+      assessedDimensionCount: answeredDimensions.size,
+      configuredDimensionCount: dimensions.length,
+    });
+    const finalizedQuestionById = new Map(
+      finalized.questionEvaluations.map((evaluation) => [evaluation.questionId, evaluation]),
+    );
+    const finalizedQuestionEvaluations = questionEvaluations.map((evaluation) => ({
+      ...evaluation,
+      ...(finalizedQuestionById.get(evaluation.questionId) ?? {}),
+    }));
 
     const evaluation = await recruitRepository.upsertEvaluation({
       candidateId: id,
       overallScore,
       dimensionScores,
-      questionEvaluations,
-      recommendation: parsed.recommendation,
-      recommendationReason: parsed.recommendationReason,
-      strengths: parsed.strengths,
-      concerns: parsed.concerns,
-      overallComment: parsed.overallComment,
+      questionEvaluations: finalizedQuestionEvaluations,
+      recommendation: finalized.recommendation,
+      recommendationReason: finalized.recommendationReason,
+      strengths: finalized.strengths,
+      concerns: finalized.concerns,
+      overallComment: finalized.overallComment,
     });
 
     await recruitRepository.updateCandidate(id, { status: 'evaluated' });

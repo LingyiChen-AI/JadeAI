@@ -49,6 +49,25 @@ Seniority calibration:
 - Difficulty comes from the depth of reasoning and evidence required, not obscure trivia. Do not give a
   senior candidate junior recall questions or demand staff-level scope from a junior candidate.
 
+REAL INTERVIEW QUESTION SHAPE — follow the slot category, not whatever buzzword is easiest to ask:
+- Every question must test a JD must-have, a credible résumé claim, or a material gap. If the connection to
+  job performance is not obvious, rewrite it. A question that merely sounds technical is a failure.
+- Do not ask for an obscure constant, default value, API name, or library name unless the JD explicitly
+  requires that exact knowledge or the résumé explicitly claims having tuned/implemented it. Never turn a
+  gap into a vocabulary quiz such as “name a Python CLI library”. Test how the person would deliver the work.
+- Project deep-dive stem: begin from the claimed project, ask for the person's responsibility or a concrete
+  decision, then use follow-ups for implementation, evidence, failure, and reflection. Do not assume they
+  tuned a parameter, owned an architecture, or achieved a metric before they say so.
+- Scenario stem: give one realistic job task with a concrete desired outcome. Follow-ups progressively add
+  input/output, failure, observability, security, delivery, or acceptance constraints. Do not ask “how would
+  you design X” without enough workplace context to make trade-offs possible.
+- Fundamentals stem: prefer high-frequency core mechanisms that affect this JD. Connect mechanism to a code
+  example, production symptom, debugging signal, or engineering choice; never stop at reciting a definition.
+- Behavioral / pressure stem: ask for one past event and require Situation → personal Action → Result →
+  reflection evidence. Hypothetical slogans such as “I would communicate more” are not enough.
+- HR motivation stem: test the concrete choice, expectations, constraints, and consistency with this role;
+  do not ask generic self-introduction, personality, family, age, relationship, or other protected topics.
+
 Depth bar:
 - Project questions must expose what the candidate personally did, why, under what constraint, what
   evidence they used, what went wrong and what they learned. Do not accept "we used X" as proof.
@@ -91,7 +110,7 @@ Return JSON with this exact shape:
 
 ${JSON_RULE}`;
 
-const EVALUATION_SYSTEM = `You are a seasoned hiring interviewer scoring a completed interview. You are given the JD, the candidate's resume, the question set (with rubrics), and the raw interview transcript.
+const EVALUATION_SYSTEM = `You are a seasoned hiring interviewer writing an internal hiring decision memo for HR. You are given the JD, the resume, the question set (with rubrics), and the raw interview transcript.
 
 ${LANGUAGE_RULE}
 
@@ -104,6 +123,19 @@ Rules:
 - For each dimension, give a 0-100 score based ONLY on the questions in that dimension that were actually answered. If no question in a dimension was answered, still return the dimension with score 0 — the caller will exclude it.
 - Do NOT compute any aggregate or total score. The caller computes it from the dimension scores and the configured weights.
 - "recommendation" is one of: strong_hire, hire, hold, no_hire. Base it on the whole picture, not just the numbers.
+- Explicitly match against the JD must-haves; bonus skills cannot compensate for an unverified must-have.
+- This is an internal evidence memo, not feedback addressed to the interviewee. Never use the candidate name,
+  greetings, second-person address, or repeated labels such as “候选人/该候选人”. Write findings directly
+  and impersonally: “已展示…”, “回答显示…”, “本轮未验证…”.
+- Do not use demographic or identity labels (student status, age, gender, school tier, marital/family status)
+  unless the JD contains a lawful, job-essential requirement and the interview produced directly relevant evidence.
+  Never use personality-laden wording such as “稚嫩”, “聪明”, “老实”, “有灵性”, or “气场不足”.
+- Evidence boundary: a résumé claim is context, not verified evidence. Use the interview answers to confirm it.
+  A missing answer means “本轮未验证”, not “不会/缺乏/能力差”. Do not infer collaboration, learning ability,
+  ownership, stability, or engineering maturity from unrelated technical answers.
+- Coverage guardrail: if fewer than 5 substantive questions were assessed, or fewer than half of configured
+  dimensions have answered evidence, force recommendation="hold". State that evidence is insufficient and list
+  exactly what a follow-up interview must verify; do not produce a confident hire/no-hire conclusion.
 - "strengths": 3-5 substantive advantages. Each item must contain (1) a clear competency conclusion,
   (2) concrete evidence from a specific recorded answer/transcript detail, and (3) why that evidence matters
   for this JD. Do not write generic praise or repeat dimension scores.
@@ -111,11 +143,10 @@ Rules:
   (2) concrete answer evidence or an explicit lack of evidence, (3) its likely impact on this JD, and
   (4) what should be verified next. Distinguish "not demonstrated" from "cannot do".
 - "overallComment": write a detailed, decision-useful Chinese assessment of roughly 600-1000 Chinese
-  characters (or equivalent detail in the JD language). Use coherent paragraphs covering: overall profile;
-  technical depth across the assessed dimensions; problem-solving and engineering judgment; communication,
-  ownership and learning behavior; match against the JD's must-haves and material gaps; hiring level,
-  onboarding/management risks, and a final recommendation. Cite concrete interview evidence throughout.
-  Do not merely restate the strengths/concerns lists, scores, résumé, or JD.
+  characters (or equivalent detail in the JD language). Use exactly these four paragraph labels, each followed
+  by evidence-based prose: “岗位匹配：”, “已验证能力：”, “主要风险：”, “录用建议：”. For every conclusion,
+  cite the question/answer evidence that supports it. Put unassessed must-haves under “主要风险” as “本轮未验证”
+  with a proposed verification method. Do not restate the résumé, JD, score, strengths list, or concerns list.
 - "recommendationReason": 100-200 Chinese characters (or equivalent), explicitly connecting the recommendation
   to must-have JD coverage, strongest evidence, and the most important unresolved risk.
 
@@ -365,6 +396,7 @@ Reference points: ${q.referencePoints.join('; ')}${
   const dimensionLines = input.dimensions
     .map((d) => `- ${d.label} (key: ${d.key})`)
     .join('\n');
+  const assessedDimensionCount = new Set(input.questions.map((q) => q.dimension)).size;
 
   const prompt = `Job title: ${input.jobTitle}
 
@@ -376,6 +408,8 @@ ${input.resumeText}
 
 Dimensions to score:
 ${dimensionLines}
+
+Interview coverage: ${input.questions.length} questions across ${assessedDimensionCount} of ${input.dimensions.length} configured dimensions.
 
 Question set:
 ${questionBlocks}
