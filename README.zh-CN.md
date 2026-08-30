@@ -153,7 +153,7 @@
 - **求职信生成** — 基于简历和 JD 的 AI 定制求职信，可选语气（正式 / 友好 / 自信）
 - **语法与写作检查** — 检测弱动词、模糊描述和语法问题，返回质量评分
 - **多语言翻译** — 支持 10 种语言互译，保留专业术语原文
-- **灵活 AI 供应商** — 支持 OpenAI、Anthropic 及自定义 API 端点；用户在应用内自行配置密钥
+- **灵活 AI 供应商** — 支持 OpenAI、Anthropic 及任意兼容 OpenAI 的 API 端点（例如 [OrcaRouter](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17)，一个 Key 即可调用 200+ 模型）；用户在应用内自行配置密钥
 
 ### 模拟面试
 
@@ -290,7 +290,7 @@ docker run -d -p 3000:3000 \
 
 > **`AUTH_SECRET`** 为必填项，用于会话加密。通过 `openssl rand -base64 32` 生成。
 
-> **AI 配置：** 无需服务端 AI 环境变量。每位用户在应用内的 **设置 > AI** 中自行配置 API Key、Base URL 和模型。
+> **AI 配置：** 无需服务端 AI 环境变量。每位用户在应用内的 **设置 > AI** 中自行配置 API Key、Base URL 和模型。还没有模型密钥的话，[OrcaRouter](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17) 一个 Key 就能调用 200+ 模型，详见 [AI 模型配置](#ai-模型配置)。
 
 <details>
 <summary>使用 Google OAuth 登录</summary>
@@ -333,7 +333,7 @@ cp .env.example .env.local
 AUTH_ENABLED=false
 ```
 
-> **AI 配置：** 无需服务端环境变量。每位用户在应用内的 **设置 > AI** 中自行配置 API Key、Base URL 和模型。
+> **AI 配置：** 无需服务端环境变量。每位用户在应用内的 **设置 > AI** 中自行配置 API Key、Base URL 和模型。用 [OrcaRouter](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17) 一个 Key 调用 200+ 模型的方式见 [AI 模型配置](#ai-模型配置)。
 
 查看 `.env.example` 了解所有可用选项（Google OAuth、自定义 SQLite 路径等）。
 
@@ -352,6 +352,29 @@ pnpm dev
 ```
 
 打开 [http://localhost:3000](http://localhost:3000)。
+
+## AI 模型配置
+
+所有 AI 功能（对话、简历生成、JD 匹配、模拟面试、翻译……）都需要一个 API Key。JadeAI 不在服务端保存密钥——你在应用内的 **设置 > AI** 中填写，密钥只存在浏览器的 localStorage 里。
+
+任何兼容 OpenAI 协议的端点都能用：OpenAI、Anthropic、自建网关，或者模型路由服务。
+
+### 使用 OrcaRouter（一个 Key 调用 200+ 模型）
+
+[OrcaRouter](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17) 是一个兼容 OpenAI 协议的 AI 网关：一个 Key 即可调用 200+ 模型（OpenAI、Anthropic、Gemini、DeepSeek、Qwen 等），按供应商原价计费、不加价，并在供应商故障时自动切换。适合不想逐家注册、或者想在 JadeAI 里随时换模型又不用换 Key 的场景。
+
+1. 在 [orcarouter.ai](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17) 注册（有免费额度，无需信用卡），创建一个 API Key。
+2. 打开 JadeAI 的 **设置 > AI**，填写：
+
+| 配置项 | 填写内容 |
+|--------|----------|
+| Base URL | `https://api.orcarouter.ai/v1` |
+| API Key | 你的 OrcaRouter 密钥（`sk-...`） |
+| 模型 | [模型列表](https://www.orcarouter.ai/models)中的任意模型 ID |
+
+3. 保存后即可在编辑器里使用所有 AI 功能。
+
+如果想直连 OpenAI 或 Anthropic，在同一个面板里换成对应的 Base URL、Key 和模型 ID 即可。
 
 ## 环境变量
 
@@ -518,7 +541,9 @@ JadeAI 内置 **50 套专业设计模板**，覆盖多种风格和行业需求�
 <details>
 <summary><b>AI 配置是如何工作的？</b></summary>
 
-JadeAI 不需要在服务端配置 AI API 密钥。每位用户在应用内的 **设置 > AI** 中自行配置 AI 供应商（OpenAI、Anthropic 或自定义端点）、API Key 和模型。API 密钥仅存储在浏览器的 localStorage 中，不会发送到服务端存储。
+JadeAI 不需要在服务端配置 AI API 密钥。每位用户在应用内的 **设置 > AI** 中自行配置 AI 供应商（OpenAI、Anthropic 或任意兼容 OpenAI 协议的端点）、API Key 和模型。API 密钥仅存储在浏览器的 localStorage 中，不会发送到服务端存储。
+
+想用一个 Key 覆盖 200+ 模型，可以用 [OrcaRouter](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17)，Base URL 填 `https://api.orcarouter.ai/v1`。完整步骤见 [AI 模型配置](#ai-模型配置)。
 
 </details>
 

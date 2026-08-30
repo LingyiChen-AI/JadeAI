@@ -145,7 +145,7 @@ The following resume sections support Markdown syntax:
 - **Cover Letter Generation** — AI-tailored cover letter based on resume and JD, with tone selection (formal / friendly / confident)
 - **Grammar & Writing Check** — Detect weak verbs, vague descriptions, and grammar issues; returns a quality score
 - **Translation** — Translate resume content across 10 languages while preserving technical terms
-- **Flexible AI Provider** — Supports OpenAI, Anthropic, and custom API endpoints; each user configures their own key in-app
+- **Flexible AI Provider** — Supports OpenAI, Anthropic, and any OpenAI-compatible endpoint (such as [OrcaRouter](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17), which exposes 200+ models behind one key); each user configures their own key in-app
 
 ### Mock Interview
 
@@ -297,7 +297,7 @@ Open [http://localhost:3000](http://localhost:3000). Database auto-migrates and 
 
 > **`AUTH_SECRET`** is required for session encryption. Generate one with `openssl rand -base64 32`.
 
-> **AI Configuration:** No server-side AI env vars needed. Each user configures their own API Key, Base URL, and Model in **Settings > AI** within the app.
+> **AI Configuration:** No server-side AI env vars needed. Each user configures their own API Key, Base URL, and Model in **Settings > AI** within the app. If you don't have a provider key yet, [OrcaRouter](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17) gives you 200+ models through a single OpenAI-compatible endpoint — see [AI provider setup](#ai-provider-setup).
 
 <details>
 <summary>With Google OAuth</summary>
@@ -340,7 +340,7 @@ Edit `.env.local`:
 AUTH_ENABLED=false
 ```
 
-> **AI Configuration:** No server-side env vars needed. Each user configures their own API Key, Base URL, and Model in **Settings > AI** within the app.
+> **AI Configuration:** No server-side env vars needed. Each user configures their own API Key, Base URL, and Model in **Settings > AI** within the app. See [AI provider setup](#ai-provider-setup) for using [OrcaRouter](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17) to access 200+ models with one key.
 
 See `.env.example` for all available options (Google OAuth, custom SQLite path, etc.).
 
@@ -359,6 +359,29 @@ pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+## AI Provider Setup
+
+All AI features (chat, resume generation, JD matching, mock interview, translation…) need an API key. JadeAI never stores keys on the server — you fill them in under **Settings > AI** in the app, and they stay in your browser's local storage.
+
+Any OpenAI-compatible endpoint works. Point it at OpenAI, Anthropic, a self-hosted gateway, or a router.
+
+### Using OrcaRouter (200+ models, one key)
+
+[OrcaRouter](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17) is an OpenAI-compatible AI gateway: one key gives you access to 200+ models (OpenAI, Anthropic, Gemini, DeepSeek, Qwen and more) at provider pricing with no per-token markup, plus automatic failover between providers. Handy if you'd rather not sign up with every vendor separately, or want to switch models inside JadeAI without swapping keys.
+
+1. Register at [orcarouter.ai](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17) (free tier, no credit card) and create an API key.
+2. In JadeAI, open **Settings > AI** and fill in:
+
+| Field | Value |
+|-------|-------|
+| Base URL | `https://api.orcarouter.ai/v1` |
+| API Key | your OrcaRouter key (`sk-...`) |
+| Model | any model ID from the [model list](https://www.orcarouter.ai/models) |
+
+3. Save, then use any AI feature in the editor.
+
+To use OpenAI or Anthropic directly instead, just fill in that provider's base URL, key, and model ID in the same panel.
 
 ## Environment Variables
 
@@ -525,7 +548,9 @@ Contributions are welcome! Here's how to get started:
 <details>
 <summary><b>How does AI configuration work?</b></summary>
 
-JadeAI does not require server-side AI API keys. Each user configures their own AI provider (OpenAI, Anthropic, or custom endpoint), API key, and model in **Settings > AI** within the app. API keys are stored in the browser's local storage and are never sent to the server for storage.
+JadeAI does not require server-side AI API keys. Each user configures their own AI provider (OpenAI, Anthropic, or any OpenAI-compatible endpoint), API key, and model in **Settings > AI** within the app. API keys are stored in the browser's local storage and are never sent to the server for storage.
+
+If you want a single key that covers 200+ models, use [OrcaRouter](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17) with Base URL `https://api.orcarouter.ai/v1`. Full steps in [AI provider setup](#ai-provider-setup).
 
 </details>
 
