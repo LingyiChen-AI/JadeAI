@@ -52,6 +52,30 @@ export function LandingFooter() {
                   <Github className="h-5 w-5" />
                 </a>
               </div>
+              <a
+                href="https://launchai.tools"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-launchai-badge="featured"
+                aria-label="Featured on LaunchAI: Build Your Perfect Resume with AI"
+                className="mt-6 inline-flex items-center gap-2.5 rounded-md border border-[#1f2a24] bg-[#f8f8f6] px-[13px] py-2.5 text-[#17211b] no-underline transition-opacity hover:opacity-90"
+              >
+                <img
+                  src="https://launchai.tools/brand/launchai-rocket-mark-web.png"
+                  alt=""
+                  width={34}
+                  height={34}
+                  loading="lazy"
+                  decoding="async"
+                  className="block h-[34px] w-[34px] shrink-0 rounded-[5px] object-contain"
+                />
+                <span className="grid gap-0.5 leading-none">
+                  <span className="text-[11px] font-bold uppercase text-[#5f6966]">
+                    Featured on
+                  </span>
+                  <strong className="text-[19px] font-extrabold">LaunchAI</strong>
+                </span>
+              </a>
             </div>
 
             {/* Link columns */}
