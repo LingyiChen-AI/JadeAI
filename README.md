@@ -12,8 +12,7 @@ Build professional resumes with drag-and-drop editing, real-time AI optimization
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6)](https://www.typescriptlang.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ed)](https://hub.docker.com/r/twwch/jadeai)
 [![Powered by OrcaRouter](https://img.shields.io/badge/Powered_by-OrcaRouter-2563eb)](https://www.orcarouter.ai/ref/ref_1f47b025a90949564e17)
-
-<a href="https://launchai.tools" target="_blank" rel="noopener" data-launchai-badge="featured" aria-label="Featured on LaunchAI: Build Your Perfect Resume with AI" style="display:inline-flex;align-items:center;gap:10px;padding:10px 13px;border:1px solid #1f2a24;border-radius:6px;background:#f8f8f6;color:#17211b;font-family:Arial,Helvetica,sans-serif;text-decoration:none;"><span aria-hidden="true" style="display:block;width:34px;height:34px;flex:0 0 auto;overflow:hidden;border-radius:5px;"><img src="https://launchai.tools/brand/launchai-rocket-mark-web.png" alt="" width="34" height="34" loading="lazy" decoding="async" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit;" /></span><span style="display:grid;gap:2px;line-height:1.05;"><span style="color:#5f6966;font-size:11px;font-weight:700;letter-spacing:0;text-transform:uppercase;">Featured on</span><strong style="font-size:19px;font-weight:800;letter-spacing:0;">LaunchAI</strong></span></a>
+[![Featured on LaunchAI](https://img.shields.io/badge/Featured_on-LaunchAI-1f2a24)](https://launchai.tools)
 
 [中文文档](./README.zh-CN.md)
 
