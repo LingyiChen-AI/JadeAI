@@ -42,7 +42,7 @@ next-env.d.ts
 
 jadeai-data/*
 
-.superpowers
+.superpowers/*
 .worktrees
 
 test
