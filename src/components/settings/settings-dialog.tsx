@@ -27,17 +27,35 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useUIStore } from '@/stores/ui-store';
-import { useSettingsStore, getAIHeaders, type AIProvider } from '@/stores/settings-store';
+import {
+  useSettingsStore,
+  getAIHeaders,
+  isOrcaProvider,
+  type AIProvider,
+} from '@/stores/settings-store';
+import { OrcaRouterConnect } from '@/components/settings/orcarouter-connect';
+import { ModelSelector } from '@/components/settings/model-selector';
 import { useTourStore } from '@/stores/tour-store';
 import { usePathname, useRouter } from '@/i18n/routing';
 import { locales, localeNames } from '@/i18n/config';
 import { cn } from '@/lib/utils';
 
-const AI_PROVIDERS: { value: AIProvider; label: string }[] = [
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic' },
-  { value: 'gemini', label: 'Google Gemini' },
+/**
+ * The provider picker. OrcaRouter appears as two first-class entries rather than
+ * one button that sometimes asks for a key and sometimes opens a browser: the
+ * two have different failure modes, different logout semantics and different
+ * support answers, so the user chooses explicitly.
+ */
+const AI_PROVIDERS: { value: AIProvider; labelKey: string }[] = [
+  { value: 'openai', labelKey: 'openai' },
+  { value: 'anthropic', labelKey: 'anthropic' },
+  { value: 'gemini', labelKey: 'gemini' },
+  { value: 'orcarouter', labelKey: 'orcaApi' },
+  { value: 'orcarouter-oauth', labelKey: 'orcaAuth' },
 ];
+
+/** Non-text modalities the resume-parsing surface uploads. */
+const PARSE_INPUT_MODALITIES = ['image'] as const;
 
 export function SettingsDialog() {
   const t = useTranslations('settings');
@@ -66,7 +84,11 @@ export function SettingsDialog() {
 
   const startTour = useTourStore((s) => s.startTour);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [catalogToken, setCatalogToken] = useState(0);
   const isOpen = activeModal === 'settings';
+  const isOrca = isOrcaProvider(aiProvider);
+  const aiParseModel = useSettingsStore((s) => s.aiParseModel);
+  const setAIParseModel = useSettingsStore((s) => s.setAIParseModel);
 
   // Model combobox state
   const [modelOpen, setModelOpen] = useState(false);
@@ -178,23 +200,32 @@ export function SettingsDialog() {
                 <SelectContent>
                   {AI_PROVIDERS.map((p) => (
                     <SelectItem key={p.value} value={p.value}>
-                      {p.label}
+                      {t(`ai.providers.${p.labelKey}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* API Key */}
+            {/* API Key — the manual credential entry. With OrcaRouter selected
+                this is one of two explicit choices, and it stays fully usable on
+                its own: a user who already holds an `sk-orca-…` key never has to
+                open a browser. */}
             <div className="space-y-2">
-              <Label>{t('ai.apiKey')}</Label>
+              <Label htmlFor="ai-api-key-input">
+                {isOrca ? t('ai.orca.apiKeyLabel') : t('ai.apiKey')}
+              </Label>
               <div className="relative">
                 <Input
+                  id="ai-api-key-input"
                   type={showApiKey ? 'text' : 'password'}
                   value={aiApiKey}
                   onChange={(e) => setAIApiKey(e.target.value)}
-                  placeholder={t('ai.apiKeyPlaceholder')}
+                  placeholder={isOrca ? t('ai.orca.apiKeyPlaceholder') : t('ai.apiKeyPlaceholder')}
                   className="pr-10"
+                  autoComplete="off"
+                  spellCheck={false}
+                  data-testid="ai-api-key-input"
                 />
                 <Button
                   type="button"
@@ -202,12 +233,39 @@ export function SettingsDialog() {
                   size="icon-xs"
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
                   onClick={() => setShowApiKey(!showApiKey)}
+                  aria-label={showApiKey ? t('ai.orca.hideKey') : t('ai.orca.showKey')}
                 >
                   {showApiKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 </Button>
               </div>
-              <p className="text-xs text-zinc-400">{t('ai.apiKeyHint')}</p>
+              <p className="text-xs text-zinc-400">
+                {isOrca ? t('ai.orca.apiKeyHint') : t('ai.apiKeyHint')}
+              </p>
+              {isOrca && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs cursor-pointer"
+                  onClick={() => setAIApiKey('')}
+                  disabled={!aiApiKey}
+                  data-testid="orca-clear-key"
+                >
+                  {t('ai.orca.clearKey')}
+                </Button>
+              )}
             </div>
+
+            {/* Connect with OrcaRouter — the second, independent choice. Shown
+                alongside the key field so both are visible at once, whichever
+                OrcaRouter entry is selected. */}
+            {isOrca && (
+              <OrcaRouterConnect
+                provider={aiProvider}
+                capability="text"
+                onConnected={() => setCatalogToken((n) => n + 1)}
+              />
+            )}
 
             {/* Base URL */}
             <div className="space-y-2">
@@ -219,9 +277,22 @@ export function SettingsDialog() {
               />
             </div>
 
-            {/* Model — Combobox */}
+            {/* Model — for OrcaRouter this is a capability-filtered picker over
+                the live catalog; other providers keep the existing combobox. */}
             <div className="space-y-2">
               <Label>{t('ai.model')}</Label>
+              {isOrca ? (
+                <ModelSelector
+                  provider={aiProvider}
+                  capability="text"
+                  apiKey={aiApiKey}
+                  baseURL={aiBaseURL}
+                  value={aiModel}
+                  onChange={setAIModel}
+                  refreshToken={catalogToken}
+                  testIdPrefix="orca-model"
+                />
+              ) : (
               <Popover open={modelOpen} onOpenChange={setModelOpen} modal={false}>
                 <PopoverTrigger asChild>
                   <Button
@@ -294,7 +365,29 @@ export function SettingsDialog() {
                   </div>
                 </PopoverContent>
               </Popover>
+              )}
             </div>
+
+            {/* Resume parsing uploads page images, so it needs a model that
+                explicitly declares image input. This is the same picker with a
+                different capability filter — not a free-text field. */}
+            {isOrca && (
+              <div className="space-y-2">
+                <Label>{t('ai.orca.multimodalModel')}</Label>
+                <ModelSelector
+                  provider={aiProvider}
+                  capability="multimodal"
+                  requiredInputModalities={[...PARSE_INPUT_MODALITIES]}
+                  apiKey={aiApiKey}
+                  baseURL={aiBaseURL}
+                  value={aiParseModel}
+                  onChange={setAIParseModel}
+                  refreshToken={catalogToken}
+                  testIdPrefix="orca-multimodal-model"
+                />
+                <p className="text-xs text-zinc-400">{t('ai.orca.multimodalHint')}</p>
+              </div>
+            )}
           </TabsContent>
 
           {/* Appearance Tab */}

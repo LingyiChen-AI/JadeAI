@@ -385,6 +385,37 @@ Any OpenAI-compatible endpoint works. Point it at OpenAI, Anthropic, a self-host
 
 To use OpenAI or Anthropic directly instead, just fill in that provider's base URL, key, and model ID in the same panel.
 
+#### OrcaRouter as a first-class provider
+
+OrcaRouter also appears directly in the **Model Protocol** picker, with two
+separate entries and two ways to authenticate:
+
+| Entry | How you sign in |
+|-------|-----------------|
+| OrcaRouter – API | Paste an `sk-orca-…` key you created in the OrcaRouter console. |
+| OrcaRouter – Auth | Click **Connect with OrcaRouter** and approve the request in your browser, then paste back the code shown. No client secret and no redirect URI to register. |
+
+Both produce the same thing — an ordinary OrcaRouter API key that belongs to
+your account, is billed to you, and can be revoked from
+[the OrcaRouter console](https://www.orcarouter.ai/console/authorized-apps) at
+any time. Either way the key is stored locally in your browser and sent only to
+OrcaRouter.
+
+When an OrcaRouter entry is selected, the model field becomes a searchable list
+built from your own account's live model catalogue (`GET /v1/models`), filtered
+to what the feature you are using can actually handle — text chat, multimodal
+(resume parsing uploads page images, so it only offers models that declare image
+input), embeddings, image generation, video, or rerank. You do not type a model
+name; if the catalogue is unreachable, a small verified fallback list is shown
+and labelled as such.
+
+The two authentication choices are independent: use the API-key entry if you
+already have a key, or the Auth entry if you would rather not create one by
+hand.
+
+If you prefer to keep configuring OrcaRouter by hand as a generic
+OpenAI-compatible endpoint, the manual route above still works.
+
 ## Environment Variables
 
 | Variable | Required | Default | Description |

@@ -1,6 +1,6 @@
 import { generateText } from 'ai';
 import type { ModelMessage } from 'ai';
-import { getModel, getJsonProviderOptions, type AIConfig } from '@/lib/ai/provider';
+import { getParseModel, getJsonProviderOptions, type AIConfig } from '@/lib/ai/provider';
 import type { ParsedResume } from '@/lib/ai/parse-schema';
 
 export const ACCEPTED_RESUME_TYPES = [
@@ -55,7 +55,10 @@ export function validateResumeFile(file: File): string | null {
 export async function parseResumeFile(file: File, aiConfig: AIConfig): Promise<ParsedResume> {
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  const model = getModel(aiConfig);
+  // Multimodal surface: resume parsing sends page images, so it takes the
+  // multimodal model (which is capability-filtered separately) rather than the
+  // text default.
+  const model = getParseModel(aiConfig);
 
   // Build messages based on file type
   const messages: ModelMessage[] = [];
