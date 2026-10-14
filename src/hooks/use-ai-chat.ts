@@ -18,6 +18,7 @@ interface UseAIChatOptions {
 export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel }: UseAIChatOptions) {
   const [input, setInput] = useState('');
   const [localMessages, setLocalMessages] = useState<UIMessage[]>([]);
+  const [saveError, setSaveError] = useState<Error | undefined>();
 
   const modelRef = useRef(selectedModel);
   modelRef.current = selectedModel;
@@ -53,7 +54,14 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
    */
   const sendMessage = useCallback(
     async (message: Parameters<typeof rawSendMessage>[0]) => {
-      await useResumeStore.getState().flushSave();
+      setSaveError(undefined);
+      try {
+        await useResumeStore.getState().flushSave();
+      } catch (error) {
+        // Existing fire-and-forget callers observe this through the chat error UI.
+        setSaveError(error instanceof Error ? error : new Error('Resume save failed'));
+        return;
+      }
       return rawSendMessage(message);
     },
     [rawSendMessage],
@@ -167,7 +175,7 @@ export function useAIChat({ resumeId, sessionId, initialMessages, selectedModel 
     handleSubmit,
     isLoading,
     status,
-    error,
+    error: saveError ?? error,
     clearMessages,
     sendMessage,
   };

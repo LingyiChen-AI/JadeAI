@@ -1,4 +1,4 @@
-import { resumeRepository } from '@/lib/db/repositories/resume.repository';
+import type { resumeRepository } from '@/lib/db/repositories/resume.repository';
 import { BACKGROUND_TEMPLATES } from '@/lib/constants';
 import type {
   PersonalInfoContent,

@@ -1,9 +1,13 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
+import { useRouter } from '@/i18n/routing';
+import { Button } from '@/components/ui/button';
 import { useEditor } from '@/hooks/use-editor';
 import { useFingerprint } from '@/hooks/use-fingerprint';
+import { useResumeStore } from '@/stores/resume-store';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { EditorToolbar } from '@/components/editor/editor-toolbar';
 import { EditorSidebar } from '@/components/editor/editor-sidebar';
@@ -41,14 +45,19 @@ const EDITOR_TOUR_STEPS: TourStepConfig[] = [
 
 export default function EditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const t = useTranslations();
+  const router = useRouter();
   const { isLoading: fpLoading } = useFingerprint();
-  const { resume, sections, updateSection, addSection, removeSection, reorderSections } = useEditor(id);
+  const { resume, sections, loadError, loadResume, updateSection, addSection, removeSection, reorderSections } = useEditor(id);
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { showThemeEditor, mobileActiveTab, setPendingAiMessage, setShowAiChat } = useEditorStore();
   const { activeModal, openModal, closeModal } = useUIStore();
   const { hydrate, _hydrated } = useSettingsStore();
   const startTour = useTourStore((s) => s.startTour);
+  const { currentResume, sections: liveSections, flushSave } = useResumeStore();
+  const liveResume = useMemo(() => currentResume?.id === id ? { ...currentResume, sections: liveSections } : null,
+    [currentResume, liveSections, id]);
 
   useEffect(() => {
     if (!_hydrated) hydrate();
@@ -90,6 +99,16 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
       setShowAiChat(true);
     }
   }, [resume, id, setPendingAiMessage, setShowAiChat]);
+
+  if (loadError) return (
+    <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-background p-4">
+      <p role="alert" className="text-sm text-muted-foreground">{t('preview.loadError')}</p>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={() => router.push('/dashboard')}>{t('common.back')}</Button>
+        <Button onClick={() => { void loadResume(); }}>{t('preview.retry')}</Button>
+      </div>
+    </div>
+  );
 
   if (fpLoading || !resume) {
     return (
@@ -177,11 +196,12 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         onOpenChange={(open) => open ? openModal('translate') : closeModal()}
         resumeId={id}
       />
-      <ExportDialog
+      {liveResume && <ExportDialog key={liveResume.id}
         open={activeModal === 'export'}
         onOpenChange={(open) => open ? openModal('export') : closeModal()}
-        resumeId={id}
-      />
+        resume={liveResume}
+        beforeExport={flushSave}
+      />}
       <ImportDialog
         open={activeModal === 'import'}
         onOpenChange={(open) => open ? openModal('import') : closeModal()}

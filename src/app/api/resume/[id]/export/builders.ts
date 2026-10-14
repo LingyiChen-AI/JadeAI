@@ -2,6 +2,8 @@ import { esc, buildExportThemeCSS, DEFAULT_THEME, type ResumeWithSections } from
 import { EXPORT_TAILWIND_CSS } from '@/lib/pdf/export-tailwind-css';
 import { BACKGROUND_TEMPLATES } from '@/lib/constants';
 import { generateQrSvg } from '@/lib/qrcode';
+import type { PdfLayout } from '@/lib/pdf/layout';
+import { CONTINUOUS_LAYOUT_CSS } from '@/lib/pdf/continuous-layout';
 import { buildClassicHtml } from './templates/classic';
 import { buildModernHtml } from './templates/modern';
 import { buildMinimalHtml } from './templates/minimal';
@@ -161,7 +163,7 @@ async function preGenerateQrSvgs(resume: ResumeWithSections): Promise<void> {
   (qrSection.content as any)._qrSvgs = svgs;
 }
 
-export async function generateHtml(resume: ResumeWithSections, forPdf = false): Promise<string> {
+export async function generateHtml(resume: ResumeWithSections, forPdf: boolean | PdfLayout = false): Promise<string> {
   // Pre-generate QR SVGs so sync template builders can use them
   await preGenerateQrSvgs(resume);
   const builder = TEMPLATE_BUILDERS[resume.template] || buildClassicHtml;
@@ -191,7 +193,12 @@ export async function generateHtml(resume: ResumeWithSections, forPdf = false): 
   const pageMarginTop = pxToMm(theme.margin.top);
   const pageMarginBottom = pxToMm(theme.margin.bottom);
 
-  const pdfOverrides = forPdf
+  const pdfOverrides = forPdf === 'continuous'
+    ? `${CONTINUOUS_LAYOUT_CSS}
+       ${resume.template === 'gradient' ? '.resume-export > div { overflow-x: clip !important; overflow-y: visible !important; }' : ''}
+       /* Fill the subpixel rounding allowance with the template background. */
+       html, body { background: ${bodyBg} !important; }`
+    : forPdf
     ? `/* Page margins and fragmentation */
        @page { margin: ${needsEdgeToEdge ? '0' : `${pageMarginTop}mm 0 ${pageMarginBottom}mm 0`}; }
        html, body { background: ${bodyBg} !important; padding: 0 !important; margin: 0 !important; display: block !important; min-height: 100%; }

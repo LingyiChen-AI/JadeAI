@@ -123,6 +123,7 @@
       "saving": "Saving...",
       "unsaved": "Unsaved",
       "save": "Save",
+      "saveFailed": "Save failed. Please retry.",
       "exportPdf": "Export",
       "exporting": "Exporting...",
       "jdAnalysis": "JD Match",
@@ -477,6 +478,12 @@
     "loadingHistory": "Loading history..."
   },
   "export": {
+    "pdfLayout": "PDF layout",
+    "pdfA4": "A4 standard",
+    "pdfFitOnePage": "A4 fit to one page",
+    "pdfContinuous": "Continuous page",
+    "printFallbackLimit": "Browser printing uses its own pagination and does not preserve fit to one page compression or continuous page output.",
+    "resumeChanged": "The resume changed. Please export again.",
     "title": "Export Resume",
     "description": "Choose a format to export your resume",
     "pdf": "PDF",
@@ -498,7 +505,15 @@
     "error": "Export failed. Please try again.",
     "pdfFailedHint": "The server couldn't generate the PDF (Chromium may be missing or under-resourced). You can print to PDF in your browser instead.",
     "printFallback": "Print to PDF in browser",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "pdfInvalidSnapshot": "Resume validation failed. Check these fields: {fields}.",
+    "pdfTooLarge": "The resume or avatar is too large. Reduce the image size or shorten the content.",
+    "pdfAccessDenied": "Cannot access this resume. Check your sign-in status and access permissions.",
+    "pdfBusy": "The PDF export service is busy. Please retry shortly.",
+    "pdfTimeout": "PDF export timed out. Please retry or choose another layout.",
+    "pdfRenderFailed": "PDF generation failed: {reason}",
+    "pdfInvalidResponse": "The server did not return a valid PDF file. Please retry.",
+    "pdfNetworkError": "Cannot reach the PDF export service. Check your connection and retry."
   },
   "import": {
     "title": "Import Resume",
@@ -1186,5 +1201,9 @@
     "collapse": "Collapse",
     "expand": "Expand",
     "close": "Close"
+  },
+  "preview": {
+    "loadError": "Unable to load this resume. Check your access and retry.",
+    "retry": "Retry"
   }
 }

@@ -1,5 +1,13 @@
-import puppeteer, { type Page } from 'puppeteer-core';
+import puppeteer, { type Browser, type Page } from 'puppeteer-core';
 import { accessSync } from 'fs';
+import type { PdfLayout } from './layout';
+import {
+  CONTINUOUS_WIDTH_MM,
+  CONTINUOUS_WIDTH_PX,
+  MAX_CONTINUOUS_HEIGHT_PX,
+  CONTINUOUS_RESOURCE_TIMEOUT_MS,
+  CONTINUOUS_RENDER_TIMEOUT_MS,
+} from './continuous-layout';
 
 // A4 dimensions in CSS pixels at 96 DPI
 const A4_WIDTH_PX = 794;   // 210mm
@@ -8,6 +16,8 @@ const MAX_ITERATIONS = 20;
 
 interface PdfOptions {
   fitOnePage?: boolean;
+  layout?: PdfLayout;
+  signal?: AbortSignal;
 }
 
 // Container/host-friendly Chromium flags. --disable-dev-shm-usage avoids the
@@ -20,16 +30,19 @@ const LAUNCH_ARGS = [
   '--disable-gpu',
 ];
 
-async function getBrowser() {
+async function getBrowser(signal?: AbortSignal) {
+  signal?.throwIfAborted();
   // Vercel serverless: use @sparticuz/chromium-min (downloads binary at runtime)
   if (process.env.VERCEL) {
     const chromium = await import('@sparticuz/chromium-min');
+    const executablePath = await chromium.default.executablePath(
+      'https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar',
+    );
+    // A cancelled binary download must never start a late Chromium process.
+    signal?.throwIfAborted();
     return puppeteer.launch({
       args: chromium.default.args,
-      executablePath: await chromium.default.executablePath(
-        'https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar',
-      ),
-      headless: true,
+      executablePath, headless: true, signal, timeout: 15_000,
     });
   }
 
@@ -60,6 +73,7 @@ async function getBrowser() {
         executablePath: path,
         args: LAUNCH_ARGS,
         headless: true,
+        signal, timeout: 15_000,
       });
     } catch {
       continue;
@@ -379,40 +393,174 @@ async function preventNearlyBlankPage(page: Page): Promise<void> {
   });
 }
 
-export async function generatePdf(html: string, options: PdfOptions = {}): Promise<Buffer> {
-  const browser = await getBrowser();
+async function withTimeout<T>(operation: Promise<T>, timeout: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const page = await browser.newPage();
-
-    // Set viewport to A4 width before loading content for accurate layout
-    await page.setViewport({ width: A4_WIDTH_PX, height: A4_HEIGHT_PX });
-
-    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 15000 });
-
-    // Wait for web fonts (e.g. Noto Sans SC) to finish loading
-    await page.evaluate(() => document.fonts.ready);
-
-    // Double rAF to ensure layout is fully settled after font swap
-    await page.evaluate(() => new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-    ));
-
-    if (options.fitOnePage) {
-      await fitContentToOnePage(page);
-    } else {
-      // Auto-prevent nearly-blank second pages (e.g. sidebar-dark templates
-      // where box-decoration-break:clone inflates height at page breaks)
-      await preventNearlyBlankPage(page);
-    }
-
-    const pdf = await page.pdf({
-      format: 'A4',
-      scale: 1,
-      printBackground: true,
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
-    });
-    return Buffer.from(pdf);
+    return await Promise.race([
+      operation,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeout);
+      }),
+    ]);
   } finally {
-    await browser.close();
+    clearTimeout(timer);
   }
+}
+
+async function closePdfBrowser(browser: Browser): Promise<void> {
+  try {
+    await withTimeout(browser.close(), 5_000, 'Chromium cleanup timed out');
+  } catch {
+    // A hung renderer must not leave a Chromium process behind.
+    browser.process()?.kill('SIGKILL');
+  }
+}
+
+async function renderContinuousPage(browser: Browser, html: string): Promise<Buffer> {
+  const page = await browser.newPage();
+  await page.setViewport({ width: Math.ceil(CONTINUOUS_WIDTH_PX), height: A4_HEIGHT_PX });
+  // Measure using the same media and fixed CSS width as the final PDF.
+  await page.emulateMediaType('print');
+  await page.setContent(html, { waitUntil: 'load', timeout: CONTINUOUS_RESOURCE_TIMEOUT_MS });
+  await page.waitForFunction(
+    () => document.fonts.status === 'loaded' && Array.from(document.images).every(img => img.complete),
+    { timeout: CONTINUOUS_RESOURCE_TIMEOUT_MS },
+  );
+
+  const dimensions = await page.evaluate(async () => {
+    for (const image of Array.from(document.images)) {
+      if (image.naturalWidth === 0) throw new Error('A resume image failed to load. Retry PDF export.');
+      await image.decode();
+    }
+    const root = document.querySelector<HTMLElement>('.resume-export');
+    if (!root) throw new Error('Continuous PDF requires a resume export container');
+    const measure = () => {
+      const rect = root.getBoundingClientRect();
+      let bottom = rect.bottom;
+      for (const el of root.querySelectorAll('*')) {
+        bottom = Math.max(bottom, el.getBoundingClientRect().bottom);
+      }
+      return {
+        height: Math.max(rect.height, root.scrollHeight, bottom - rect.top),
+        width: Math.max(rect.width, root.scrollWidth),
+      };
+    };
+    let previous = measure();
+    let stableFrames = 0;
+    while (stableFrames < 3) {
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      const next = measure();
+      stableFrames = Math.abs(next.height - previous.height) < 0.25 &&
+        Math.abs(next.width - previous.width) < 0.25 ? stableFrames + 1 : 0;
+      previous = next;
+    }
+    return previous;
+  });
+
+  // Round up and allow 2 CSS pixels for Chromium's print-unit rounding.
+  const height = Math.ceil(dimensions.height) + 2;
+  if (!Number.isFinite(height) || height <= 2 || height > MAX_CONTINUOUS_HEIGHT_PX) {
+    throw new Error('Resume exceeds the continuous PDF height limit. Use an A4 layout instead.');
+  }
+  if (dimensions.width > CONTINUOUS_WIDTH_PX + 1) {
+    throw new Error('Resume exceeds the continuous PDF width. Use an A4 layout instead.');
+  }
+  await page.addStyleTag({ content: `
+    @page { size: ${CONTINUOUS_WIDTH_MM}mm ${height}px; margin: 0; }
+    .resume-export > div { min-height: ${height - 12}px !important; }
+  ` });
+  const pdf = await page.pdf({
+    width: `${CONTINUOUS_WIDTH_MM}mm`,
+    height: `${height}px`,
+    preferCSSPageSize: true,
+    scale: 1,
+    printBackground: true,
+    margin: { top: '0', right: '0', bottom: '0', left: '0' },
+    timeout: 15_000,
+    // Fonts were already awaited under the resource and render deadlines.
+    waitForFonts: false,
+  });
+  return Buffer.from(pdf);
+}
+
+async function launchPdfBrowser(signal?: AbortSignal): Promise<Browser> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error('Chromium launch timed out. Retry PDF export.')), 15_000);
+  const onAbort = () => controller.abort(signal?.reason);
+  signal?.addEventListener('abort', onAbort, { once: true });
+  const launch = getBrowser(controller.signal);
+  let browser: Browser;
+  let rejectCancelled: (() => void) | undefined;
+  try {
+    const cancelled = new Promise<never>((_, reject) => {
+      rejectCancelled = () => reject(controller.signal.reason);
+      controller.signal.addEventListener('abort', rejectCancelled, { once: true });
+    });
+    browser = await Promise.race([launch, cancelled]);
+  } catch (error) {
+    // If launch finishes after its deadline, still dispose of its browser.
+    void launch.then(closePdfBrowser).catch(() => {});
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', onAbort);
+    if (rejectCancelled) controller.signal.removeEventListener('abort', rejectCancelled);
+  }
+  return browser;
+}
+
+export async function generatePdf(html: string, options: PdfOptions = {}): Promise<Buffer> {
+  options.signal?.throwIfAborted();
+  const browser = await launchPdfBrowser(options.signal);
+  let onAbort: (() => void) | undefined;
+  try {
+    options.signal?.throwIfAborted();
+    const cancelled = new Promise<never>((_, reject) => {
+      onAbort = () => reject(options.signal?.reason ?? new DOMException('PDF request cancelled', 'AbortError'));
+      options.signal?.addEventListener('abort', onAbort, { once: true });
+    });
+    const render = options.layout === 'continuous'
+      ? renderContinuousPage(browser, html)
+      : renderA4Page(browser, html, options);
+    return await withTimeout(
+      Promise.race([render, cancelled]), CONTINUOUS_RENDER_TIMEOUT_MS,
+      'PDF rendering timed out. Retry or use an A4 layout.',
+    );
+  } finally {
+    if (onAbort) options.signal?.removeEventListener('abort', onAbort);
+    await closePdfBrowser(browser);
+  }
+}
+
+async function renderA4Page(browser: Browser, html: string, options: PdfOptions): Promise<Buffer> {
+  const page = await browser.newPage();
+
+  // Set viewport to A4 width before loading content for accurate layout
+  await page.setViewport({ width: A4_WIDTH_PX, height: A4_HEIGHT_PX });
+
+  await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 15000 });
+
+  // Wait for web fonts (e.g. Noto Sans SC) to finish loading
+  await page.evaluate(() => document.fonts.ready);
+
+  // Double rAF to ensure layout is fully settled after font swap
+  await page.evaluate(() => new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  ));
+
+  if (options.layout === 'fit-one-page' || (!options.layout && options.fitOnePage)) {
+    await fitContentToOnePage(page);
+  } else {
+    // Auto-prevent nearly-blank second pages (e.g. sidebar-dark templates
+    // where box-decoration-break:clone inflates height at page breaks)
+    await preventNearlyBlankPage(page);
+  }
+
+  const pdf = await page.pdf({
+    format: 'A4',
+    scale: 1,
+    printBackground: true,
+    margin: { top: '0', right: '0', bottom: '0', left: '0' },
+  });
+  return Buffer.from(pdf);
 }
