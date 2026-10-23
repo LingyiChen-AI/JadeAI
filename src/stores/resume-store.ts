@@ -3,6 +3,9 @@ import type { Resume, ResumeSection, SectionContent } from '@/types/resume';
 import { AUTOSAVE_DELAY } from '@/lib/constants';
 import { useSettingsStore } from '@/stores/settings-store';
 import { normalizeSectionContent } from '@/lib/resume/normalize-content';
+import { parseThemeConfig } from '@/lib/resume/parse-theme-config';
+
+export class ResumeSaveError extends Error {}
 
 interface ResumeStore {
   currentResume: Resume | null;
@@ -37,6 +40,8 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   _savePromise: null,
 
   setResume: (resume) => {
+    // Templates and the theme editor supply defaults for missing theme fields.
+    const themeConfig = (parseThemeConfig(resume.themeConfig) ?? {}) as Resume['themeConfig'];
     // Cancel any pending autosave to prevent stale data overwriting server changes (e.g., from AI tool calls)
     const { _saveTimeout } = get();
     if (_saveTimeout) clearTimeout(_saveTimeout);
@@ -51,7 +56,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
     }));
 
     set({
-      currentResume: { ...resume, sections },
+      currentResume: { ...resume, themeConfig, sections },
       sections,
       isDirty: false,
       _saveTimeout: null,
@@ -156,8 +161,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   save: async () => {
     // 已经有一次在飞就先等它落地。两次 PUT 并行的话，先发的那次可能后到，
     // 于是旧内容盖掉新内容——防抖保存和 flushSave 撞在一起时正好会这样。
-    const inFlight = get()._savePromise;
-    if (inFlight) await inFlight;
+    while (get()._savePromise) await get()._savePromise;
 
     const { currentResume, sections, isDirty } = get();
     if (!currentResume || !isDirty) return;
@@ -167,7 +171,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
         ? localStorage.getItem('jade_fingerprint')
         : null;
 
-      await fetch(`/api/resume/${currentResume.id}`, {
+      const response = await fetch(`/api/resume/${currentResume.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -187,6 +191,12 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
           })),
         }),
       });
+      if (!response.ok) {
+        const data: unknown = await response.json().catch(() => null);
+        const detail = data && typeof data === 'object' && 'error' in data && typeof data.error === 'string'
+          ? data.error : `Resume save failed (${response.status})`;
+        throw new ResumeSaveError(detail);
+      }
     })();
 
     set({ isSaving: true, _savePromise: request });
@@ -201,6 +211,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to save resume:', error);
+      throw error;
     } finally {
       set({ isSaving: false, _savePromise: null });
     }
@@ -239,7 +250,8 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
 
     const delay = _hydrated ? autoSaveInterval : AUTOSAVE_DELAY;
     const timeout = setTimeout(() => {
-      get().save();
+      // Manual callers receive the error; autosave keeps dirty state for retry.
+      void get().save().catch(() => {});
     }, delay);
 
     set({ _saveTimeout: timeout });

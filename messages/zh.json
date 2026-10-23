@@ -123,6 +123,7 @@
       "saving": "保存中...",
       "unsaved": "未保存",
       "save": "保存",
+      "saveFailed": "保存失败，请重试。",
       "exportPdf": "导出",
       "exporting": "导出中...",
       "jdAnalysis": "JD 匹配",
@@ -477,6 +478,12 @@
     "loadingHistory": "加载历史..."
   },
   "export": {
+    "pdfLayout": "PDF 排版",
+    "pdfA4": "A4 标准",
+    "pdfFitOnePage": "A4 智能一页",
+    "pdfContinuous": "连续长页",
+    "printFallbackLimit": "浏览器打印使用浏览器自身的分页规则，不能保留智能一页压缩或连续长页结果。",
+    "resumeChanged": "简历已变化，请重新导出。",
     "title": "导出简历",
     "description": "选择导出格式下载简历",
     "pdf": "PDF",
@@ -498,7 +505,15 @@
     "error": "导出失败，请重试。",
     "pdfFailedHint": "服务器生成 PDF 失败（可能未安装 Chromium 或资源不足）。可改用浏览器打印为 PDF。",
     "printFallback": "用浏览器打印为 PDF",
-    "cancel": "取消"
+    "cancel": "取消",
+    "pdfInvalidSnapshot": "简历数据校验失败，请检查这些字段：{fields}。",
+    "pdfTooLarge": "简历内容或头像过大，请缩小头像或精简内容后导出。",
+    "pdfAccessDenied": "无法访问这份简历，请检查登录状态和访问权限。",
+    "pdfBusy": "PDF 导出服务繁忙，请稍后重试。",
+    "pdfTimeout": "PDF 导出超时，请稍后重试或选择其他排版。",
+    "pdfRenderFailed": "PDF 生成失败：{reason}",
+    "pdfInvalidResponse": "服务器没有返回有效的 PDF 文件，请稍后重试。",
+    "pdfNetworkError": "无法连接 PDF 导出服务，请检查网络后重试。"
   },
   "import": {
     "title": "导入简历",
@@ -1186,5 +1201,9 @@
     "collapse": "收起",
     "expand": "展开",
     "close": "关闭"
+  },
+  "preview": {
+    "loadError": "无法加载简历，请检查访问权限后重试。",
+    "retry": "重试"
   }
 }

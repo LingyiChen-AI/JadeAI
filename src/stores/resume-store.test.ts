@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useResumeStore } from './resume-store';
 import { useSettingsStore } from './settings-store';
+import { createPdfSnapshot } from '@/lib/pdf/snapshot';
+import { pdfSnapshotRequestSchema } from '@/lib/pdf/snapshot-schema';
+import { pdfResumeFixture } from '@/lib/pdf/resume-pdf.fixtures';
+import type { Resume } from '@/types/resume';
 
 const RESUME = {
   id: 'r1',
@@ -24,6 +28,20 @@ describe('resume-store 保存', () => {
     useResumeStore.getState().reset();
     vi.unstubAllGlobals();
     vi.useRealTimers();
+  });
+
+  it('keeps layout edits exportable after loading a serialized legacy theme', () => {
+    const resume = pdfResumeFixture();
+    delete (resume.sections[0].content as Record<string, unknown>).avatar;
+    useResumeStore.getState().setResume({ ...resume, themeConfig: '{}' } as unknown as Resume);
+    const current = useResumeStore.getState().currentResume!;
+    expect(current.themeConfig).toEqual({});
+    // Reproduce the theme editor's spread-based update after reading the record.
+    const edited = { ...current, themeConfig: { ...current.themeConfig, lineSpacing: 1.6, sectionSpacing: 18 } };
+    expect(pdfSnapshotRequestSchema.safeParse({
+      format: 'pdf', layout: 'a4', resume: createPdfSnapshot(edited),
+    }).success).toBe(true);
+    expect(resume.themeConfig).toBeNull();
   });
 
   describe('flushSave', () => {
@@ -81,6 +99,47 @@ describe('resume-store 保存', () => {
   });
 
   describe('save 串行化', () => {
+    it('keeps failed changes dirty and rejects manual saves on HTTP errors', async () => {
+      useSettingsStore.setState({ autoSave: false, _hydrated: true });
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500,
+          json: async () => ({ error: 'STAGE2_SAVE_FAILURE' }) }));
+        useResumeStore.getState().setResume(RESUME);
+        useResumeStore.getState().setTitle('Unsaved');
+        await expect(useResumeStore.getState().flushSave()).rejects.toThrow('STAGE2_SAVE_FAILURE');
+        expect(useResumeStore.getState()).toMatchObject({ isDirty: true, isSaving: false, _savePromise: null });
+        vi.mocked(fetch).mockResolvedValue({ ok: true } as Response);
+        await useResumeStore.getState().flushSave();
+        expect(useResumeStore.getState().isDirty).toBe(false);
+      } finally { log.mockRestore(); useSettingsStore.setState({ autoSave: true, _hydrated: false }); }
+    });
+
+    it('does not silently swallow network failures during export saves', async () => {
+      useSettingsStore.setState({ autoSave: false, _hydrated: true });
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        vi.mocked(fetch).mockRejectedValue(new Error('Network unavailable'));
+        useResumeStore.getState().setResume(RESUME);
+        useResumeStore.getState().setTitle('Unsaved');
+        await expect(useResumeStore.getState().flushSave()).rejects.toThrow('Network unavailable');
+        expect(useResumeStore.getState().isDirty).toBe(true);
+      } finally { log.mockRestore(); useSettingsStore.setState({ autoSave: true, _hydrated: false }); }
+    });
+
+    it('handles autosave rejection without an unhandled promise and preserves dirty state', async () => {
+      vi.useFakeTimers();
+      useSettingsStore.setState({ autoSave: true, _hydrated: true, autoSaveInterval: 100 });
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        vi.mocked(fetch).mockResolvedValue({ ok: false, status: 500, json: async () => ({}) } as Response);
+        useResumeStore.getState().setResume(RESUME);
+        useResumeStore.getState().setTitle('Unsaved');
+        await vi.advanceTimersByTimeAsync(100);
+        expect(useResumeStore.getState()).toMatchObject({ isDirty: true, isSaving: false });
+      } finally { log.mockRestore(); useSettingsStore.setState({ autoSave: true, _hydrated: false }); }
+    });
+
     it('前一次还在飞的时候，后一次要等它落地——否则旧内容可能后到、盖掉新的', async () => {
       let release!: () => void;
       const gate = new Promise<void>((r) => {

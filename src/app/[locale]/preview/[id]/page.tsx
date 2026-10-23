@@ -7,29 +7,64 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from '@/i18n/routing';
 import { ResumePreview } from '@/components/preview/resume-preview';
 import { PreviewErrorBoundary } from '@/components/preview/preview-error-boundary';
-import { usePdfExport } from '@/hooks/use-pdf-export';
+import { ExportDialog } from '@/components/editor/export-dialog';
+import { useFingerprint } from '@/hooks/use-fingerprint';
 import { normalizeSections } from '@/lib/resume/normalize-content';
+import { parseThemeConfig } from '@/lib/resume/parse-theme-config';
 import type { Resume } from '@/types/resume';
 
 export default function PreviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const t = useTranslations();
-  const { exportPdf, isExporting } = usePdfExport();
   const [resume, setResume] = useState<Resume | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const { fingerprint, isLoading: fingerprintLoading } = useFingerprint();
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
-    const fingerprint = localStorage.getItem('jade_fingerprint');
+    if (fingerprintLoading) return;
+    const controller = new AbortController();
     fetch(`/api/resume/${id}`, {
       headers: fingerprint ? { 'x-fingerprint': fingerprint } : {},
+      signal: controller.signal,
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Resume loading failed (${res.status})`);
+        return res.json();
+      })
       // Heal AI-corrupted content so a bad shape can't crash the preview (issue #87).
-      .then((data: Resume) => setResume({ ...data, sections: normalizeSections(data.sections || []) }))
-      .catch(console.error);
-  }, [id]);
+      .then((data: Resume) => {
+        if (!controller.signal.aborted) {
+          setLoadError(null);
+          setResume({
+            ...data,
+            themeConfig: (parseThemeConfig(data.themeConfig) ?? {}) as Resume['themeConfig'],
+            sections: normalizeSections(data.sections || []),
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          console.error(error);
+          setLoadError(id);
+        }
+      });
+    return () => controller.abort();
+  }, [id, loadAttempt, fingerprint, fingerprintLoading]);
 
-  if (!resume) {
+  if (loadError === id) return (
+    <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-background p-4">
+      <p role="alert" className="text-sm text-muted-foreground">{t('preview.loadError')}</p>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={() => router.push('/dashboard')}>{t('common.back')}</Button>
+        <Button onClick={() => { setLoadError(null); setLoadAttempt(value => value + 1); }}>{t('preview.retry')}</Button>
+      </div>
+    </div>
+  );
+
+  if (!resume || resume.id !== id) {
     return <div className="flex h-screen items-center justify-center text-zinc-400">{t('common.loading')}</div>;
   }
 
@@ -42,12 +77,11 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
         </Button>
         <Button
           size="sm"
-          disabled={isExporting}
-          onClick={() => exportPdf(id, resume.title)}
+          onClick={() => setExportOpen(true)}
           className="cursor-pointer gap-1 bg-brand hover:bg-brand-hover"
         >
           <Download className="h-4 w-4" />
-          {isExporting ? t('pdf.exporting') : t('editor.toolbar.export')}
+          {t('editor.toolbar.export')}
         </Button>
       </div>
       <div className="p-8 pb-20 sm:pb-8">
@@ -68,13 +102,13 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
         </Button>
         <Button
           className="flex-1 cursor-pointer bg-brand hover:bg-brand-hover"
-          onClick={() => exportPdf(id, resume.title)}
-          disabled={isExporting}
+          onClick={() => setExportOpen(true)}
         >
           <Download className="mr-1.5 h-4 w-4" />
-          {isExporting ? t('pdf.exporting') : t('editor.toolbar.export')}
+          {t('editor.toolbar.export')}
         </Button>
       </div>
+      <ExportDialog key={resume.id} open={exportOpen} onOpenChange={setExportOpen} resume={resume} includeTimestamp={false} />
     </div>
   );
 }

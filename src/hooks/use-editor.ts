@@ -1,27 +1,32 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFingerprint } from './use-fingerprint';
 import { useResumeStore } from '@/stores/resume-store';
 import { useEditorStore } from '@/stores/editor-store';
 import type { ResumeSection } from '@/types/resume';
 
-function getHeaders() {
-  const fingerprint = typeof window !== 'undefined' ? localStorage.getItem('jade_fingerprint') : null;
-  return {
-    'Content-Type': 'application/json',
-    ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}),
-  };
-}
-
 export function useEditor(resumeId: string) {
+  const { fingerprint, isLoading: fingerprintLoading } = useFingerprint();
+  const [failedId, setFailedId] = useState<string | null>(null);
+  const request = useRef<AbortController | null>(null);
   const { setResume, sections, currentResume, updateSection, addSection, removeSection, reorderSections, reset: resetResume } = useResumeStore();
   const { pushSnapshot, reset: resetEditor } = useEditorStore();
 
   const loadResume = useCallback(async () => {
+    if (fingerprintLoading) return;
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    setFailedId(null);
     try {
-      const res = await fetch(`/api/resume/${resumeId}`, { headers: getHeaders() });
-      if (res.ok) {
-        const data = await res.json();
+      const res = await fetch(`/api/resume/${resumeId}`, {
+        headers: fingerprint ? { 'x-fingerprint': fingerprint } : {},
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`Resume loading failed (${res.status})`);
+      const data = await res.json();
+      if (!controller.signal.aborted) {
         setResume({
           ...data,
           sections: data.sections || [],
@@ -31,20 +36,24 @@ export function useEditor(resumeId: string) {
         });
       }
     } catch (error) {
-      console.error('Failed to load resume:', error);
+      if (!controller.signal.aborted) {
+        console.error('Failed to load resume:', error);
+        setFailedId(resumeId);
+      }
     }
-  }, [resumeId, setResume]);
+  }, [resumeId, setResume, fingerprintLoading, fingerprint]);
 
   useEffect(() => {
-    loadResume();
+    void loadResume();
     return () => {
+      request.current?.abort();
       resetResume();
       resetEditor();
     };
   }, [loadResume, resetResume, resetEditor]);
 
   const handleUpdateSection = useCallback(
-    (sectionId: string, content: any) => {
+    (sectionId: string, content: Partial<ResumeSection['content']>) => {
       pushSnapshot(sections);
       updateSection(sectionId, content);
     },
@@ -76,7 +85,8 @@ export function useEditor(resumeId: string) {
   );
 
   return {
-    resume: currentResume,
+    resume: currentResume?.id === resumeId ? currentResume : null,
+    loadError: failedId === resumeId,
     sections,
     updateSection: handleUpdateSection,
     addSection: handleAddSection,

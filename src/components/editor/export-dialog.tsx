@@ -1,283 +1,243 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useId } from 'react';
 import { useTranslations } from 'next-intl';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useResumeStore } from '@/stores/resume-store';
-import {
-  FileDown,
-  FileText,
-  Globe,
-  AlignLeft,
-  Braces,
-  Sparkles,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-} from 'lucide-react';
+import { ResumeSaveError } from '@/stores/resume-store';
+import { usePdfExport } from '@/hooks/use-pdf-export';
+import { PdfExportError } from '@/lib/pdf/request-resume-pdf';
+import type { PdfLayout } from '@/lib/pdf/layout';
+import type { Resume } from '@/types/resume';
+import { FileDown, FileText, Globe, AlignLeft, Braces, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface ExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  resumeId: string;
+  resume: Resume;
+  beforeExport?: () => Promise<void>;
+  includeTimestamp?: boolean;
 }
 
-type ExportFormat = 'pdf' | 'pdf-one-page' | 'docx' | 'html' | 'txt' | 'json';
+type ExportFormat = 'pdf' | 'docx' | 'html' | 'txt' | 'json';
 type ExportState = 'idle' | 'exporting' | 'success' | 'error';
-
-const FORMAT_OPTIONS: {
-  value: ExportFormat;
-  icon: typeof FileDown;
-  labelKey: string;
-  descKey: string;
-  tooltipKey?: string;
-}[] = [
-  { value: 'pdf', icon: FileDown, labelKey: 'pdf', descKey: 'pdfDescription' },
-  { value: 'pdf-one-page', icon: Sparkles, labelKey: 'pdfOnePage', descKey: 'pdfOnePageDescription', tooltipKey: 'pdfOnePageTooltip' },
+const FORMAT_OPTIONS = [
   { value: 'docx', icon: FileText, labelKey: 'docx', descKey: 'docxDescription' },
   { value: 'html', icon: Globe, labelKey: 'html', descKey: 'htmlDescription' },
   { value: 'txt', icon: AlignLeft, labelKey: 'txt', descKey: 'txtDescription' },
   { value: 'json', icon: Braces, labelKey: 'json', descKey: 'jsonDescription' },
-];
+] as const;
+const PDF_OPTIONS = [
+  { value: 'a4', labelKey: 'pdfA4' },
+  { value: 'fit-one-page', labelKey: 'pdfFitOnePage' },
+  { value: 'continuous', labelKey: 'pdfContinuous' },
+] as const;
 
-export function ExportDialog({ open, onOpenChange, resumeId }: ExportDialogProps) {
+export function ExportDialog({ open, onOpenChange, resume, beforeExport, includeTimestamp = true }: ExportDialogProps) {
   const t = useTranslations('export');
-  const { currentResume, isDirty, save } = useResumeStore();
-
+  const groupId = useId();
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('pdf');
+  const [selectedLayout, setSelectedLayout] = useState<PdfLayout>('a4');
   const [state, setState] = useState<ExportState>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [canPrintFallback, setCanPrintFallback] = useState(false);
+  const [failedResume, setFailedResume] = useState<Resume | null>(null);
+  const { exportPdf, isExporting } = usePdfExport(resume);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const request = useRef<AbortController | null>(null);
+  const busy = useRef(false);
+  const current = useRef(resume);
 
+  useEffect(() => {
+    current.current = resume;
+  }, [resume]);
   useEffect(() => {
     if (open) {
       setState('idle');
       setErrorMessage('');
       setSelectedFormat('pdf');
+      setSelectedLayout('a4');
       setCanPrintFallback(false);
     }
+    return () => { if (closeTimer.current) clearTimeout(closeTimer.current); };
   }, [open]);
+  useEffect(() => () => { request.current?.abort(); }, [resume.id]);
 
-  // Client-side fallback: when the server can't render a PDF (no Chromium / OOM →
-  // 502/500), fetch the print-ready HTML and open the browser's own print dialog,
-  // where the user can "Save as PDF" (issue #85).
+  // Browser printing is an explicit alternative; it does not reproduce PDF layouts.
   const handlePrintFallback = useCallback(async () => {
+    if (busy.current || failedResume !== resume) return;
+    busy.current = true;
+    setState('exporting');
     try {
+      await beforeExport?.();
+      if (current.current !== failedResume) {
+        throw new DOMException('Resume changed before printing', 'AbortError');
+      }
+      const controller = new AbortController();
+      request.current = controller;
       const fingerprint = localStorage.getItem('jade_fingerprint');
-      const res = await fetch(`/api/resume/${resumeId}/export?format=html&forPrint=true`, {
-        headers: { ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}) },
+      const res = await fetch(`/api/resume/${encodeURIComponent(resume.id)}/export?format=html&forPrint=true`, {
+        headers: { ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}) }, signal: controller.signal,
       });
-      if (!res.ok) throw new Error('Failed to load resume HTML');
+      if (!res.ok) throw new Error(t('error'));
       const html = await res.text();
-
+      if (controller.signal.aborted || current.current !== failedResume) {
+        throw new DOMException('Resume changed before printing', 'AbortError');
+      }
       const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
+      iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
       iframe.setAttribute('aria-hidden', 'true');
       iframe.onload = () => {
         const win = iframe.contentWindow;
-        if (!win) return;
-        // Give web fonts a beat to load before printing.
+        if (!win) { iframe.remove(); return; }
         setTimeout(() => {
           win.focus();
           win.print();
-          // Remove after the print dialog has had time to open.
           setTimeout(() => iframe.remove(), 60_000);
         }, 400);
       };
       iframe.srcdoc = html;
       document.body.appendChild(iframe);
       onOpenChange(false);
+      setState('idle');
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : t('error'));
-    }
-  }, [resumeId, onOpenChange, t]);
+      setState('error');
+      setCanPrintFallback(false);
+      setErrorMessage(err instanceof DOMException && err.name === 'AbortError' ? t('resumeChanged') : err instanceof Error ? err.message : t('error'));
+    } finally { busy.current = false; }
+  }, [resume, failedResume, beforeExport, onOpenChange, t]);
 
   const handleExport = useCallback(async () => {
+    if (busy.current) return;
+    busy.current = true;
+    let saved = !beforeExport;
+    const resumeId = resume.id;
+    const assertCurrent = () => {
+      if (current.current !== resume) {
+        throw new DOMException('Resume changed during export', 'AbortError');
+      }
+    };
+    const save = async () => { await beforeExport?.(); saved = true; assertCurrent(); };
     setState('exporting');
     setErrorMessage('');
     setCanPrintFallback(false);
-
     try {
-      // Save first if dirty
-      if (isDirty) await save();
-
-      const fingerprint = localStorage.getItem('jade_fingerprint');
-      const queryFormat = selectedFormat === 'pdf-one-page' ? 'pdf' : selectedFormat;
-      const fitParam = selectedFormat === 'pdf-one-page' ? '&fitOnePage=true' : '';
-      const res = await fetch(`/api/resume/${resumeId}/export?format=${queryFormat}${fitParam}`, {
-        headers: {
-          ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}),
-        },
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Export failed');
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-
-      const title = currentResume?.title || 'resume';
+      const title = resume.title || 'resume';
       const now = new Date();
-      const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
-      const extMap: Record<ExportFormat, string> = {
-        'pdf': 'pdf',
-        'pdf-one-page': 'pdf',
-        'docx': 'docx',
-        'html': 'html',
-        'txt': 'txt',
-        'json': 'json',
-      };
-      a.download = `${title}-${ts}.${extMap[selectedFormat]}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
+      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+      const filename = `${title}${includeTimestamp ? `-${timestamp}` : ''}.${selectedFormat}`;
+      if (selectedFormat === 'pdf') {
+        await exportPdf(filename, selectedLayout, save);
+      } else {
+        await save();
+        const controller = new AbortController();
+        request.current = controller;
+        const fingerprint = localStorage.getItem('jade_fingerprint');
+        const res = await fetch(`/api/resume/${encodeURIComponent(resumeId)}/export?format=${selectedFormat}`, {
+          headers: { ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}) }, signal: controller.signal,
+        });
+        if (!res.ok) {
+          const data: unknown = await res.json().catch(() => null);
+          throw new Error(data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : t('error'));
+        }
+        const blob = await res.blob();
+        assertCurrent();
+        if (controller.signal.aborted) throw new DOMException('Export cancelled', 'AbortError');
+        const url = URL.createObjectURL(blob);
+        try {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } finally { URL.revokeObjectURL(url); }
+      }
       setState('success');
-      setTimeout(() => onOpenChange(false), 1500);
-    } catch (err: any) {
+      closeTimer.current = setTimeout(() => onOpenChange(false), 1500);
+    } catch (err: unknown) {
       setState('error');
-      setErrorMessage(err.message || t('error'));
-      // Offer the browser-print fallback only for the PDF formats.
-      setCanPrintFallback(selectedFormat === 'pdf' || selectedFormat === 'pdf-one-page');
-    }
-  }, [resumeId, selectedFormat, currentResume, isDirty, save, onOpenChange, t]);
+      const cancelled = err instanceof DOMException && err.name === 'AbortError';
+      const message = err instanceof PdfExportError
+        ? t(err.code, { fields: err.fields.join(', ') || err.message, reason: err.message })
+        : err instanceof Error ? err.message : t('error');
+      setErrorMessage(cancelled ? t('resumeChanged') : message);
+      setFailedResume(resume);
+      const renderFailed = err instanceof PdfExportError && (err.code === 'pdfRenderFailed' || err.code === 'pdfTimeout');
+      setCanPrintFallback(saved && !(err instanceof ResumeSaveError) && !cancelled && renderFailed && selectedFormat === 'pdf');
+    } finally { busy.current = false; }
+  }, [resume, selectedFormat, selectedLayout, beforeExport, exportPdf, includeTimestamp, onOpenChange, t]);
 
-  const isLoading = state === 'exporting';
-
+  const isLoading = state === 'exporting' || isExporting;
+  const selectedCard = 'border-brand bg-brand-muted dark:border-brand dark:bg-brand-muted';
+  const idleCard = 'border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
+  const canPrint = canPrintFallback && failedResume === resume;
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o && !isLoading) onOpenChange(false); }}>
-      <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-0">
-          <DialogTitle className="flex items-center gap-2">
-            <FileDown className="h-5 w-5 text-brand" />
-            {t('title')}
-          </DialogTitle>
+    <Dialog open={open} onOpenChange={value => { if (!value && !isLoading) onOpenChange(false); }}>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto p-0 sm:max-w-lg">
+        <DialogHeader className="px-6 pb-0 pt-6">
+          <DialogTitle className="flex items-center gap-2"><FileDown className="size-5 text-brand" />{t('title')}</DialogTitle>
           <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
-
         <div className="px-6 py-5">
           {state === 'idle' && (
-            <TooltipProvider>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {FORMAT_OPTIONS.map((format) => {
-                  const Icon = format.icon;
-                  const isSelected = selectedFormat === format.value;
-                  const card = (
-                    <button
-                      key={format.value}
-                      onClick={() => setSelectedFormat(format.value)}
-                      className={`cursor-pointer flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all duration-150 hover:border-brand hover:bg-brand-muted/50 dark:hover:border-brand dark:hover:bg-brand-muted/20 ${
-                        isSelected
-                          ? 'border-brand bg-brand-muted dark:border-brand dark:bg-brand-muted'
-                          : 'border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900'
-                      }`}
-                    >
-                      <Icon className={`h-6 w-6 ${isSelected ? 'text-brand' : 'text-zinc-500 dark:text-zinc-400'}`} />
-                      <span className={`text-sm font-medium ${isSelected ? 'text-brand dark:text-brand' : 'text-zinc-700 dark:text-zinc-300'}`}>
-                        {t(format.labelKey)}
-                      </span>
-                      <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                        {t(format.descKey)}
-                      </span>
-                    </button>
-                  );
-                  if (format.tooltipKey) {
-                    return (
-                      <Tooltip key={format.value}>
-                        <TooltipTrigger asChild>{card}</TooltipTrigger>
-                        <TooltipContent side="bottom" sideOffset={6}>
-                          {t(format.tooltipKey)}
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  }
-                  return card;
-                })}
+            <div aria-label={t('description')} className="grid grid-cols-[minmax(0,1.35fr)_repeat(2,minmax(0,1fr))] gap-2 sm:grid-cols-3 sm:gap-3">
+              <div className={`row-span-2 min-w-0 rounded-lg border-2 p-2 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background sm:p-3 ${selectedFormat === 'pdf' ? selectedCard : idleCard}`}>
+                <button type="button" aria-pressed={selectedFormat === 'pdf'} onClick={() => setSelectedFormat('pdf')}
+                  className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-md py-1 text-center focus-visible:outline-none">
+                  <FileDown className={`size-6 ${selectedFormat === 'pdf' ? 'text-brand' : 'text-muted-foreground'}`} />
+                  <span className="text-sm font-medium">{t('pdf')}</span>
+                  <span className="text-xs text-muted-foreground">{t('pdfDescription')}</span>
+                </button>
+                {/* Keep native fieldset contents above the card's focus-ring paint layer. */}
+                <fieldset className="relative mt-3 space-y-1">
+                  <legend className="sr-only">{t('pdfLayout')}</legend>
+                  {PDF_OPTIONS.map(option => (
+                    <label key={option.value} title={option.value === 'fit-one-page' ? t('pdfOnePageTooltip') : undefined}
+                      className="flex cursor-pointer items-start gap-1.5 rounded-md px-1 py-2 text-xs leading-4 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand sm:gap-2">
+                      <input type="radio" name={`${groupId}-pdf-layout`} value={option.value}
+                        checked={selectedLayout === option.value && selectedFormat === 'pdf'}
+                        onChange={() => { setSelectedFormat('pdf'); setSelectedLayout(option.value); }}
+                        className="mt-0.5 size-3 shrink-0 accent-brand" />
+                      <span>{t(option.labelKey)}</span>
+                    </label>
+                  ))}
+                </fieldset>
               </div>
-            </TooltipProvider>
-          )}
-
-          {state === 'exporting' && (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-brand mb-3" />
-              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                {t('exporting')}
-              </p>
+              {FORMAT_OPTIONS.map(format => {
+                const Icon = format.icon;
+                const selected = selectedFormat === format.value;
+                return <button key={format.value} type="button" aria-pressed={selected} onClick={() => setSelectedFormat(format.value)}
+                  className={`flex min-w-0 cursor-pointer flex-col items-center gap-2 rounded-lg border-2 px-2 py-4 text-center transition-colors hover:border-brand hover:bg-brand-muted/50 focus-visible:outline-brand sm:p-4 ${selected ? selectedCard : idleCard}`}>
+                  <Icon className={`size-6 ${selected ? 'text-brand' : 'text-muted-foreground'}`} />
+                  <span className="text-sm font-medium">{t(format.labelKey)}</span>
+                  <span className="text-xs text-muted-foreground">{t(format.descKey)}</span>
+                </button>;
+              })}
             </div>
           )}
-
-          {state === 'success' && (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <CheckCircle2 className="h-8 w-8 text-green-500 mb-3" />
-              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                {t('success')}
-              </p>
-            </div>
-          )}
-
-          {state === 'error' && (
-            <div className="flex flex-col items-center justify-center py-6 text-center">
-              <AlertCircle className="h-8 w-8 text-red-500 mb-3" />
-              <p className="text-sm font-medium text-red-600 dark:text-red-400">
-                {errorMessage || t('error')}
-              </p>
-              {canPrintFallback && (
-                <>
-                  <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-                    {t('pdfFailedHint')}
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={handlePrintFallback}
-                    className="mt-3 cursor-pointer gap-1.5"
-                  >
-                    <FileDown className="h-3.5 w-3.5" />
-                    {t('printFallback')}
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
+          {state === 'exporting' && <div role="status" className="flex flex-col items-center justify-center py-8 text-center">
+            <Loader2 className="mb-3 size-8 animate-spin text-brand" /><p className="text-sm font-medium text-muted-foreground">{t('exporting')}</p>
+          </div>}
+          {state === 'success' && <div role="status" className="flex flex-col items-center justify-center py-8 text-center">
+            <CheckCircle2 className="mb-3 size-8 text-green-500" /><p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('success')}</p>
+          </div>}
+          {state === 'error' && <div role="alert" className="flex flex-col items-center justify-center py-6 text-center">
+            <AlertCircle className="mb-3 size-8 text-destructive" /><p className="break-all text-sm font-medium text-destructive">{errorMessage || t('error')}</p>
+            {canPrint && <>
+              <p className="mt-3 text-xs text-muted-foreground">{t('pdfFailedHint')}</p>
+              <p className="mt-2 text-xs text-muted-foreground">{t('printFallbackLimit')}</p>
+              <Button variant="outline" onClick={handlePrintFallback} className="mt-3 cursor-pointer gap-1.5"><FileDown className="size-3.5" />{t('printFallback')}</Button>
+            </>}
+          </div>}
         </div>
-
-        <DialogFooter className="border-t border-zinc-100 px-6 py-4 dark:border-zinc-800">
-          {(state === 'idle' || state === 'error') && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="cursor-pointer"
-              >
-                {t('cancel')}
-              </Button>
-              <Button
-                onClick={handleExport}
-                disabled={isLoading}
-                className="cursor-pointer bg-brand hover:bg-brand-hover"
-              >
-                {t('export')}
-              </Button>
-            </>
-          )}
+        <DialogFooter className="border-t px-6 py-4">
+          {(state === 'idle' || state === 'error') && <>
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="cursor-pointer">{t('cancel')}</Button>
+            <Button onClick={handleExport} disabled={isLoading} className="cursor-pointer bg-brand hover:bg-brand-hover">{t('export')}</Button>
+          </>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

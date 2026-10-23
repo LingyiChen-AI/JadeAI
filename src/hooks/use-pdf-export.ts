@@ -1,41 +1,46 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useAuth } from './use-auth';
+import { createPdfSnapshot } from '@/lib/pdf/snapshot';
+import { requestResumePdf } from '@/lib/pdf/request-resume-pdf';
+import type { PdfLayout } from '@/lib/pdf/layout';
+import type { Resume } from '@/types/resume';
 
-export function usePdfExport() {
+/** Export current data only when requested. Editing never starts PDF generation. */
+export function usePdfExport(resume: Resume) {
+  const { user } = useAuth();
+  const identityKey = user?.id ?? null;
   const [isExporting, setIsExporting] = useState(false);
+  const pending = useRef<AbortController | null>(null);
+  useEffect(() => () => { pending.current?.abort(); }, [resume, identityKey]);
 
-  const exportPdf = useCallback(async (resumeId: string, title?: string) => {
+  const exportPdf = useCallback(async (filename: string, layout: PdfLayout, beforeExport?: () => Promise<void>) => {
+    if (pending.current) throw new Error('PDF download is already in progress');
+    const controller = new AbortController();
+    pending.current = controller;
     setIsExporting(true);
     try {
-      const fingerprint = localStorage.getItem('jade_fingerprint');
-      const res = await fetch(`/api/resume/${resumeId}/export?format=pdf`, {
-        headers: {
-          ...(fingerprint ? { 'x-fingerprint': fingerprint } : {}),
-        },
+      await beforeExport?.();
+      controller.signal.throwIfAborted();
+      const blob = await requestResumePdf(resume.id, createPdfSnapshot(resume), layout, {
+        signal: controller.signal,
+        fingerprint: localStorage.getItem('jade_fingerprint'),
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'PDF export failed');
-      }
-
-      const blob = await res.blob();
+      controller.signal.throwIfAborted();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${title || 'resume'}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Failed to export PDF:', error);
-      throw error;
+      try {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } finally { URL.revokeObjectURL(url); }
     } finally {
+      if (pending.current === controller) pending.current = null;
       setIsExporting(false);
     }
-  }, []);
-
+  }, [resume]);
   return { exportPdf, isExporting };
 }

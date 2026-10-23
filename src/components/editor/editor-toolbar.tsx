@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { useRouter } from '@/i18n/routing';
 import { ArrowLeft, Undo2, Redo2, Download, Upload, Settings, Palette, Save, FileSearch, Languages, FileText, SpellCheck, Share2, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,7 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
   const t = useTranslations('editor.toolbar');
   const router = useRouter();
   const { toggleThemeEditor, showThemeEditor, undo, redo, undoStack, redoStack } = useEditorStore();
-  const { isSaving, isDirty, currentResume, sections, reorderSections, save } = useResumeStore();
+  const { isSaving, isDirty, currentResume, reorderSections, save } = useResumeStore();
   const { openModal } = useUIStore();
   const autoSave = useSettingsStore((s) => s.autoSave);
 
@@ -44,7 +45,7 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
   };
 
   return (
-    <div className="flex h-12 items-center justify-between gap-2 border-b bg-white px-2 sm:px-3 dark:bg-background dark:border-zinc-800">
+    <div data-resume-id={resumeId} className="flex h-12 items-center justify-between gap-2 border-b bg-white px-2 sm:px-3 dark:bg-background dark:border-zinc-800">
       <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
         <Button
           variant="ghost"
@@ -65,7 +66,9 @@ export function EditorToolbar({ resumeId }: EditorToolbarProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => save()}
+            onClick={() => { void save().catch((error: unknown) => {
+              toast.error(t('saveFailed'), { description: error instanceof Error ? error.message : undefined });
+            }); }}
             className="cursor-pointer gap-1 text-brand hover:text-brand hover:bg-brand-muted"
           >
             <Save className="h-3.5 w-3.5" />
